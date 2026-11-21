@@ -16,6 +16,10 @@ const QuantumScene = lazy(() => import('../modules/quantum/Quantum').then((m) =>
 const QuantumOverlay = lazy(() => import('../modules/quantum/Quantum').then((m) => ({ default: m.QuantumOverlay })));
 const ArchitectScene = lazy(() => import('../modules/architect/Architect').then((m) => ({ default: m.ArchitectScene })));
 const ArchitectOverlay = lazy(() => import('../modules/architect/Architect').then((m) => ({ default: m.ArchitectOverlay })));
+const HistoryScene = lazy(() => import('../modules/history/History').then((m) => ({ default: m.HistoryScene })));
+const HistoryOverlay = lazy(() => import('../modules/history/History').then((m) => ({ default: m.HistoryOverlay })));
+const MassScene = lazy(() => import('../modules/masses/MassSpec').then((m) => ({ default: m.MassScene })));
+const MassOverlay = lazy(() => import('../modules/masses/MassSpec').then((m) => ({ default: m.MassOverlay })));
 const PeriodicOverlay = lazy(() => import('../modules/periodic/Periodic').then((m) => ({ default: m.PeriodicOverlay })));
 
 /** Laboratorios disponibles (en el orden del temario). */
@@ -238,6 +242,10 @@ function SceneFor({ route }: { route: Route }) {
       return <QuantumScene />;
     case '/arquitecto':
       return <ArchitectScene />;
+    case '/historia':
+      return <HistoryScene />;
+    case '/masas':
+      return <MassScene />;
     case '/entrenamiento':
       return null;
     default:
@@ -257,6 +265,10 @@ function OverlayFor({ route }: { route: Route }): ReactNode {
       return <QuantumOverlay />;
     case '/arquitecto':
       return <ArchitectOverlay />;
+    case '/historia':
+      return <HistoryOverlay />;
+    case '/masas':
+      return <MassOverlay />;
     case '/entrenamiento':
       return <TrainingOverlay />;
     default:
