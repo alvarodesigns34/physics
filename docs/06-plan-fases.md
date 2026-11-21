@@ -28,21 +28,18 @@ Cada fase deja el producto **ejecutable, integrado, probado y visualmente cohere
 
 **Pendiente conocido de la fase 1:** la escena de ondas y la escalera de niveles en móvil son legibles, pero densas. Los niveles n ≥ 4 solo se rotulan en escritorio.
 
-## Fase 2 · Electron Architect + Quantum Space
-- Constructor de diagramas de cajas con validación Pauli/Hund en vivo y estados fundamental, excitado y prohibido.
-- Visualizador 3D de orbitales s, p, d y f (isosuperficies y nubes) con números cuánticos manipulables.
-- Capítulos III «Probabilidad» y IV «Arquitectura».
-- *Aceptación:* tests de AMP 11–19 y TEO 2–8; el visualizador nunca muestra órbitas.
+## Fases 2–4 · Los siete laboratorios ✅
+**Entregado**
+- **Electron Architect:** torre de energía 3D con cajas interactivas (↑, ↓, ↑↓, ↑↑), diagnóstico en vivo de Pauli, Hund y Aufbau, excepciones reales (Cr, Cu…), llenado animado y diagrama de Möller que también sirve de editor accesible.
+- **Quantum Space:** orbitales hidrogenoides reales (n ≤ 5, l ≤ 3) muestreados de |ψ|² y coloreados por el signo de ψ, corte para ver los nodos, órbita de Bohr superpuesta, subnivel completo (simetría esférica), gráfica P(r) y paquete gaussiano de incertidumbre mínima.
+- **Periodic Universe:** tabla 3D de 118 elementos con alturas proporcionales a datos reales (radio, EI₁, AE, χ, Z_ef de Slater y masa), comparador razonado con detección y explicación de excepciones, y vista de tamaños de átomos frente a iones (radios de Shannon).
+- **Time Machine:** modelos de Dalton a la mecánica cuántica (colapso clásico de Rutherford y saltos de Bohr con el color del fotón), tubo de rayos catódicos con la fuerza de Lorentz integrada y la medida de q/m, y Geiger–Marsden con Monte Carlo en vivo (Thomson frente a núcleo), histograma frente a la fórmula de Rutherford y trayectorias hiperbólicas integradas.
+- **Mass Spectrometry Lab:** sector magnético con r = √(2mV/q)/B, isótopos naturales reales de cualquier elemento, espectro acumulado, masa media medida con su incertidumbre estadística y la demostración de la errata del cloro.
+- **Campaña de 7 capítulos y 35 misiones**, Atrio con 8 estaciones y 26 generadores más 64 ejercicios de las fuentes: **los 54 apartados del temario tienen ejercicios**.
 
-## Fase 3 · Periodic Universe
-- Tabla 3D con alturas y colores de propiedades reales (radio, EI, AE, χ), Z_ef de Slater, formación de iones y excepciones.
-- Capítulo V «Periodicidad».
-- *Aceptación:* tests de AMP 20–31 y TEO 9, 19, 20; las tendencias se muestran con datos y no con flechas inventadas.
-
-## Fase 4 · Time Machine + Mass Spectrometry Lab
-- Tubo de rayos catódicos (desviación en campos E y B), dispersión de Rutherford con trayectorias coulombianas hiperbólicas frente al modelo de Thomson y limitaciones de cada modelo.
-- Espectros de masas con picos de isótopos reales y cálculo de masa media (incluye el ejemplo del cloro corregido).
-- Capítulos VI «Historia» y VII «Masa».
+**Verificación**
+- 159 pruebas superadas, entre ellas: trayectoria coulombiana integrada frente a tan(θ/2) = d/2b; Monte Carlo frente a la sección eficaz (Thomson: 0 desviaciones > 10°); tubo de Thomson integrado frente a y₁ = qEL²/2mv² y compensación B = E/v; tendencias con datos reales y excepciones N/O, Be/B y F/Cl; diagramas de cajas (Pauli, Hund, excepción del Cr); autoconsistencia de todos los generadores; y cobertura de 54 de 54 apartados.
+- Prueba de humo en navegador: 15 de 15 comprobaciones en todos los laboratorios, escritorio y móvil.
 
 ## Fase 5 · Pulido y producción
-- Examen global del tema, auditoría de accesibilidad (lectores de pantalla y teclado), presupuesto de rendimiento en dispositivos de gama baja, PWA sin conexión y exportación del informe de progreso.
+- Auditoría de accesibilidad con lectores de pantalla, presupuesto de rendimiento en dispositivos de gama baja, PWA sin conexión, informe de progreso exportable en PDF y modo docente (asignar misiones y exámenes).

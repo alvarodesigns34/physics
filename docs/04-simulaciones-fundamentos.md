@@ -64,3 +64,21 @@ M = Σ mᵢ·xᵢ con Σ xᵢ = 1. El corrector comprueba que las abundancias su
 - Todas las funciones de `science/` tienen tests unitarios contra valores de referencia: ejemplos resueltos de TEO, ejercicios de AMP resueltos a mano y valores NIST.
 - **Cifras significativas:** `countSigFigs()` interpreta la respuesta *tal como la escribe* el alumno (coma o punto decimal, notación científica con ·10ⁿ, x10^n o e). Tolerancia relativa por defecto del 1 %, ajustable por ejercicio. Las cifras significativas se evalúan aparte y dan una advertencia, no un fallo, si difieren en más de una de las justificadas por los datos.
 - **Unidades:** analizador con prefijos SI y conversión dimensional (m, nm, cm, Å, Hz, s⁻¹, s, J, eV, kJ/mol, u, m⁻¹, cm⁻¹). Si la unidad es correcta pero la magnitud no coincide, o si el valor es correcto en otra unidad, se da una retroalimentación específica.
+
+## 4.10 Dispersión de Geiger–Marsden (Time Machine)
+
+- Distancia de máximo acercamiento d = k·Z₁Z₂e²/E (k·e² = 1,440 MeV·fm). Para α de 4,8 MeV sobre oro, d ≈ 47 fm.
+- Trayectorias: integración de Verlet de a = ½·r̂/r² en unidades de d y v₀. Se valida contra tan(θ/2) = d/(2b).
+- Monte Carlo: parámetro de impacto del núcleo más cercano con P(b < x) = n·t·π·x² (n = 5,9·10²⁸ m⁻³) más una dispersión múltiple gaussiana de σ ≈ 0,8° (aproximación declarada). En el modelo de Thomson solo actúa la gaussiana: ninguna desviación grande.
+- Colapso clásico: τ = a₀³/(4·r_e²·c) ≈ 1,6·10⁻¹¹ s. La animación sigue r³ = r₀³(1 − t/τ), ralentizada y etiquetada.
+
+## 4.11 Tubo de rayos catódicos y espectrómetro de masas
+
+- Tubo: integración de F = q(E + v × B) con v = √(2eV/m). Se valida contra y₁ = qEL²/(2mv²) y la compensación B = E/v. La medida de q/m se presenta como ampliación (fuera del temario).
+- Sector magnético: r = √(2mV/q)/B con masas isotópicas NUBASE. Los iones se generan con la abundancia natural, así que la masa media medida converge como 1/√N.
+
+## 4.12 Quantum Space y Electron Architect
+
+- Orbitales reales muestreados con |ψ_nlm|² (radial por inversión de la CDF y angular por rechazo). El color indica el signo de ψ (fase), no carga. El corte muestra la losa |z| < 0,09·r₉₀ para revelar los nodos (n − l − 1 radiales y l angulares).
+- Incertidumbre: paquete gaussiano exacto con σx·σp = ħ/2.
+- Cajas: código 0, ↑, ↓, ↑↓ y ↑↑ (prohibido). El diagnóstico aplica Pauli, Hund (apareamiento con orbitales vacíos o espines no paralelos) y Aufbau (huecos por debajo), y reconoce el estado fundamental real aunque sea una excepción.

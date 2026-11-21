@@ -40,13 +40,13 @@ Reglas de dependencia: cada capa importa solo de las inferiores. `science/` y `l
 | **Photon Lab** | `#/fotones` | Banco de ondas EM, niveles del hidrógeno, emisión/absorción y espectroscopio | 1 |
 | **Centro de entrenamiento** | `#/entrenamiento` | Práctica adaptativa, repaso espaciado, modo examen y progreso por apartados | 1 |
 | **Campaña** | `#/campana` | Misiones encadenadas que se juegan dentro de los laboratorios | 1 |
-| Electron Architect | `#/arquitecto` | Configuraciones, diagramas de cajas, Pauli, Hund y estados | 2 |
-| Quantum Space | `#/cuantico` | Orbitales como densidad de probabilidad 3D y números cuánticos | 2 |
-| Periodic Universe | `#/periodico` | Tabla 3D, bloques, Z_ef y tendencias con datos reales | 3 |
-| Time Machine | `#/historia` | Dalton → Bohr, tubo de rayos catódicos y dispersión de Rutherford | 4 |
-| Mass Spectrometry Lab | `#/masas` | Espectros de masas, abundancias y masa atómica media | 4 |
+| Electron Architect | `#/arquitecto` | Configuraciones, diagramas de cajas, Pauli, Hund y estados | 2 ✅ |
+| Quantum Space | `#/cuantico` | Orbitales como densidad de probabilidad 3D y números cuánticos | 2 ✅ |
+| Periodic Universe | `#/periodico` | Tabla 3D, bloques, Z_ef y tendencias con datos reales | 3 ✅ |
+| Time Machine | `#/historia` | Dalton → Bohr, tubo de rayos catódicos y dispersión de Rutherford | 4 ✅ |
+| Mass Spectrometry Lab | `#/masas` | Espectros de masas, abundancias y masa atómica media | 4 ✅ |
 
-Solo se muestran en el Atrio las estaciones implementadas. Las futuras aparecen en este documento, no como pantallas vacías.
+Los siete laboratorios están implementados y accesibles desde el Atrio y desde el menú «Laboratorios».
 
 ## 2.3 Modelo de datos principal
 
