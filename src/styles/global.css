@@ -957,3 +957,27 @@ input[type='range']::-moz-range-thumb {
   color: var(--ink-muted);
   text-shadow: 0 1px 8px rgb(0 0 0 / 0.9);
 }
+
+@media (max-width: 760px) {
+  .desktop-only {
+    display: none !important;
+  }
+  .side {
+    max-height: 50vh;
+  }
+  .station-label {
+    padding: 5px 10px !important;
+  }
+  .station-label span:first-child {
+    font-size: 16px !important;
+  }
+  .station-label span:last-child {
+    display: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+  .mobile-only {
+    display: none !important;
+  }
+}

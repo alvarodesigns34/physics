@@ -22,18 +22,30 @@ function StudioEnvironment() {
  * Desplaza el centro óptico hacia la izquierda la mitad del ancho del panel lateral, para que la
  * escena quede centrada en el área visible (en móvil el panel va abajo y no se desplaza).
  */
-function ViewOffset({ panel }: { panel: number }) {
+function ViewOffset({ panel, fov }: { panel: number; fov: number }) {
   const { camera, size } = useThree();
   useLayoutEffect(() => {
     const cam = camera as THREE.PerspectiveCamera;
-    if (size.width > 760 && panel > 0) cam.setViewOffset(size.width, size.height, panel / 2, 0, size.width, size.height);
+    const mobile = size.width <= 760;
+    // Área visible de la escena: a la izquierda del panel (escritorio) o encima de la hoja inferior (móvil).
+    const visW = mobile ? size.width : size.width - panel;
+    const visH = mobile ? size.height * 0.5 : size.height;
+    if (mobile) cam.setViewOffset(size.width, size.height, 0, size.height * 0.25, size.width, size.height);
+    else if (panel > 0) cam.setViewOffset(size.width, size.height, panel / 2, 0, size.width, size.height);
     else cam.clearViewOffset();
+    // El área visible debe abarcar al menos el campo vertical de diseño y el horizontal equivalente a una
+    // relación 1,6; después se amplía al lienzo completo (la parte tapada por la hoja inferior).
+    const rad = (d: number) => (d * Math.PI) / 180;
+    const hfov = 2 * Math.atan(Math.tan(rad(fov) / 2) * 1.6);
+    const visFov = Math.max(rad(fov), 2 * Math.atan(Math.tan(hfov / 2) / (visW / visH)));
+    const fullFov = 2 * Math.atan(Math.tan(visFov / 2) * (size.height / visH));
+    cam.fov = Math.min(100, (fullFov * 180) / Math.PI);
     cam.updateProjectionMatrix();
     return () => {
       cam.clearViewOffset();
       cam.updateProjectionMatrix();
     };
-  }, [camera, size.width, size.height, panel]);
+  }, [camera, size.width, size.height, panel, fov]);
   return null;
 }
 
@@ -55,7 +67,7 @@ export function Stage({ children, camera = [0, 2.4, 9] as [number, number, numbe
     >
       <color attach="background" args={['#0b0a09']} />
       <fog attach="fog" args={['#0b0a09', 14, 42]} />
-      <ViewOffset panel={panel} />
+      <ViewOffset panel={panel} fov={fov} />
       {auto && <PerformanceMonitor onDecline={degradeAutoTier} flipflops={2} />}
       <Suspense fallback={null}>
         {q.tier !== 'baja' && <StudioEnvironment />}

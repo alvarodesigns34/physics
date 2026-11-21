@@ -224,6 +224,7 @@ function StationLabels() {
         <AnchoredLabel key={def.id} id={`station-${def.id}`} align="bottom">
           <button
             type="button"
+            className="station-label"
             onClick={() => navigate(def.route)}
             onMouseEnter={() => setHovered(def.id)}
             onMouseLeave={() => setHovered(null)}
@@ -266,7 +267,7 @@ export function HubOverlay() {
     <div className="workspace">
       <StationLabels />
       <div style={{ position: 'relative' }}>
-        <div className="enter" style={{ position: 'absolute', left: 'var(--gutter)', bottom: 'var(--gutter)', maxWidth: 500, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="enter desktop-only" style={{ position: 'absolute', left: 'var(--gutter)', bottom: 'var(--gutter)', maxWidth: 500, display: 'flex', flexDirection: 'column', gap: 16 }}>
           <span className="eyebrow eyebrow--accent">Estructura atómica · Sistema periódico</span>
           <h1 className="display" style={{ fontSize: 'clamp(2.5rem, 4.4vw, 4rem)' }}>La materia, de cerca{alias ? `, ${alias}` : ''}.</h1>
           <p className="lead">Un laboratorio para construir átomos, hacer que emitan luz y comprobar con cálculos de verdad lo que dice el temario de 1.º de Bachillerato.</p>
@@ -277,6 +278,11 @@ export function HubOverlay() {
       </div>
       <aside className="side interactive enter" aria-label="Campaña" style={{ animationDelay: '80ms' }}>
         <div className="side__scroll">
+          <section className="section mobile-only">
+            <span className="eyebrow eyebrow--accent">Estructura atómica · Sistema periódico</span>
+            <h1 className="h2">La materia, de cerca{alias ? `, ${alias}` : ''}.</h1>
+            <p className="small muted">Construye átomos, haz que emitan luz y comprueba con cálculos de verdad lo que dice el temario. Toca una estación para entrar.</p>
+          </section>
           <section className="section">
             <div className="row row--between">
               <span className="eyebrow">Campaña</span>

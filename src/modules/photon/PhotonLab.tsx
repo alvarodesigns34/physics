@@ -381,18 +381,18 @@ function SceneLabels({ tab }: { tab: PhotonTab }) {
     return (
       <LabelLayer>
         {[1, 2, 3, 4].map((n) => (
-          <AnchoredLabel key={n} id={`lvl-${n}`} align="left">
+          <AnchoredLabel key={n} id={`lvl-${n}`} align="left" className={n === 4 ? 'desktop-only' : undefined}>
             <span className="scene-label" style={{ color: n === level ? 'var(--accent)' : undefined }}>
               n = {n} · {fmt(levelEnergyEV(n), 3)} eV
             </span>
           </AnchoredLabel>
         ))}
-        <AnchoredLabel id="lvl-high" align="left">
+        <AnchoredLabel id="lvl-high" align="left" className="desktop-only">
           <span className="scene-label faint" style={{ color: level > 4 ? 'var(--accent)' : 'var(--ink-faint)' }}>
             n = 5, 6, 7…{level > 4 ? ` (electrón en n = ${level})` : ''}
           </span>
         </AnchoredLabel>
-        <AnchoredLabel id="lvl-inf" align="left">
+        <AnchoredLabel id="lvl-inf" align="left" className="desktop-only">
           <span className="scene-label" style={{ color: 'var(--ink-faint)' }}>
             n → ∞ · 0 eV (ionización)
           </span>
@@ -447,7 +447,7 @@ export function PhotonOverlay() {
     <div className="workspace">
       <SceneLabels tab={tab} />
       <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '0 var(--gutter) var(--gutter)' }}>
-        <div className="interactive" style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 860 }}>
+        <div className="interactive desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 860 }}>
           {tab === 'hidrogeno' && <DetectorStrip lines={detected} highlightStamp={lastTransition?.stamp} />}
           {tab === 'ondas' && <EMBand lambdaM={lambdaNm * 1e-9} />}
           <div className="row row--wrap" style={{ gap: 8 }}>
@@ -476,6 +476,10 @@ export function PhotonOverlay() {
             ))}
           </div>
           <MissionPanel lab="fotones" signal={signal} />
+          <div className="mobile-only stack-8">
+            {tab === 'hidrogeno' && <DetectorStrip lines={detected} highlightStamp={lastTransition?.stamp} />}
+            {tab === 'ondas' && <EMBand lambdaM={lambdaNm * 1e-9} />}
+          </div>
           {tab === 'ondas' && <WavePanel />}
           {tab === 'hidrogeno' && <HydrogenPanel />}
           {tab === 'espectroscopio' && <SpectroPanel />}

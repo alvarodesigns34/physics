@@ -389,12 +389,12 @@ export function ForgeOverlay() {
   return (
     <div className="workspace">
       <div style={{ position: 'relative' }}>
-        <div className="stage-caption">
+        <div className="stage-caption desktop-only">
           <EpiTag kind="esquema">Núcleo: nucleones como esferas; escala no real (el núcleo sería unas 10⁵ veces menor que la nube)</EpiTag>
           {conf && conf.length > 0 && <EpiTag kind="calculo">Nube: densidad electrónica aproximada (orbitales hidrogenoides con Z efectiva de Slater)</EpiTag>}
         </div>
         {sp.z === 0 && sp.n === 0 && sp.e === 0 && (
-          <div className="fade" style={{ position: 'absolute', left: '50%', top: '46%', transform: 'translate(-50%, -50%)', textAlign: 'center', maxWidth: 360 }}>
+          <div className="fade" style={{ position: 'absolute', left: '50%', top: '40%', transform: 'translate(-50%, -50%)', textAlign: 'center', maxWidth: 360 }}>
             <p className="h2" style={{ fontSize: '1.75rem' }}>
               El crisol está vacío.
             </p>
@@ -494,7 +494,11 @@ export function ForgeOverlay() {
           <section className="section">
             <IsotopeLadder sp={sp} table={table} onPick={(n) => setSp({ ...sp, n })} />
             <ElementPicker table={table} onPick={(z, n) => setSp({ z, n, e: z })} />
-            <button type="button" className="btn btn--ghost btn--sm" style={{ alignSelf: 'flex-start' }} onClick={() => setSp({ z: 0, n: 0, e: 0 })}>
+            <div className="stack-8 mobile-only">
+              <EpiTag kind="esquema">Núcleo: esferas; escala no real</EpiTag>
+              <EpiTag kind="calculo">Nube: densidad electrónica aproximada (Slater)</EpiTag>
+            </div>
+          <button type="button" className="btn btn--ghost btn--sm" style={{ alignSelf: 'flex-start' }} onClick={() => setSp({ z: 0, n: 0, e: 0 })}>
               <Icon name="reset" size={16} /> Vaciar el crisol
             </button>
           </section>

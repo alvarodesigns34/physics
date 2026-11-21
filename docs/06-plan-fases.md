@@ -6,19 +6,27 @@ Cada fase deja el producto **ejecutable, integrado, probado y visualmente cohere
 - Matriz de cobertura (54 nodos, 7 bloques) con registro de 22 erratas y simplificaciones.
 - Arquitectura, diseño de experiencia, fundamentos físicos, propuesta visual y este plan.
 
-## Fase 1 · Fundación y primera experiencia completa (en curso)
+## Fase 1 · Fundación y primera experiencia completa ✅
 **Alcance**
 1. Núcleo científico completo y probado: constantes, números, unidades y cifras significativas; 118 elementos; nucleidos; identidad de especies; fotón; hidrógeno; masa media; números cuánticos; configuraciones con excepciones e iones; Slater; orbitales hidrogenoides; color espectral.
 2. Motor de aprendizaje: temario como datos, corrector (numérico con unidades y cifras significativas, especies, elección y configuración), pistas, detectores de errores, dominio adaptativo, repaso espaciado, examen y persistencia.
 3. Atrio 3D, **Atomic Forge** y **Photon Lab** completos.
 4. Campaña: capítulos I «Identidad» y II «Luz».
-5. Centro de entrenamiento: práctica adaptativa, repaso, examen y progreso por apartados, con ejercicios de los bloques 1, 3 (salvo 3.1), 5.4 y 6 a partir de los generadores disponibles.
+5. Centro de entrenamiento: práctica adaptativa, repaso, examen y progreso por apartados, con ejercicios de los bloques 1, 3, 4, 5 y 6 (y 7.2/7.5) a partir de los generadores disponibles.
 6. Ajustes persistentes: calidad, movimiento reducido, sonido, escala de texto y alias.
 
 **Criterios de aceptación**
 - `npm test`: todos los tests verdes. Incluyen los ejemplos de TEO y las soluciones de AMP 1–10, 12, 15, 17 y 19, además de la comprobación de las 118 configuraciones.
 - `npm run build` sin errores de tipos.
 - `npm run e2e`: recorrido automático Atrio → Forja (construir ¹²C) → Photon Lab (emitir Hα) → Entrenamiento (resolver un ejercicio), sin errores de consola, con capturas en escritorio y móvil.
+
+**Resultado de la verificación**
+- 119 pruebas superadas: autoconsistencia de los 15 generadores (60 semillas × dificultad), los 35 ejercicios de las fuentes, las 118 configuraciones de referencia y los ejemplos de TEO y AMP.
+- La compilación con comprobación estricta de tipos termina sin errores.
+- Prueba de humo superada: 9 de 9 comprobaciones, en escritorio y en iPhone 13 emulado.
+- Correcciones científicas detectadas durante la verificación visual: la aproximación analítica CIE se sustituyó por la tabla oficial (700 nm salía naranja); el *tone mapping* AgX se cambió por Neutral (desplazaba el tono de los rojos); se quitaron las mayúsculas automáticas en las fichas (convertían λ en Λ y e⁻ en E⁻); y el radio de la nube se reescaló con el n* de Slater (el modelo hidrogenoide hacía el Cs unas 5 veces mayor).
+
+**Pendiente conocido de la fase 1:** la escena de ondas y la escalera de niveles en móvil son legibles, pero densas. Los niveles n ≥ 4 solo se rotulan en escritorio.
 
 ## Fase 2 · Electron Architect + Quantum Space
 - Constructor de diagramas de cajas con validación Pauli/Hund en vivo y estados fundamental, excitado y prohibido.
