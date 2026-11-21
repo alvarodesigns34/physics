@@ -145,8 +145,10 @@ function Tower() {
                     const next = [...arr];
                     next[j] = NEXT_BOX[st];
                     set({ boxes: { ...boxes, [label]: next }, focus: label });
-                    if (NEXT_BOX[st] === 0) sfx.remove();
-                    else sfx.add('e');
+                    const nx = NEXT_BOX[st];
+                    if (nx === 0) sfx.remove();
+                    else if (nx === 4) sfx.forbidden();
+                    else sfx.spin(nx !== 2);
                   }}
                 />
               ))}

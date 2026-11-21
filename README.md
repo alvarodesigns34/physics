@@ -7,7 +7,7 @@ Laboratorio interactivo de **estructura atómica y sistema periódico** para 1.�
 ```bash
 npm install
 npm run dev        # desarrollo en http://localhost:5173
-npm test           # 159 pruebas del núcleo científico y del motor de aprendizaje
+npm test           # 177 pruebas del núcleo científico y del motor de aprendizaje
 npm run build      # comprobación de tipos + compilación en dist/
 npm run e2e        # prueba de humo en navegador (requiere build previo)
 ```
@@ -16,16 +16,18 @@ npm run e2e        # prueba de humo en navegador (requiere build previo)
 
 | Área | Contenido |
 |---|---|
-| **Atrio** | Mundo central 3D con la densidad electrónica *calculada* del neón y acceso a las estaciones y la campaña |
-| **Atomic Forge** | Construcción de átomos e iones con botones, arrastre o teclado (P, N, E); identidad, estabilidad nuclear (NUBASE), isótopos naturales, configuración e isoelectrónicos. Nube electrónica con Z efectiva de Slater |
-| **Photon Lab** | Banco de ondas (λ, ν, T, E), escalera de niveles del hidrógeno con Rydberg, emisión, absorción y cascadas, detector UV-visible-IR y espectroscopio con líneas NIST |
-| **Entrenamiento** | Práctica adaptativa (26 generadores), repaso espaciado (Leitner), examen con informe por apartados, progreso sobre los 54 apartados del temario (todos con ejercicios) y 64 ejercicios de los apuntes |
+| **Atrio** | Mundo central 3D (columnata, suelo reflectante) con la densidad electrónica *calculada* del neón, nueve estaciones, acceso directo a la guía y al examen tipo, y bienvenida en la primera visita |
+| **Guía de estudio** | 7 lecciones por bloque: lo esencial, fórmulas con el significado y la unidad de cada símbolo, errores típicos de examen, consejos y ejercicios resueltos paso a paso; formulario completo. 10 widgets interactivos: anatomía de una onda (cuerda y onda EM: λ, ν, T, A, v), espectro electromagnético, Rydberg con diagrama de niveles, notación de nucleidos, números cuánticos, Möller, tendencias periódicas, masa atómica media, modelos y partículas |
+| **Atomic Forge** | Construcción de átomos e iones con botones, arrastre o teclado (P, N, E); identidad, estabilidad nuclear (NUBASE), isótopos naturales, configuración e isoelectrónicos. Nube electrónica con Z efectiva de Slater y visor de escala real (R = 1,2·A^⅓ fm frente al radio atómico) |
+| **Photon Lab** | Banco de ondas (λ, ν, T, E), escalera de niveles del hidrógeno con Rydberg, emisión, absorción y cascadas, detector UV-visible-IR y espectroscopio de prisma 3D: vidrio SF11 (Sellmeier), trazado de rayos con Snell y líneas NIST en su posición calculada |
+| **Entrenamiento** | Práctica adaptativa (32 generadores, 5 de ellos problemas compuestos de nivel examen), «Examen tipo» puntuado sobre 10 con enlaces a la teoría de cada fallo, repaso espaciado (Leitner), examen con informe por apartados, progreso sobre los 54 apartados del temario (todos con ejercicios) y 64 ejercicios de los apuntes |
 | **Time Machine** | Modelos de Dalton a la mecánica cuántica, colapso clásico de Rutherford, tubo de rayos catódicos (fuerza de Lorentz y q/m) y Geiger–Marsden con Monte Carlo en vivo frente a la fórmula de Rutherford |
 | **Mass Spectrometry Lab** | Sector magnético con isótopos naturales reales, espectro acumulado y masa media medida con su incertidumbre estadística |
-| **Quantum Space** | Orbitales reales (n ≤ 5) con fase, corte para ver nodos, órbita de Bohr superpuesta, P(r) y paquete de incertidumbre mínima |
+| **Quantum Space** | Orbitales reales (n ≤ 5) como superficie que encierra el 90 % de la probabilidad (marching cubes) o como nube de puntos, con fase, corte para ver nodos, órbita de Bohr superpuesta, P(r) y paquete de incertidumbre mínima |
 | **Electron Architect** | Torre de energía 3D con cajas interactivas, Pauli, Hund y Aufbau en vivo, excepciones reales y diagrama de Möller editable |
 | **Periodic Universe** | Tabla 3D de 118 elementos con propiedades reales, comparador razonado que detecta excepciones y tamaños de átomos frente a iones |
 | **Campaña** | 7 capítulos y 35 misiones con objetivos experimentales verificables |
+| **Sonido** | Síntesis WebAudio: ambiente propio de cada laboratorio, efectos por acción (partículas, fotones con tono según su frecuencia, contador Geiger, detector, espines, aciertos y errores) y volumen ajustable |
 | **Ajustes** | Calidad gráfica adaptable, movimiento reducido, sonido opcional, escala de texto, orden de configuraciones y exportar o importar el progreso |
 
 ## Documentación

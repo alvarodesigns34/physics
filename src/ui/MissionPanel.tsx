@@ -60,7 +60,7 @@ export function MissionPanel({ lab, signal }: { lab: LabId; signal: LabSignal })
       const stars = 1 + (hintsUsed === 0 ? 1 : 0) + (firstTry ? 1 : 0);
       const prevStars = useStore.getState().campaign[mission.id]?.stars ?? 0;
       updateMission(mission.id, { status: 'completada', step: mission.steps.length, stars: Math.max(stars, prevStars), hintsUsed, firstTry });
-      sfx.success();
+      sfx.complete();
       toast(`Misión ${mission.code} completada`);
       announce(`Misión ${mission.code}, ${mission.title}, completada.`);
     },

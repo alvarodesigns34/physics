@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { usePhoton, type PhotonTab } from './state';
-import { WaveScene, HydrogenScene, LampScene } from './scenes';
+import { WaveScene, HydrogenScene } from './scenes';
+import { SpectroscopeScene, PRISM } from './Spectroscope';
 import { DetectorStrip, EMBand, VisibleSpectrum, VisibleAxis } from './Spectra';
 import { fromWavelength, colorName, wavelengthToCss, isVisible } from '../../science/photon';
 import { SIM_CONSTANTS, R_H, CODATA } from '../../science/constants';
@@ -59,7 +60,7 @@ export function PhotonScene() {
   const mode = usePhoton((s) => s.spectroMode);
   useTabFromRoute();
   if (tab === 'ondas') return <WaveScene />;
-  if (tab === 'espectroscopio') return <LampScene symbol={el} mode={mode} />;
+  if (tab === 'espectroscopio') return <SpectroscopeScene symbol={el} mode={mode} />;
   return <HydrogenScene />;
 }
 
@@ -342,6 +343,39 @@ function SpectroPanel() {
         </div>
         <VisibleSpectrum lines={ref.lines} mode={spectroMode} label={`Espectro de ${spectroMode} del ${ref.name.toLowerCase()}`} />
         <VisibleAxis />
+        <details className="details-plain">
+          <summary className="small">Medidas del prisma: índice y desviación de cada línea</summary>
+          <div className="table-wrap" style={{ marginTop: 8 }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>λ (nm)</th>
+                  <th>n (SF11)</th>
+                  <th>Desviación δ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...ref.lines]
+                  .sort((a, b) => a.lambdaNm - b.lambdaNm)
+                  .map((ln) => {
+                    const t = PRISM.trace(ln.lambdaNm)!;
+                    return (
+                      <tr key={ln.lambdaNm}>
+                        <td className="mono" style={{ color: wavelengthToCss(ln.lambdaNm) }}>
+                          {fmt(ln.lambdaNm, 4)}
+                        </td>
+                        <td className="mono">{formatNumber(t.n, { sig: 5 })}</td>
+                        <td className="mono">{formatNumber((t.deviation * 180) / Math.PI, { sig: 4 })}°</td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+          <p className="small faint" style={{ marginTop: 8 }}>
+            Prisma equilátero de vidrio SF11 (Sellmeier, SCHOTT) en desviación mínima para 550 nm. El índice de refracción crece al disminuir λ: el violeta se desvía más que el rojo (dispersión). Así separa Newton la luz blanca.
+          </p>
+        </details>
         <p className="small faint">
           {spectroMode === 'emision' ? 'Gas excitado: emite solo unas longitudes de onda (líneas brillantes).' : 'Luz blanca que atraviesa el gas: faltan exactamente las mismas longitudes de onda (líneas oscuras).'}
         </p>
@@ -407,6 +441,26 @@ function SceneLabels({ tab }: { tab: PhotonTab }) {
         </AnchoredLabel>
       </LabelLayer>
     );
+  if (tab === 'espectroscopio')
+    return (
+      <LabelLayer>
+        <AnchoredLabel id="sp-lamp">
+          <span className="scene-label">Lámpara de descarga</span>
+        </AnchoredLabel>
+        <AnchoredLabel id="sp-prism">
+          <span className="scene-label">Prisma de vidrio SF11</span>
+        </AnchoredLabel>
+        <AnchoredLabel id="sp-screen">
+          <span className="scene-label">Pantalla</span>
+        </AnchoredLabel>
+        <AnchoredLabel id="sp-violet" className="desktop-only">
+          <span className="scene-label faint">400 nm</span>
+        </AnchoredLabel>
+        <AnchoredLabel id="sp-red" className="desktop-only">
+          <span className="scene-label faint">700 nm</span>
+        </AnchoredLabel>
+      </LabelLayer>
+    );
   if (tab === 'ondas')
     return (
       <LabelLayer>
@@ -437,11 +491,9 @@ export function PhotonOverlay() {
   const cascade = usePhoton((s) => s.cascade);
   const spectroGuess = usePhoton((s) => s.spectroGuess);
   const detected = usePhoton((s) => s.detected);
-  const spectroEl = usePhoton((s) => s.spectroElement);
   const [collapsed, setCollapsed] = useState(false);
   const mobile = useMediaQuery('(max-width: 760px)');
   const signal = useMemo(() => ({ lambdaNm, transition: lastTransition, cascade, spectro: spectroGuess }), [lambdaNm, lastTransition, cascade, spectroGuess]);
-  const lampColor = useMemo(() => VISIBLE_SPECTRA.find((s) => s.symbol === spectroEl)!.name, [spectroEl]);
 
   return (
     <div className="workspace">
@@ -458,7 +510,7 @@ export function PhotonOverlay() {
               </>
             )}
             {tab === 'ondas' && <EpiTag kind="esquema">Onda dibujada con λ en escala logarítmica comprimida; la velocidad de la animación no es real. E y B, perpendiculares y en fase</EpiTag>}
-            {tab === 'espectroscopio' && <EpiTag kind="calculo">Color de la lámpara de {lampColor.toLowerCase()}: suma de sus líneas visibles (aproximado)</EpiTag>}
+            {tab === 'espectroscopio' && <EpiTag kind="calculo">Trayectorias con la ley de Snell y el índice real del vidrio SF11; líneas NIST en su posición calculada</EpiTag>}
           </div>
         </div>
       </div>

@@ -17,6 +17,7 @@ import { ELEMENTS, CATEGORY_LABEL, elementBySymbol, displayWeight } from '../../
 import { MissionPanel } from '../../ui/MissionPanel';
 import { EpiTag, announce } from '../../ui/common';
 import { Icon } from '../../ui/Icon';
+import { RealScale } from './RealScale';
 
 /** Unidades de escena por radio de Bohr para la nube (la escala del núcleo NO es real). */
 const CLOUD_SCALE = 1.15;
@@ -340,7 +341,8 @@ export function ForgeOverlay() {
       if (kind === 'e') next.e = Math.min(Math.max(next.z + 3, 2), Math.max(0, s.e + delta));
       if (next.z === s.z && next.n === s.n && next.e === s.e) return;
       setSp(next);
-      if (delta > 0) sfx.add(kind);
+      if (kind === 'p' && next.z !== s.z) sfx.transmute();
+      else if (delta > 0) sfx.add(kind);
       else sfx.remove();
       const nid = identify(next);
       announce(`${nid.element ? nid.element.name : 'Sin elemento'}: ${next.z} protones, ${next.n} neutrones, ${next.e} electrones. ${KIND_LABEL[nid.kind]}${nid.charge ? `, carga ${chargeLabel(nid.charge)}` : ''}.`);
@@ -490,6 +492,8 @@ export function ForgeOverlay() {
               </div>
             </section>
           )}
+
+          {sp.z > 0 && <RealScale z={sp.z} a={sp.z + sp.n} />}
 
           <section className="section">
             <IsotopeLadder sp={sp} table={table} onPick={(n) => setSp({ ...sp, n })} />

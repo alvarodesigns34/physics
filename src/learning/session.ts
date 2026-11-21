@@ -3,7 +3,7 @@
  */
 import { mulberry32 } from '../science/numbers';
 import { chooseDifficulty, dueCards, initialMastery, type NodeMastery, type ReviewCard } from './mastery';
-import { COVERED_NODES, generatorsForNode, SOURCE_EXERCISES } from './registry';
+import { COVERED_NODES, GENERATOR_BY_ID, generatorsForNode, SOURCE_EXERCISES } from './registry';
 import type { Difficulty, Exercise } from './types';
 
 export interface SelectionState {
@@ -94,4 +94,29 @@ export function buildExam(scope: string[], count: number, seed: number): Exercis
     i++;
   }
   return out.slice(0, count);
+}
+
+/**
+ * Examen tipo: la estructura habitual de una prueba de 1.º de Bachillerato sobre el tema.
+ * Cinco problemas compuestos (uno por gran bloque) y tres cuestiones teóricas.
+ */
+export const MOCK_EXAM_PLAN: { generator: string; difficulty: Difficulty; points: number }[] = [
+  { generator: 'examen-masa-iones', difficulty: 2, points: 1.5 },
+  { generator: 'historia', difficulty: 1, points: 1 },
+  { generator: 'examen-ondas', difficulty: 2, points: 1.5 },
+  { generator: 'examen-espectro', difficulty: 3, points: 2 },
+  { generator: 'cuantica-conceptos', difficulty: 1, points: 0.5 },
+  { generator: 'examen-cuantico', difficulty: 2, points: 1.5 },
+  { generator: 'examen-elementos', difficulty: 3, points: 1.5 },
+  { generator: 'conceptos-varios', difficulty: 1, points: 0.5 },
+];
+
+export function buildMockExam(seed: number): Exercise[] {
+  const rng = mulberry32(seed);
+  return MOCK_EXAM_PLAN.map(({ generator, difficulty }) => {
+    const gen = GENERATOR_BY_ID.get(generator);
+    if (!gen) throw new Error(`Generador desconocido: ${generator}`);
+    const d = gen.difficulties.includes(difficulty) ? difficulty : gen.difficulties[gen.difficulties.length - 1]!;
+    return gen.create(randomSeed(rng), d);
+  });
 }

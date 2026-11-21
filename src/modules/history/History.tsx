@@ -362,6 +362,7 @@ function GeigerContent() {
         if (b >= 0) bins[b]! += 1;
         // Visualiza todas las desviaciones > 2° y una muestra de las pequeñas
         if (deg > 2 || rng() < 0.012) {
+          sfx.geiger();
           const phi = rng() * Math.PI * 2;
           const dir = new THREE.Vector3(Math.cos(th), Math.sin(th) * Math.cos(phi), Math.sin(th) * Math.sin(phi));
           S.pos[S.i]!.copy(dir).multiplyScalar(RING_R);
@@ -371,7 +372,6 @@ function GeigerContent() {
             S.tdir[S.ti]!.copy(dir);
             S.tlife[S.ti] = 1;
             S.ti = (S.ti + 1) % 40;
-            if (deg > 30) sfx.add('n');
           }
         }
       }

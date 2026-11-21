@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { MeshReflectorMaterial, OrbitControls } from '@react-three/drei';
 import { create } from 'zustand';
 import { AnchoredLabel, LabelLayer, LabelProjector } from '../../render/labels';
 import * as THREE from 'three';
@@ -40,22 +40,99 @@ const STATIONS: StationDef[] = [
   { id: 'cuantico', route: '/cuantico', title: 'Quantum Space', subtitle: 'Orbitales y números cuánticos', position: [3.68, 0, -4.33] },
   { id: 'arquitecto', route: '/arquitecto', title: 'Electron Architect', subtitle: 'Configuración electrónica', position: [6.58, 0, -1.90] },
   { id: 'periodico', route: '/periodico', title: 'Periodic Universe', subtitle: 'Tabla y propiedades periódicas', position: [8.08, 0, 1.58] },
-  { id: 'entrenamiento', route: '/entrenamiento', title: 'Centro de entrenamiento', subtitle: 'Práctica, repaso y examen', position: [0, 0, 3.2] },
+  { id: 'guia', route: '/guia', title: 'Guía de estudio', subtitle: 'Teoría, fórmulas y ejemplos', position: [-2.4, 0, 3.3] },
+  { id: 'entrenamiento', route: '/entrenamiento', title: 'Centro de entrenamiento', subtitle: 'Práctica, repaso y examen tipo', position: [2.4, 0, 3.3] },
 ];
 
-function Floor() {
+function Floor({ reflective }: { reflective: boolean }) {
   const rings = useMemo(() => [2.2, 4.6, 7.4, 11], []);
   return (
     <group>
       <mesh rotation-x={-Math.PI / 2} receiveShadow>
         <circleGeometry args={[30, 96]} />
-        <meshStandardMaterial color="#121110" roughness={0.38} metalness={0.15} envMapIntensity={0.35} />
+        {reflective ? (
+          <MeshReflectorMaterial resolution={512} blur={[380, 120]} mixBlur={1} mixStrength={2.2} mirror={0.35} roughness={0.75} depthScale={0.4} minDepthThreshold={0.4} maxDepthThreshold={1.2} color="#121110" metalness={0.35} />
+        ) : (
+          <meshStandardMaterial color="#121110" roughness={0.38} metalness={0.15} envMapIntensity={0.35} />
+        )}
       </mesh>
       {rings.map((r) => (
         <mesh key={r} rotation-x={-Math.PI / 2} position-y={0.002}>
           <ringGeometry args={[r, r + 0.012, 160]} />
           <meshBasicMaterial color="#ece6dc" transparent opacity={0.06} />
         </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** Columnata y anillo de luz: la arquitectura del Atrio. */
+function Architecture({ reduced }: { reduced: boolean }) {
+  const cols = useMemo(() => {
+    const out: [number, number][] = [];
+    for (let i = 0; i <= 16; i++) {
+      const a = (-110 + (220 * i) / 16) * (Math.PI / 180);
+      out.push([Math.sin(a) * 13.5, -Math.cos(a) * 13.5 + 1]);
+    }
+    return out;
+  }, []);
+  const ring = useRef<THREE.Mesh>(null);
+  useFrame((st) => {
+    if (ring.current && !reduced) (ring.current.material as THREE.MeshBasicMaterial).opacity = 0.22 + 0.06 * Math.sin(st.clock.elapsedTime * 0.6);
+  });
+  return (
+    <group>
+      {cols.map(([x, z], i) => (
+        <group key={i} position={[x, 0, z]}>
+          <mesh position-y={3.2}>
+            <cylinderGeometry args={[0.16, 0.2, 6.4, 24]} />
+            <meshStandardMaterial color="#1d1a17" roughness={0.42} metalness={0.3} envMapIntensity={0.7} />
+          </mesh>
+          <mesh position-y={6.45}>
+            <cylinderGeometry args={[0.3, 0.22, 0.1, 24]} />
+            <meshStandardMaterial color="#2a2622" roughness={0.35} metalness={0.5} />
+          </mesh>
+          <mesh position-y={6.52}>
+            <cylinderGeometry args={[0.26, 0.26, 0.02, 24]} />
+            <meshBasicMaterial color={new THREE.Color('#f2a93b').multiplyScalar(1.4)} toneMapped={false} />
+          </mesh>
+          <mesh position-y={0.06}>
+            <cylinderGeometry args={[0.32, 0.36, 0.12, 24]} />
+            <meshStandardMaterial color="#24211d" roughness={0.5} metalness={0.3} />
+          </mesh>
+        </group>
+      ))}
+      {/* Arquitrabe luminoso: solo el arco de la columnata (−110° a 110°), por detrás de las estaciones */}
+      <mesh ref={ring} position={[0, 6.56, 1]} rotation={[-Math.PI / 2, 0, (-20 * Math.PI) / 180]}>
+        <torusGeometry args={[13.5, 0.03, 8, 240, (220 * Math.PI) / 180]} />
+        <meshBasicMaterial color="#f2a93b" transparent opacity={0.25} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Libro abierto con fórmulas que se iluminan: la Guía de estudio. */
+function GuideHologram({ reduced }: { reduced: boolean }) {
+  const g = useRef<THREE.Group>(null);
+  useFrame((st) => {
+    if (g.current && !reduced) g.current.position.y = 1.35 + Math.sin(st.clock.elapsedTime * 1.1) * 0.05;
+  });
+  const lines = useMemo(() => [0.5, 0.36, 0.22, 0.08, -0.06, -0.2].map((y, i) => ({ y, w: [0.42, 0.3, 0.38, 0.24, 0.4, 0.28][i]! })), []);
+  return (
+    <group ref={g} position={[0, 1.35, 0]} rotation-x={-0.35}>
+      {[-1, 1].map((side) => (
+        <group key={side} rotation-y={side * 0.32}>
+          <mesh position={[side * 0.3, 0.15, 0]}>
+            <boxGeometry args={[0.58, 0.82, 0.015]} />
+            <meshStandardMaterial color="#e9e1d3" roughness={0.8} emissive="#f2a93b" emissiveIntensity={0.06} />
+          </mesh>
+          {lines.map((l, i) => (
+            <mesh key={i} position={[side * 0.3 - 0.02 * side, l.y, 0.012]}>
+              <boxGeometry args={[l.w, 0.025, 0.004]} />
+              <meshBasicMaterial color={i === 1 && side === 1 ? new THREE.Color('#f2a93b').multiplyScalar(2) : new THREE.Color('#3a342d')} toneMapped={i !== 1 || side !== 1} />
+            </mesh>
+          ))}
+        </group>
       ))}
     </group>
   );
@@ -290,6 +367,7 @@ function Station({ def, reduced, hovered, onHover }: { def: StationDef; reduced:
         {def.id === 'forja' && <ForgeHologram reduced={reduced} />}
         {def.id === 'fotones' && <PhotonHologram reduced={reduced} />}
         {def.id === 'entrenamiento' && <SyllabusHologram />}
+        {def.id === 'guia' && <GuideHologram reduced={reduced} />}
         {def.id === 'historia' && <BohrHologram reduced={reduced} />}
         {def.id === 'masas' && <MassHologram />}
         {def.id === 'cuantico' && <OrbitalHologram reduced={reduced} />}
@@ -333,7 +411,8 @@ export function HubScene() {
       <ambientLight intensity={0.18} />
       <spotLight position={[0, 9, 2]} angle={0.55} penumbra={0.9} intensity={60} color="#ffe2bd" distance={30} decay={2} />
       <pointLight position={[-6, 3, 4]} intensity={10} color="#9dbfe8" distance={18} decay={2} />
-      <Floor />
+      <Floor reflective={q.tier === 'alta'} />
+      <Architecture reduced={reduced} />
       <CentralAtom reduced={reduced} points={Math.round(q.points * 0.8)} />
       {STATIONS.map((s) => (
         <Station key={s.id} def={s} reduced={reduced} hovered={hovered === s.id} onHover={setHovered} />
@@ -410,6 +489,19 @@ export function HubOverlay() {
             <span className="eyebrow eyebrow--accent">Estructura atómica · Sistema periódico</span>
             <h1 className="h2">La materia, de cerca{alias ? `, ${alias}` : ''}.</h1>
             <p className="small muted">Construye átomos, haz que emitan luz y comprueba con cálculos de verdad lo que dice el temario. Toca una estación para entrar.</p>
+          </section>
+          <section className="section" aria-label="Preparar el examen">
+            <span className="eyebrow">Preparar el examen</span>
+            <div className="hub-quick">
+              <a href="#/guia" className="card hub-quick__item">
+                <span className="h3">Guía de estudio</span>
+                <span className="small muted">Teoría explicada, fórmulas, errores típicos y ejemplos resueltos</span>
+              </a>
+              <a href="#/entrenamiento?v=examen" className="card hub-quick__item">
+                <span className="h3">Examen tipo</span>
+                <span className="small muted">8 preguntas, 10 puntos, 50 minutos, con corrección</span>
+              </a>
+            </div>
           </section>
           <section className="section">
             <div className="row row--between">

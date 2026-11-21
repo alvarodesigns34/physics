@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
+import { useThree } from '@react-three/fiber';
+import { MarchingCubes } from 'three/examples/jsm/objects/MarchingCubes.js';
+import { orbitalGrid } from '../../science/isosurface';
 import * as THREE from 'three';
 import { create } from 'zustand';
 import { Stage } from '../../render/Stage';
@@ -25,12 +28,13 @@ interface QState {
   slice: boolean;
   bohr: boolean;
   subshell: boolean;
+  view: 'nube' | 'superficie';
   tab: Tab;
   sigmaNm: number;
   set: (p: Partial<Omit<QState, 'set'>>) => void;
 }
 
-export const useQuantum = create<QState>((set) => ({ n: 2, l: 1, m: 0, slice: false, bohr: false, subshell: false, tab: 'orbitales', sigmaNm: 0.1, set: (p) => set(p) }));
+export const useQuantum = create<QState>((set) => ({ n: 2, l: 1, m: 0, slice: false, bohr: false, subshell: false, view: 'superficie', tab: 'orbitales', sigmaNm: 0.1, set: (p) => set(p) }));
 
 const fmt = (v: number, sig = 3) => formatNumber(v, { sig });
 
@@ -163,6 +167,99 @@ function OrbitalCloud({ data, scale, slice, reduced, size }: { data: CloudData; 
   );
 }
 
+// ── Superficie de contorno (90 %) ────────────────────────────────────────
+
+function surfaceMaterial(color: string, emissive: string) {
+  return new THREE.MeshPhysicalMaterial({
+    color,
+    emissive,
+    emissiveIntensity: 0.32,
+    roughness: 0.26,
+    metalness: 0,
+    clearcoat: 1,
+    clearcoatRoughness: 0.18,
+    envMapIntensity: 1.3,
+    sheen: 0.4,
+    sheenColor: new THREE.Color(color),
+    side: THREE.DoubleSide,
+  });
+}
+
+interface SurfaceSpec {
+  color: string;
+  sign: 1 | -1;
+  m: number;
+}
+
+function OrbitalSurface({ n, l, m, subshell, scale, slice, res }: { n: number; l: number; m: number; subshell: boolean; scale: number; slice: boolean; res: number }) {
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    gl.localClippingEnabled = true;
+  }, [gl]);
+  const clip = useMemo(() => [new THREE.Plane(new THREE.Vector3(0, -1, 0), 0)], []);
+  const group = useRef<THREE.Group>(null);
+  const meshes = useMemo(() => {
+    const ms = subshell ? Array.from({ length: 2 * l + 1 }, (_, i) => i - l) : [m];
+    const size = subshell ? Math.min(res, 48) : res;
+    const out: { mc: MarchingCubes; half: number }[] = [];
+    ms.forEach((mm, k) => {
+      const g = orbitalGrid(n, l, mm, size, 0.9);
+      const specs: SurfaceSpec[] = subshell ? [{ color: `#${M_COLORS[k % M_COLORS.length]!.getHexString()}`, sign: 1, m: mm }] : [
+        { color: '#ffb54d', sign: 1, m: mm },
+        { color: '#86c2f7', sign: -1, m: mm },
+      ];
+      for (const sp of specs) {
+        const mat = surfaceMaterial(sp.color, sp.color);
+        const mc = new MarchingCubes(size, mat, false, false, 90000);
+        mc.isolation = g.iso;
+        const f = mc.field;
+        for (let i = 0; i < g.psi.length; i++) f[i] = subshell ? Math.abs(g.psi[i]!) : sp.sign * g.psi[i]!;
+        mc.update();
+        if (mc.count === 0) {
+          mat.dispose();
+          mc.geometry.dispose();
+          continue;
+        }
+        out.push({ mc, half: g.half });
+      }
+    });
+    return out;
+  }, [n, l, m, subshell, res]);
+  useEffect(
+    () => () =>
+      meshes.forEach(({ mc }) => {
+        mc.geometry.dispose();
+        (mc.material as THREE.Material).dispose();
+      }),
+    [meshes],
+  );
+  useEffect(() => {
+    meshes.forEach(({ mc }) => {
+      (mc.material as THREE.Material).clippingPlanes = slice ? clip : [];
+      (mc.material as THREE.Material).needsUpdate = true;
+    });
+  }, [slice, meshes, clip]);
+  const reduced = useReducedMotion();
+  const grow = useRef(0);
+  useEffect(() => {
+    grow.current = 0;
+  }, [meshes]);
+  useFrame((_, dt) => {
+    grow.current = Math.min(1, grow.current + dt * 2.2);
+    const e = reduced ? 1 : 1 - Math.pow(1 - grow.current, 3);
+    meshes.forEach(({ mc, half }) => mc.scale.setScalar(half * scale * 0.74 * (0.85 + 0.15 * e)));
+    if (group.current && !reduced && !slice) group.current.rotation.z += dt * 0.08;
+    if (group.current && slice) group.current.rotation.z += (0 - group.current.rotation.z) * Math.min(1, dt * 4);
+  });
+  return (
+    <group ref={group}>
+      {meshes.map(({ mc }) => (
+        <primitive key={mc.uuid} object={mc} />
+      ))}
+    </group>
+  );
+}
+
 function Axes() {
   const L = 4;
   return (
@@ -188,7 +285,7 @@ const AXIS_ANCHORS = [
 ];
 
 export function QuantumScene() {
-  const { n, l, m, slice, bohr, subshell } = useQuantum();
+  const { n, l, m, slice, bohr, subshell, view } = useQuantum();
   const q = useQuality();
   const reduced = useReducedMotion();
   const data = useMemo(() => buildCloud(n, l, m, subshell, Math.min(60000, q.points * 2.2)), [n, l, m, subshell, q.points]);
@@ -197,7 +294,11 @@ export function QuantumScene() {
   return (
     <Stage camera={slice ? [0, 9, 0.01] : [5.2, 3.4, 6.2]} fov={40} key={slice ? 'corte' : 'libre'}>
       <group rotation={[-Math.PI / 2, 0, 0]}>
-        <OrbitalCloud data={data} scale={scale} slice={slice} reduced={reduced} size={q.tier === 'baja' ? 60 : 42} />
+        {view === 'nube' ? (
+          <OrbitalCloud data={data} scale={scale} slice={slice} reduced={reduced} size={q.tier === 'baja' ? 60 : 42} />
+        ) : (
+          <OrbitalSurface n={n} l={l} m={m} subshell={subshell} scale={scale} slice={slice} res={q.tier === 'alta' ? 72 : q.tier === 'media' ? 56 : 40} />
+        )}
         {bohr && (
           <mesh>
             <torusGeometry args={[n * n * scale, 0.012, 8, 160]} />
@@ -429,7 +530,11 @@ export function QuantumOverlay() {
           </p>
         </div>
         <div className="stage-caption desktop-only">
-          <EpiTag kind="calculo">Puntos muestreados de |ψ|² del hidrógeno; color = signo de ψ (fase), no carga</EpiTag>
+          {st.view === 'nube' ? (
+            <EpiTag kind="calculo">Puntos muestreados de |ψ|² del hidrógeno; color = signo de ψ (fase), no carga</EpiTag>
+          ) : (
+            <EpiTag kind="calculo">Superficie que encierra el 90 % de la probabilidad; color = signo de ψ (fase), no carga</EpiTag>
+          )}
           {st.bohr && <EpiTag kind="historico">Anillo: órbita de Bohr de radio n²·a₀</EpiTag>}
         </div>
       </div>
@@ -451,6 +556,18 @@ export function QuantumOverlay() {
           {st.tab === 'orbitales' ? (
             <>
               <section className="section">
+                <div className="field">
+                  <span className="label" id="q-view">Representación</span>
+                  <div className="segmented" role="radiogroup" aria-labelledby="q-view">
+                    <button type="button" role="radio" aria-checked={st.view === 'superficie'} aria-pressed={st.view === 'superficie'} onClick={() => st.set({ view: 'superficie' })}>
+                      Superficie del 90 %
+                    </button>
+                    <button type="button" role="radio" aria-checked={st.view === 'nube'} aria-pressed={st.view === 'nube'} onClick={() => st.set({ view: 'nube' })}>
+                      Nube de probabilidad
+                    </button>
+                  </div>
+                  <span className="small faint">{st.view === 'superficie' ? 'La forma que dibujan los libros: dentro de esa superficie hay un 90 % de probabilidad de encontrar al electrón.' : 'Cada punto es una posición posible del electrón: donde hay más puntos, más probabilidad.'}</span>
+                </div>
                 <span className="eyebrow">Números cuánticos</span>
                 <Picker label="n · nivel (tamaño y energía)" values={[1, 2, 3, 4, 5]} value={n} onChange={(v) => st.set({ n: v, l: Math.min(l, v - 1), m: Math.max(-Math.min(l, v - 1), Math.min(m, Math.min(l, v - 1))) })} />
                 <Picker label="l · subnivel (forma)" values={Array.from({ length: Math.min(4, n) }, (_, i) => i)} value={l} onChange={(v) => st.set({ l: v, m: Math.max(-v, Math.min(m, v)) })} render={(v) => `${v} · ${lLetter(v)}`} />
@@ -486,7 +603,7 @@ export function QuantumOverlay() {
                 <RadialPlot n={n} l={l} scaleBohr={st.bohr} />
                 {n === 1 && st.bohr && <Feedback tone="info">En el 1s el radio más probable coincide con el radio de Bohr (a₀ = 52,9 pm), pero el electrón no está «en» la órbita: puede encontrarse más cerca o más lejos.</Feedback>}
                 {st.subshell && <Feedback tone="info">Cada color es un orbital del subnivel {n}{lLetter(l)}. Juntos forman una distribución con simetría esférica (teorema de Unsöld): por eso un subnivel lleno no tiene dirección preferente.</Feedback>}
-                {st.slice && <Feedback tone="info">Corte por el plano xy: las zonas vacías son nodos, superficies donde ψ = 0 y la probabilidad es nula. Al cruzar un nodo, ψ cambia de signo (de color).</Feedback>}
+                {st.slice && <Feedback tone="info">{st.view === 'nube' ? 'Corte por el plano xy: las zonas vacías son nodos, superficies donde ψ = 0 y la probabilidad es nula. Al cruzar un nodo, ψ cambia de signo (de color).' : 'Corte por el plano xy: se ve el interior de las superficies. Los nodos radiales aparecen como capas concéntricas separadas por huecos.'}</Feedback>}
               </section>
               <section className="section">
                 <span className="eyebrow">Comprobar una combinación</span>
