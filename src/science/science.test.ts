@@ -16,7 +16,7 @@ import {
   valenceShell,
 } from './configuration';
 import { orbitalsInShell, shellCapacity, subshellCapacity, validateQuantumSet } from './quantum';
-import { colorName, emRegion, fromWavelength, wavelengthToLinearRGB } from './photon';
+import { cieXYZ, colorName, emRegion, fromWavelength, wavelengthToLinearRGB } from './photon';
 import { cascadeLineCount, cascadeLines, levelEnergyEV, seriesLimitWavelength, transition, upperLevelFromFrequency } from './hydrogen';
 import { EXERCISE_DATA, PARTICLES, R_H, THEORY_DATA } from './constants';
 import { averageAtomicMass } from './massSpec';
@@ -271,6 +271,18 @@ describe('fotones (AMP 6)', () => {
     expect(emRegion(1e-12).id).toBe('gamma');
     expect(emRegion(3).id).toBe('radio');
   });
+  it('tabla CIE 1931 y tonos espectrales', () => {
+    const [x, y] = cieXYZ(700);
+    expect(x).toBeCloseTo(0.011359, 6);
+    expect(y).toBeCloseTo(0.004102, 6);
+    const [r7, g7, b7] = wavelengthToLinearRGB(700);
+    expect(g7).toBeLessThan(0.02 * r7); // 700 nm: rojo puro, no naranja
+    expect(b7).toBeLessThan(0.2 * r7);
+    const [r58, g58, b58] = wavelengthToLinearRGB(580);
+    const enc = (c: number) => (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
+    expect(enc(g58) / enc(r58)).toBeGreaterThan(0.6); // amarillo (sRGB codificado)
+    expect(b58).toBeLessThan(0.05);
+  });
   it('colores espectrales plausibles', () => {
     const [r, g, b] = wavelengthToLinearRGB(656);
     expect(r).toBeGreaterThan(g);
@@ -425,5 +437,21 @@ describe('identidad de especies (AMP 1–5)', () => {
     expect(PARTICLES.electron.massU).toBeCloseTo(0.000549, 6);
     expect(PARTICLES.proton.massU).toBeCloseTo(1.007276, 6);
     expect(PARTICLES.neutron.massU).toBeCloseTo(1.008665, 6);
+  });
+});
+
+describe('tamaño de la nube electrónica', () => {
+  it('sigue las tendencias reales: Cs > K > Na > Li > Ne y el F < O', () => {
+    const outer = (z: number) => {
+      const d = atomDensity(z, groundState(z), 10, mulberry32(1));
+      return Math.max(...d.subshells.filter((s) => s.n === Math.max(...d.subshells.map((x) => x.n))).map((s) => s.meanRadius));
+    };
+    expect(outer(55)).toBeGreaterThan(outer(19));
+    expect(outer(19)).toBeGreaterThan(outer(11));
+    expect(outer(11)).toBeGreaterThan(outer(3));
+    expect(outer(3)).toBeGreaterThan(outer(10));
+    expect(outer(8)).toBeGreaterThan(outer(9));
+    // Cs: del orden de 5–10 a₀ (radio covalente real ≈ 4,6 a₀), no 25 a₀ como daría el modelo hidrogenoide
+    expect(outer(55)).toBeLessThan(10);
   });
 });

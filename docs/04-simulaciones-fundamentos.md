@@ -26,7 +26,7 @@ Los ejercicios usan los datos de su enunciado (véase la sección 1.4).
 
 - c = λ·ν; T = 1/ν; E = h·ν = h·c/λ; E(eV) = E(J)/e; número de ondas ṽ = 1/λ.
 - **Regiones** (convención usada, límites aproximados): γ < 10 pm · X 10 pm–10 nm · UV 10–380 nm · visible 380–780 nm · IR 780 nm–1 mm · microondas 1 mm–1 m · radio > 1 m. Las fronteras son convencionales y se muestran como transiciones difusas.
-- **Color de una λ visible:** funciones de igualación de color CIE 1931 (aproximación analítica multilobular de Wyman, Sloan y Shirley, 2013) → XYZ → sRGB lineal → ajuste de gama por desaturación y normalización. Etiqueta: *Cálculo* con nota «Los monitores no pueden reproducir colores espectrales puros; se muestra la aproximación sRGB más cercana».
+- **Color de una λ visible:** tabla oficial de funciones de igualación de color CIE 1931 2° (cada 5 nm, interpolación lineal; se descartó la aproximación analítica de Wyman et al. por su error en las colas: a 700 nm daba naranja) → XYZ → sRGB lineal → ajuste de gama por desaturación y normalización. Etiqueta: *Cálculo* con nota «Los monitores no pueden reproducir colores espectrales puros; se muestra la aproximación sRGB más cercana».
 
 ## 4.4 Hidrógeno: Bohr y Rydberg
 

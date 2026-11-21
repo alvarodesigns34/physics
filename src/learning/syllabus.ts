@@ -1,5 +1,5 @@
 /**
- * Temario como datos: los 52 nodos de la matriz de cobertura (docs/01-matriz-cobertura.md).
+ * Temario como datos: los 54 nodos de la matriz de cobertura (docs/01-matriz-cobertura.md).
  */
 export type ModuleId = 'forja' | 'historia' | 'fotones' | 'masas' | 'cuantico' | 'arquitecto' | 'periodico' | 'entrenamiento';
 
@@ -37,7 +37,7 @@ const N = (id: string, title: string, modules: ModuleId[], sources: string): Syl
 
 export const NODES: SyllabusNode[] = [
   N('1.1', 'Número atómico Z', ['forja'], 'TEO p.1 · AMP 1–5'),
-  N('1.2', 'Número másico y notación ᴬ_Z X', ['forja'], 'TEO p.1 · AMP 1–5'),
+  N('1.2', 'Número másico y notación nuclear', ['forja'], 'TEO p.1 · AMP 1–5'),
   N('1.3', 'Isótopos', ['forja', 'masas'], 'TEO p.1 · AMP 3'),
   N('1.4', 'Iones: cationes y aniones', ['forja'], 'TEO p.1 · AMP 4–5'),
   N('1.5', 'Especies isoelectrónicas', ['forja', 'periodico'], 'TEO p.1, 21 · AMP 23, 27'),

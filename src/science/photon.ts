@@ -2,6 +2,7 @@
  * Radiación electromagnética: relaciones λ–ν–T–E, regiones del espectro y color de una longitud de onda.
  */
 import { SIM_CONSTANTS, type ConstantSet } from './constants';
+import { CIE_1931, CIE_START, CIE_STEP } from './data/cie1931';
 
 export interface PhotonProperties {
   /** m */
@@ -88,20 +89,17 @@ export function colorName(lambdaNm: number): string | null {
   return 'rojo';
 }
 
-// ── Color espectral: CIE 1931 (aproximación de Wyman, Sloan y Shirley, 2013) ──
+// ── Color espectral: tabla CIE 1931 2° (interpolación lineal cada 5 nm) ──
 
-function g(x: number, mu: number, s1: number, s2: number): number {
-  const s = x < mu ? s1 : s2;
-  const t = (x - mu) / s;
-  return Math.exp(-0.5 * t * t);
-}
-
+/** Funciones de igualación de color CIE 1931 (x̄, ȳ, z̄) para λ en nm; 0 fuera de 380–780 nm. */
 export function cieXYZ(lambdaNm: number): [number, number, number] {
-  const L = lambdaNm;
-  const x = 1.056 * g(L, 599.8, 37.9, 31.0) + 0.362 * g(L, 442.0, 16.0, 26.7) - 0.065 * g(L, 501.1, 20.4, 26.2);
-  const y = 0.821 * g(L, 568.8, 46.9, 40.5) + 0.286 * g(L, 530.9, 16.3, 31.1);
-  const z = 1.217 * g(L, 437.0, 11.8, 36.0) + 0.681 * g(L, 459.0, 26.0, 13.8);
-  return [x, y, z];
+  const f = (lambdaNm - CIE_START) / CIE_STEP;
+  if (f < 0 || f > CIE_1931.length - 1) return [0, 0, 0];
+  const i = Math.min(CIE_1931.length - 2, Math.floor(f));
+  const t = f - i;
+  const a = CIE_1931[i]!;
+  const b = CIE_1931[i + 1]!;
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 }
 
 /**
@@ -110,7 +108,7 @@ export function cieXYZ(lambdaNm: number): [number, number, number] {
  * de forma suavizada, para que las líneas violeta y rojo profundo se vean tenues como en la realidad.
  */
 export function wavelengthToLinearRGB(lambdaNm: number): [number, number, number] {
-  if (lambdaNm < 370 || lambdaNm > 790) return [0, 0, 0];
+  if (lambdaNm < 380 || lambdaNm > 780) return [0, 0, 0];
   const [X, Y, Z] = cieXYZ(lambdaNm);
   let r = 3.2406 * X - 1.5372 * Y - 0.4986 * Z;
   let gg = -0.9689 * X + 1.8758 * Y + 0.0415 * Z;

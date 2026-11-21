@@ -181,12 +181,24 @@ export function sampleOrbital(n: number, l: number, m: number, Z: number, count:
   return out;
 }
 
+/**
+ * Número cuántico efectivo n* de Slater (1930): 1, 2, 3, 3,7, 4,0, 4,2. Para n = 7 se extrapola 4,3.
+ * Con él, el radio medio de un orbital de Slater es ⟨r⟩ = n*(2n* + 1) / (2·Z_ef).
+ */
+export const SLATER_N_EFF = [0, 1, 2, 3, 3.7, 4.0, 4.2, 4.3];
+
+export function slaterMeanRadius(n: number, zeff: number): number {
+  const ns = SLATER_N_EFF[n] ?? n;
+  return (ns * (2 * ns + 1)) / (2 * zeff);
+}
+
 export interface DensitySubshell {
   label: string;
   n: number;
   l: number;
   electrons: number;
   zeff: number;
+  /** Radio medio (a₀) con n* de Slater: la forma radial es hidrogenoide y se reescala a este valor. */
   meanRadius: number;
   count: number;
 }
@@ -200,7 +212,9 @@ export interface AtomDensity {
 
 /**
  * Nube de densidad electrónica total de un átomo o ion: cada subnivel contribuye con puntos
- * proporcionales a sus electrones, con distribución radial hidrogenoide de Z_ef (Slater) y
+ * proporcionales a sus electrones, con distribución radial hidrogenoide de Z_ef (Slater), reescalada
+ * para n ≥ 4 al radio medio de los orbitales de Slater (el modelo hidrogenoide con n entero
+ * sobrestima mucho el tamaño de los átomos pesados), y
  * distribución angular promediada esféricamente (la suma sobre los orbitales de un subnivel
  * lleno es esférica; para subniveles parciales se representa el promedio esférico).
  */
@@ -208,7 +222,7 @@ export function atomDensity(z: number, conf: Configuration, totalPoints: number,
   const electrons = conf.reduce((a, s) => a + s.e, 0);
   const subshells: DensitySubshell[] = conf.map((s) => {
     const zeff = Math.max(0.5, slater(z, conf, s).zeff);
-    return { label: subshellLabel(s), n: s.n, l: s.l, electrons: s.e, zeff, meanRadius: meanRadius(s.n, s.l, zeff), count: 0 };
+    return { label: subshellLabel(s), n: s.n, l: s.l, electrons: s.e, zeff, meanRadius: s.n <= 3 ? meanRadius(s.n, s.l, zeff) : slaterMeanRadius(s.n, zeff), count: 0 };
   });
   if (electrons === 0) return { positions: new Float32Array(0), subshellIndex: new Uint8Array(0), subshells };
   let assigned = 0;
@@ -220,8 +234,10 @@ export function atomDensity(z: number, conf: Configuration, totalPoints: number,
   const subshellIndex = new Uint8Array(totalPoints);
   let k = 0;
   subshells.forEach((s, idx) => {
+    // Forma radial hidrogenoide (conserva los nodos) reescalada al radio medio de Slater.
+    const scale = s.meanRadius / meanRadius(s.n, s.l, s.zeff);
     for (let i = 0; i < s.count; i++, k++) {
-      const r = sampleRadius(s.n, s.l, s.zeff, rng());
+      const r = sampleRadius(s.n, s.l, s.zeff, rng()) * scale;
       const [x, y, zz] = randomDirection(rng);
       positions[k * 3] = x * r;
       positions[k * 3 + 1] = y * r;

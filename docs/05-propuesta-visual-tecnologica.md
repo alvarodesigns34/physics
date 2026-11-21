@@ -27,7 +27,7 @@ Gesto:       la única saturación de la pantalla es la luz calculada. Cuando ap
 - Densidad electrónica: puntos aditivos con tamaño atenuado por distancia, tono hielo, con la opacidad según la densidad local y mezcla aditiva limitada para no quemar.
 - Fotones: núcleo blanco con halo del color espectral; *bloom* selectivo por luminancia.
 - Arquitectura: hormigón pulido muy oscuro con rugosidad variable y anillos de luz ámbar en el suelo bajo cada estación.
-- Postproceso (calidad alta): bloom con umbral alto (solo la luz «física» florece), viñeta muy suave y tonemapping AgX.
+- Postproceso (calidad alta): bloom con umbral alto (solo la luz «física» florece), viñeta muy suave y *tone mapping* Neutral de Khronos, que conserva el tono y la saturación. Se descartaron AgX y ACES porque desplazan los rojos espectrales hacia el naranja, y la fidelidad del color de las líneas es un requisito científico.
 
 **Sonido (opcional, desactivado por defecto):** síntesis WebAudio sin archivos. Clics de cristal al añadir partículas y un tono breve al emitir un fotón. La altura del tono es una *analogía* (se mapea log ν al audible) y así se rotula.
 

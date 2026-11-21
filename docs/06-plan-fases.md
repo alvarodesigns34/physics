@@ -3,7 +3,7 @@
 Cada fase deja el producto **ejecutable, integrado, probado y visualmente coherente**. «Verificable» significa que hay criterios de aceptación objetivos y comprobados por tests o por inspección reproducible (capturas automáticas).
 
 ## Fase 0 · Análisis y diseño ✅
-- Matriz de cobertura (52 nodos, 7 bloques) con registro de 22 erratas y simplificaciones.
+- Matriz de cobertura (54 nodos, 7 bloques) con registro de 22 erratas y simplificaciones.
 - Arquitectura, diseño de experiencia, fundamentos físicos, propuesta visual y este plan.
 
 ## Fase 1 · Fundación y primera experiencia completa (en curso)

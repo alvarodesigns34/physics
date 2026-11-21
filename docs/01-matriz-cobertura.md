@@ -110,7 +110,7 @@ Leyenda de módulos: **AF** Atomic Forge · **TM** Time Machine · **PL** Photon
 | 7.12 | Carácter metálico y no metálico | TEO p.20, 22 | C R | PU | — |
 | 7.13 | Excepciones relevantes a las tendencias (EI: Be > B, N > O; AE: Cl > F; aniones no estables) | *Matiz añadido* para ser riguroso al resolver TEO 20 y AMP 25 | R | PU | TEO 20c |
 
-**Recuento:** 7 bloques y 52 nodos evaluables, cada uno con módulo asignado. Los 31 ejercicios de AMP y los 9 resueltos de TEO quedan asignados a algún nodo. No se añade ningún bloque temático ajeno al material.
+**Recuento:** 7 bloques y 54 nodos evaluables, cada uno con módulo asignado. Los 31 ejercicios de AMP y los 9 resueltos de TEO quedan asignados a algún nodo. No se añade ningún bloque temático ajeno al material.
 
 ### Contenidos deliberadamente excluidos o acotados
 
