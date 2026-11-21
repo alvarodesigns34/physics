@@ -486,7 +486,7 @@ function Sources({ onPick }: { onPick: (e: Exercise) => void }) {
   ];
   return (
     <div className="stack-16">
-      <p className="lead">Los ejercicios de tus apuntes, con sus datos originales, corrección razonada y pistas. Los que corresponden a módulos aún no construidos se incorporarán en fases posteriores.</p>
+      <p className="lead">Los ejercicios de tus apuntes, con sus datos originales, corrección razonada y pistas. Donde la fuente tiene una errata, el ejercicio usa el dato corregido y lo indica.</p>
       {groups.map((g) => (
         <section key={g.title} className="stack-8">
           <span className="h3">{g.title}</span>

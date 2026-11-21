@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { create } from 'zustand';
@@ -7,7 +7,9 @@ import * as THREE from 'three';
 import { Stage } from '../../render/Stage';
 import { ElectronCloud } from '../../render/ElectronCloud';
 import { Nucleus } from '../../render/Nucleus';
-import { atomDensity } from '../../science/orbitals';
+import { atomDensity, sampleOrbital } from '../../science/orbitals';
+import { ELEMENTS } from '../../science/elements';
+import { CATEGORY_COLOR } from '../../render/palette';
 import { groundState } from '../../science/configuration';
 import { mulberry32 } from '../../science/numbers';
 import { transition } from '../../science/hydrogen';
@@ -31,9 +33,14 @@ interface StationDef {
 }
 
 const STATIONS: StationDef[] = [
-  { id: 'forja', route: '/forja', title: 'Atomic Forge', subtitle: 'Construye átomos, isótopos e iones', position: [-3.5, 0, -0.4] },
-  { id: 'entrenamiento', route: '/entrenamiento', title: 'Centro de entrenamiento', subtitle: 'Práctica adaptativa, repaso y examen', position: [0, 0, -2.8] },
-  { id: 'fotones', route: '/fotones', title: 'Photon Lab', subtitle: 'Luz, espectros y el átomo de hidrógeno', position: [3.5, 0, -0.4] },
+  { id: 'forja', route: '/forja', title: 'Atomic Forge', subtitle: 'Átomos, isótopos e iones', position: [-8.08, 0, 1.58] },
+  { id: 'historia', route: '/historia', title: 'Time Machine', subtitle: 'Modelos y experimentos históricos', position: [-6.58, 0, -1.90] },
+  { id: 'fotones', route: '/fotones', title: 'Photon Lab', subtitle: 'Luz, espectros e hidrógeno', position: [-3.68, 0, -4.33] },
+  { id: 'masas', route: '/masas', title: 'Mass Spectrometry', subtitle: 'Isótopos y masa atómica', position: [0.00, 0, -5.20] },
+  { id: 'cuantico', route: '/cuantico', title: 'Quantum Space', subtitle: 'Orbitales y números cuánticos', position: [3.68, 0, -4.33] },
+  { id: 'arquitecto', route: '/arquitecto', title: 'Electron Architect', subtitle: 'Configuración electrónica', position: [6.58, 0, -1.90] },
+  { id: 'periodico', route: '/periodico', title: 'Periodic Universe', subtitle: 'Tabla y propiedades periódicas', position: [8.08, 0, 1.58] },
+  { id: 'entrenamiento', route: '/entrenamiento', title: 'Centro de entrenamiento', subtitle: 'Práctica, repaso y examen', position: [0, 0, 3.2] },
 ];
 
 function Floor() {
@@ -64,7 +71,7 @@ function Pedestal({ active }: { active: boolean }) {
   return (
     <group>
       <mesh position-y={0.3} castShadow>
-        <cylinderGeometry args={[0.8, 0.88, 0.6, 64, 1]} />
+        <cylinderGeometry args={[0.72, 0.8, 0.6, 64, 1]} />
         <meshStandardMaterial color="#1b1916" roughness={0.5} metalness={0.25} envMapIntensity={0.6} />
       </mesh>
       <mesh position-y={0.605} rotation-x={-Math.PI / 2}>
@@ -144,6 +151,122 @@ function SyllabusHologram() {
   );
 }
 
+function BohrHologram({ reduced }: { reduced: boolean }) {
+  const e = useRef<THREE.Mesh>(null);
+  useFrame((st) => {
+    const a = reduced ? 1 : st.clock.elapsedTime * 1.2;
+    e.current?.position.set(Math.cos(a) * 0.5, 0, Math.sin(a) * 0.5);
+  });
+  return (
+    <group position-y={1.45} rotation-x={0.5}>
+      {[0.18, 0.5, 0.9].map((r) => (
+        <mesh key={r} rotation-x={Math.PI / 2}>
+          <torusGeometry args={[r, 0.006, 6, 96]} />
+          <meshBasicMaterial color="#ece6dc" transparent opacity={0.45} />
+        </mesh>
+      ))}
+      <mesh>
+        <sphereGeometry args={[0.06, 16, 12]} />
+        <meshBasicMaterial color={new THREE.Color('#e8775c').multiplyScalar(2.4)} toneMapped={false} />
+      </mesh>
+      <mesh ref={e}>
+        <sphereGeometry args={[0.045, 12, 10]} />
+        <meshBasicMaterial color={new THREE.Color('#bfe0ff').multiplyScalar(2.4)} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
+function MassHologram() {
+  return (
+    <group position={[0, 1.1, 0]} rotation-x={-0.25}>
+      {[0.52, 0.58, 0.64].map((r, i) => (
+        <mesh key={r} position={[0, 0, 0]} rotation-z={0}>
+          <torusGeometry args={[r, 0.012, 6, 64, Math.PI]} />
+          <meshBasicMaterial color={new THREE.Color(['#f2a93b', '#8fc3f2', '#d9785a'][i]!).multiplyScalar(2)} toneMapped={false} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function OrbitalHologram({ reduced }: { reduced: boolean }) {
+  const g = useRef<THREE.Group>(null);
+  const [pos, neg] = useMemo(() => {
+    const pts = sampleOrbital(2, 1, 0, 1, 2200, mulberry32(21));
+    const a: number[] = [];
+    const b: number[] = [];
+    for (let i = 0; i < pts.length; i += 3) (pts[i + 2]! >= 0 ? a : b).push(pts[i]! * 0.09, pts[i + 2]! * 0.09, pts[i + 1]! * 0.09);
+    return [new Float32Array(a), new Float32Array(b)];
+  }, []);
+  useFrame((_, dt) => {
+    if (g.current && !reduced) g.current.rotation.y += dt * 0.4;
+  });
+  return (
+    <group ref={g} position-y={1.55}>
+      {[
+        [pos, '#f2a93b'],
+        [neg, '#8fc3f2'],
+      ].map(([arr, c], i) => (
+        <points key={i}>
+          <bufferGeometry>
+            <bufferAttribute attach="attributes-position" args={[arr as Float32Array, 3]} />
+          </bufferGeometry>
+          <pointsMaterial color={new THREE.Color(c as string).multiplyScalar(1.6)} size={0.028} sizeAttenuation transparent opacity={0.75} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} />
+        </points>
+      ))}
+    </group>
+  );
+}
+
+function BoxesHologram() {
+  const rows = [1, 1, 3, 1, 3];
+  return (
+    <group position={[0, 0.95, 0]}>
+      {rows.map((k, r) =>
+        Array.from({ length: k }, (_, j) => (
+          <group key={`${r}-${j}`} position={[(j - (k - 1) / 2) * 0.24, r * 0.2, 0]}>
+            <mesh>
+              <boxGeometry args={[0.2, 0.15, 0.06]} />
+              <meshStandardMaterial color="#2a2622" roughness={0.3} />
+            </mesh>
+            <mesh position={[0, 0, 0.04]}>
+              <boxGeometry args={[0.02, 0.11, 0.01]} />
+              <meshBasicMaterial color={new THREE.Color('#bfe0ff').multiplyScalar(2)} toneMapped={false} />
+            </mesh>
+          </group>
+        )),
+      )}
+    </group>
+  );
+}
+
+function TableHologram() {
+  const mesh = useRef<THREE.InstancedMesh>(null);
+  const cells = useMemo(() => ELEMENTS.filter((e) => e.layout.row <= 7), []);
+  useEffect(() => {
+    const m = mesh.current;
+    if (!m) return;
+    const m4 = new THREE.Matrix4();
+    cells.forEach((el, i) => {
+      const h = 0.02 + (el.electronegativity ?? 0.5) * 0.12;
+      m4.makeScale(1, h, 1).setPosition((el.layout.col - 9.5) * 0.065, h / 2, (el.layout.row - 4) * 0.065);
+      m.setMatrixAt(i, m4);
+      m.setColorAt(i, new THREE.Color(CATEGORY_COLOR[el.category]));
+    });
+    m.instanceMatrix.needsUpdate = true;
+    if (m.instanceColor) m.instanceColor.needsUpdate = true;
+  }, [cells]);
+  return (
+    <group position-y={0.95} rotation-x={0.25}>
+      <instancedMesh ref={mesh} args={[undefined, undefined, cells.length]}>
+        <boxGeometry args={[0.058, 1, 0.058]} />
+        <meshStandardMaterial roughness={0.4} />
+      </instancedMesh>
+    </group>
+  );
+}
+
 function Station({ def, reduced, hovered, onHover }: { def: StationDef; reduced: boolean; hovered: boolean; onHover: (id: string | null) => void }) {
   return (
     <group position={def.position}>
@@ -167,6 +290,11 @@ function Station({ def, reduced, hovered, onHover }: { def: StationDef; reduced:
         {def.id === 'forja' && <ForgeHologram reduced={reduced} />}
         {def.id === 'fotones' && <PhotonHologram reduced={reduced} />}
         {def.id === 'entrenamiento' && <SyllabusHologram />}
+        {def.id === 'historia' && <BohrHologram reduced={reduced} />}
+        {def.id === 'masas' && <MassHologram />}
+        {def.id === 'cuantico' && <OrbitalHologram reduced={reduced} />}
+        {def.id === 'arquitecto' && <BoxesHologram />}
+        {def.id === 'periodico' && <TableHologram />}
         {/* volumen de impacto invisible para facilitar el toque */}
         <mesh position-y={1.2} visible={false}>
           <cylinderGeometry args={[1.1, 1.1, 2.6, 12]} />
@@ -184,7 +312,7 @@ function CentralAtom({ reduced, points }: { reduced: boolean; points: number }) 
     if (g.current && !reduced) g.current.rotation.y += dt * 0.05;
   });
   return (
-    <group ref={g} position={[0, 4.5, -9]}>
+    <group ref={g} position={[0, 6.2, -12]}>
       <ElectronCloud density={density} scale={1.35} size={70} opacity={0.16} gain={1.5} animate={!reduced} />
       <group scale={0.8}>
         <Nucleus z={10} n={10} reduced={reduced} />
@@ -198,9 +326,9 @@ export function HubScene() {
   const q = useQuality();
   const hovered = useHubUI((st) => st.hovered);
   const setHovered = useHubUI((st) => st.setHovered);
-  const anchors = useMemo(() => STATIONS.map((st) => ({ id: `station-${st.id}`, position: [st.position[0], 2.55, st.position[2]] as [number, number, number] })), []);
+  const anchors = useMemo(() => STATIONS.map((st) => ({ id: `station-${st.id}`, position: [st.position[0], 2.25, st.position[2]] as [number, number, number] })), []);
   return (
-    <Stage camera={[0, 8.6, 16.5]} fov={30}>
+    <Stage camera={[0, 12.5, 22]} fov={33}>
       <LabelProjector anchors={anchors} />
       <ambientLight intensity={0.18} />
       <spotLight position={[0, 9, 2]} angle={0.55} penumbra={0.9} intensity={60} color="#ffe2bd" distance={30} decay={2} />
@@ -210,7 +338,7 @@ export function HubScene() {
       {STATIONS.map((s) => (
         <Station key={s.id} def={s} reduced={reduced} hovered={hovered === s.id} onHover={setHovered} />
       ))}
-      <OrbitControls target={[0, 1.4, -2]} enablePan={false} enableDamping minDistance={9} maxDistance={22} minPolarAngle={0.85} maxPolarAngle={1.4} minAzimuthAngle={-0.6} maxAzimuthAngle={0.6} />
+      <OrbitControls target={[0, 1.2, -1.6]} enablePan={false} enableDamping minDistance={10} maxDistance={28} minPolarAngle={0.85} maxPolarAngle={1.4} minAzimuthAngle={-0.6} maxAzimuthAngle={0.6} />
     </Stage>
   );
 }
@@ -233,8 +361,8 @@ function StationLabels() {
             style={{
               background: 'rgb(15 14 13 / 0.8)',
               border: `1px solid ${hovered === def.id ? 'var(--accent-line)' : 'var(--hairline-strong)'}`,
-              borderRadius: 10,
-              padding: '8px 14px',
+              borderRadius: 9,
+              padding: '6px 12px',
               color: 'var(--ink)',
               cursor: 'pointer',
               whiteSpace: 'nowrap',
@@ -243,8 +371,8 @@ function StationLabels() {
               backdropFilter: 'blur(6px)',
             }}
           >
-            <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 22, lineHeight: 1.1 }}>{def.title}</span>
-            <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-muted)', marginTop: 2 }}>{def.subtitle}</span>
+            <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 19, lineHeight: 1.1 }}>{def.title}</span>
+            {hovered === def.id && <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-muted)', marginTop: 2 }}>{def.subtitle}</span>}
           </button>
         </AnchoredLabel>
       ))}
@@ -270,7 +398,7 @@ export function HubOverlay() {
         <div className="enter desktop-only" style={{ position: 'absolute', left: 'var(--gutter)', bottom: 'var(--gutter)', maxWidth: 500, display: 'flex', flexDirection: 'column', gap: 16 }}>
           <span className="eyebrow eyebrow--accent">Estructura atómica · Sistema periódico</span>
           <h1 className="display" style={{ fontSize: 'clamp(2.5rem, 4.4vw, 4rem)' }}>La materia, de cerca{alias ? `, ${alias}` : ''}.</h1>
-          <p className="lead">Un laboratorio para construir átomos, hacer que emitan luz y comprobar con cálculos de verdad lo que dice el temario de 1.º de Bachillerato.</p>
+          <p className="lead">Siete laboratorios para construir átomos, repetir los experimentos que los descubrieron y comprobar con cálculos de verdad todo el tema de 1.º de Bachillerato.</p>
           <div className="row row--wrap" style={{ gap: 8 }}>
             <EpiTag kind="calculo">Nube central: densidad electrónica del neón (orbitales con Z efectiva de Slater)</EpiTag>
           </div>
@@ -305,14 +433,19 @@ export function HubOverlay() {
             )}
           </section>
           {CHAPTERS.map((ch) => (
-            <section key={ch.id} className="section">
-              <div className="stack-8" style={{ gap: 2 }}>
-                <span className="eyebrow">Capítulo {ROMAN[ch.id]}</span>
-                <span className="h2" style={{ fontSize: '1.75rem' }}>
-                  {ch.title}
+            <details key={ch.id} className="section chapter" open={ch.id === (next?.chapter ?? 1)}>
+              <summary className="row row--between" style={{ cursor: 'pointer', listStyle: 'none' }}>
+                <span className="stack-8" style={{ gap: 2 }}>
+                  <span className="eyebrow">Capítulo {ROMAN[ch.id]}</span>
+                  <span className="h2" style={{ fontSize: '1.6rem' }}>
+                    {ch.title}
+                  </span>
+                  <span className="small muted">{ch.subtitle}</span>
                 </span>
-                <span className="small muted">{ch.subtitle}</span>
-              </div>
+                <span className="mono small faint">
+                  {MISSIONS.filter((m) => m.chapter === ch.id && campaign[m.id]?.status === 'completada').length}/{MISSIONS.filter((m) => m.chapter === ch.id).length}
+                </span>
+              </summary>
               <ul className="stack-8" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {MISSIONS.filter((m) => m.chapter === ch.id).map((m) => {
                   const st = campaign[m.id];
@@ -331,7 +464,7 @@ export function HubOverlay() {
                   );
                 })}
               </ul>
-            </section>
+            </details>
           ))}
           <p className="small faint">Los laboratorios están abiertos desde el principio: la campaña propone un orden, pero no bloquea nada.</p>
         </div>

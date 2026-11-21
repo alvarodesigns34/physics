@@ -35,7 +35,7 @@ try {
 
   await page.goto(base + '#/');
   await page.waitForTimeout(2500);
-  check((await page.locator('.station-label').count()) === 3, 'Atrio: tres estaciones etiquetadas');
+  check((await page.locator('.station-label').count()) === 8, 'Atrio: ocho estaciones etiquetadas');
   await page.screenshot({ path: `${OUT}/01-atrio.png` });
 
   await page.click('button:has-text("Empezar")');
@@ -67,6 +67,42 @@ try {
   await page.waitForTimeout(300);
   check((await page.locator('.feedback--ok').count()) >= 2, 'Entrenamiento: AMP 6 corregido paso a paso');
   await page.screenshot({ path: `${OUT}/04-entrenamiento.png` });
+
+  // Laboratorios de las fases 2–4
+  await page.goto(base + '#/periodico');
+  await page.waitForTimeout(1800);
+  await page.click('button[role=radio]:text-is("EI₁")');
+  await page.waitForTimeout(800);
+  check((await page.locator('.label-layer span').count()) >= 118, 'Periodic Universe: 118 elementos etiquetados');
+  await page.screenshot({ path: `${OUT}/06-periodico.png` });
+
+  await page.goto(base + '#/cuantico');
+  await page.waitForTimeout(1500);
+  await page.click('[role=radio]:text-is("3")');
+  await page.click('[role=radio]:text-is("2 · d")');
+  await page.waitForTimeout(1500);
+  check((await page.locator('aside').innerText()).includes('nodos angulares'), 'Quantum Space: orbital 3d con sus nodos');
+  await page.screenshot({ path: `${OUT}/07-cuantico.png` });
+
+  await page.goto(base + '#/arquitecto?z=8');
+  await page.waitForTimeout(1200);
+  await page.click('button:has-text("Estado fundamental real")');
+  await page.waitForTimeout(600);
+  check((await page.locator('aside').innerText()).includes('Estado fundamental'), 'Electron Architect: oxígeno en estado fundamental');
+  await page.screenshot({ path: `${OUT}/08-arquitecto.png` });
+
+  await page.goto(base + '#/historia?tab=geiger');
+  await page.waitForTimeout(1200);
+  await page.click('[role=radio]:has-text("Átomo nuclear")');
+  await page.waitForTimeout(4000);
+  const alphas = await page.locator('.kv dd').first().innerText();
+  check(Number(alphas.replace(/\D/g, '')) > 1000, `Time Machine: Monte Carlo de Geiger–Marsden en marcha (${alphas} α)`);
+  await page.screenshot({ path: `${OUT}/09-historia.png` });
+
+  await page.goto(base + '#/masas');
+  await page.waitForTimeout(5000);
+  check(/\d+,\d+ u/.test(await page.locator('aside').innerText()), 'Mass Spectrometry: masa media medida');
+  await page.screenshot({ path: `${OUT}/10-masas.png` });
 
   const stored = await page.evaluate(() => localStorage.getItem('atom:v1'));
   check(!!stored && stored.includes('"I-1"'), 'Progreso persistido en localStorage');

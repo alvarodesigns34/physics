@@ -41,6 +41,7 @@ import {
   trendGenerator,
   valenceGenerator,
   zeffGenerator,
+  miscGenerator,
 } from './generators/extra';
 import { SOURCE_EXERCISES_2 } from './sources2';
 
@@ -71,6 +72,7 @@ export const GENERATORS: ExerciseGenerator[] = [
   familyGenerator,
   subshellGenerator,
   valenceGenerator,
+  miscGenerator,
 ];
 
 export const GENERATOR_BY_ID = new Map(GENERATORS.map((g) => [g.id, g]));

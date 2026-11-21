@@ -617,3 +617,50 @@ export const valenceGenerator: ExerciseGenerator = {
 
 /** Elección rápida de un elemento por símbolo. */
 export const E = (s: string) => ELEMENTS.find((e) => e.symbol === s)!;
+
+export const MISC_ITEMS: ConceptItem[] = [
+  {
+    q: 'Al iluminar un gas frío con luz blanca y analizar la luz que lo atraviesa se observa…',
+    options: [O('abs', 'un espectro continuo con líneas oscuras (absorción)'), O('emi', 'líneas brillantes sobre fondo negro', 'Eso es un espectro de emisión: lo produce el gas excitado, no la luz que lo atraviesa.'), O('cont', 'un espectro continuo sin huecos', 'Los átomos absorben justamente las frecuencias que pueden emitir: faltan esas líneas.')],
+    correct: 'abs',
+    explanation: 'El gas absorbe solo las frecuencias que corresponden a sus saltos entre niveles: aparecen líneas oscuras en las mismas posiciones que las líneas brillantes de su espectro de emisión (TEO p.7).',
+    nodes: ['3.5'],
+  },
+  {
+    q: '¿Por qué la espectroscopía permite saber de qué está hecha una estrella?',
+    options: [O('ok', 'Cada elemento tiene un conjunto propio y único de líneas espectrales'), O('color', 'Porque el color de la estrella indica el elemento', 'El color global depende sobre todo de la temperatura; lo característico son las líneas.'), O('masa', 'Porque las líneas indican la masa de la estrella', 'Las líneas identifican elementos (y su abundancia relativa), no la masa total.')],
+    correct: 'ok',
+    explanation: 'Los espectros son la huella dactilar de cada elemento; la intensidad de las líneas permite estimar además su concentración relativa.',
+    nodes: ['3.5'],
+  },
+  {
+    q: 'En la notación 3p⁴, ¿qué indica el 4?',
+    options: [O('e', 'El número de electrones en el subnivel 3p'), O('orb', 'El número de orbitales p', 'Un subnivel p siempre tiene 3 orbitales.'), O('n', 'El nivel de energía', 'El nivel es el 3 (número delante de la letra).')],
+    correct: 'e',
+    explanation: 'n xᵉ: n = nivel (3), x = tipo de orbital (p) y e = número de electrones en ese subnivel (4).',
+    nodes: ['6.1'],
+  },
+  {
+    q: 'En la notación de cajas, ¿cuántas cajas se dibujan para un subnivel d?',
+    options: [O('5', '5, una por orbital'), O('10', '10', 'Diez son los electrones que caben; cada caja (orbital) admite dos.'), O('2', '2', 'Dos cajas tendría… ningún subnivel: s tiene 1, p tiene 3, d 5 y f 7.')],
+    correct: '5',
+    explanation: 'Cada caja representa un orbital: s → 1, p → 3, d → 5, f → 7. En cada una caben dos flechas de sentido opuesto.',
+    nodes: ['6.1', '5.5'],
+  },
+  {
+    q: '¿Cuál tiene mayor carácter metálico: el potasio o el bromo (ambos del periodo 4)?',
+    options: [O('k', 'El potasio'), O('br', 'El bromo', 'El bromo es un halógeno: tiende a captar electrones (no metal).')],
+    correct: 'k',
+    explanation: 'El carácter metálico (tendencia a perder electrones) aumenta hacia la izquierda y hacia abajo: el K tiene baja EI, baja AE y baja electronegatividad.',
+    nodes: ['7.12'],
+  },
+  {
+    q: '¿Qué conjunto de propiedades caracteriza a un no metal?',
+    options: [O('ok', 'Energía de ionización, afinidad electrónica y electronegatividad altas'), O('baja', 'Las tres bajas', 'Eso describe a los metales, que pierden electrones con facilidad.'), O('mix', 'EI baja y electronegatividad alta', 'Las tres propiedades van de la mano: si atrae electrones, también cuesta arrancárselos.')],
+    correct: 'ok',
+    explanation: 'Los no metales tienden a captar electrones y formar aniones: EI, AE y χ altas (TEO p.22).',
+    nodes: ['7.12', '7.11'],
+  },
+];
+
+export const miscGenerator = conceptGenerator('conceptos-varios', 'Espectros, notación y carácter metálico', MISC_ITEMS);
