@@ -12,6 +12,10 @@ const PhotonScene = lazy(() => import('../modules/photon/PhotonLab').then((m) =>
 const PhotonOverlay = lazy(() => import('../modules/photon/PhotonLab').then((m) => ({ default: m.PhotonOverlay })));
 const TrainingOverlay = lazy(() => import('../modules/training/Training').then((m) => ({ default: m.TrainingOverlay })));
 const PeriodicScene = lazy(() => import('../modules/periodic/Periodic').then((m) => ({ default: m.PeriodicScene })));
+const QuantumScene = lazy(() => import('../modules/quantum/Quantum').then((m) => ({ default: m.QuantumScene })));
+const QuantumOverlay = lazy(() => import('../modules/quantum/Quantum').then((m) => ({ default: m.QuantumOverlay })));
+const ArchitectScene = lazy(() => import('../modules/architect/Architect').then((m) => ({ default: m.ArchitectScene })));
+const ArchitectOverlay = lazy(() => import('../modules/architect/Architect').then((m) => ({ default: m.ArchitectOverlay })));
 const PeriodicOverlay = lazy(() => import('../modules/periodic/Periodic').then((m) => ({ default: m.PeriodicOverlay })));
 
 /** Laboratorios disponibles (en el orden del temario). */
@@ -230,6 +234,10 @@ function SceneFor({ route }: { route: Route }) {
       return <PhotonScene />;
     case '/periodico':
       return <PeriodicScene />;
+    case '/cuantico':
+      return <QuantumScene />;
+    case '/arquitecto':
+      return <ArchitectScene />;
     case '/entrenamiento':
       return null;
     default:
@@ -245,6 +253,10 @@ function OverlayFor({ route }: { route: Route }): ReactNode {
       return <PhotonOverlay />;
     case '/periodico':
       return <PeriodicOverlay />;
+    case '/cuantico':
+      return <QuantumOverlay />;
+    case '/arquitecto':
+      return <ArchitectOverlay />;
     case '/entrenamiento':
       return <TrainingOverlay />;
     default:

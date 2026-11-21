@@ -555,3 +555,32 @@ describe('tendencias periódicas con datos reales', () => {
     expect(commonIon(E('Ar')).charge).toBeNull();
   });
 });
+
+import { boxesFromConfiguration, diagnoseBoxes, aufbauStep, addToSubshell, exciteOne, emptyBoxes, configurationFromBoxes } from './boxes';
+
+describe('diagramas de cajas (Electron Architect)', () => {
+  it('estado fundamental del oxígeno y del cromo (excepción)', () => {
+    const o = boxesFromConfiguration(groundState(8));
+    expect(o['2p']).toEqual([3, 1, 1]);
+    expect(diagnoseBoxes(o, 8, 8).status).toBe('fundamental');
+    const cr = diagnoseBoxes(boxesFromConfiguration(groundState(24)), 24, 24);
+    expect(cr.status).toBe('fundamental');
+    expect(cr.exception).toBe(true);
+  });
+  it('Pauli, Hund y Aufbau', () => {
+    const base = boxesFromConfiguration(groundState(7)); // N: 2p ↑↑↑
+    expect(diagnoseBoxes({ ...base, '2p': [4, 1, 0] }, 7, 7).status).toBe('prohibido');
+    const hundPair = diagnoseBoxes({ ...base, '2p': [3, 1, 0] }, 7, 7);
+    expect(hundPair.status).toBe('excitado');
+    expect(hundPair.hund).toEqual(['2p']);
+    expect(diagnoseBoxes({ ...base, '2p': [1, 2, 1] }, 7, 7).hund).toEqual(['2p']);
+    expect(diagnoseBoxes(exciteOne(base), 7, 7).status).toBe('excitado');
+    expect(diagnoseBoxes(base, 7, 8).status).toBe('incompleto');
+  });
+  it('construcción paso a paso: 26 pasos dan el Fe según Möller', () => {
+    let b = emptyBoxes();
+    for (let i = 0; i < 26; i++) b = aufbauStep(b)!.boxes;
+    expect(configurationFromBoxes(b)).toEqual(groundState(26));
+    expect(addToSubshell(b, '3d', -1)['3d']).toEqual([1, 1, 1, 1, 1]); // d⁶ → d⁵: quedan cinco desapareados
+  });
+});
