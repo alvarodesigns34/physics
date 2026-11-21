@@ -29,6 +29,20 @@ import {
   quantumValidityGenerator,
 } from './generators/electrons';
 import { choicePart } from './generators/util';
+import {
+  averageMassGenerator,
+  familyGenerator,
+  historyGenerator,
+  ionRadiusGenerator,
+  positionGenerator,
+  quantumConceptGenerator,
+  stableIonGenerator,
+  subshellGenerator,
+  trendGenerator,
+  valenceGenerator,
+  zeffGenerator,
+} from './generators/extra';
+import { SOURCE_EXERCISES_2 } from './sources2';
 
 export const GENERATORS: ExerciseGenerator[] = [
   speciesGenerator,
@@ -46,6 +60,17 @@ export const GENERATORS: ExerciseGenerator[] = [
   configGenerator,
   ionConfigGenerator,
   configStateGenerator,
+  historyGenerator,
+  quantumConceptGenerator,
+  averageMassGenerator,
+  trendGenerator,
+  positionGenerator,
+  stableIonGenerator,
+  zeffGenerator,
+  ionRadiusGenerator,
+  familyGenerator,
+  subshellGenerator,
+  valenceGenerator,
 ];
 
 export const GENERATOR_BY_ID = new Map(GENERATORS.map((g) => [g.id, g]));
@@ -104,7 +129,7 @@ export interface SourceExercise {
 const sp = (z: number, a: number, q = 0) => ({ z, n: a - z, e: z - q });
 
 /** Ejercicios de las fuentes, reproducidos con sus datos. */
-export const SOURCE_EXERCISES: SourceExercise[] = [
+const SOURCE_EXERCISES_1: SourceExercise[] = [
   { ref: 'AMP 1', nodeIds: ['1.1', '1.2', '1.6'], build: () => buildSpeciesExercise(sp(79, 197), 1, 'src:AMP1', 'AMP 1') },
   { ref: 'AMP 2 · C', nodeIds: ['1.1', '1.2'], build: () => buildSpeciesExercise(sp(6, 12), 1, 'src:AMP2a', 'AMP 2') },
   { ref: 'AMP 2 · Pb', nodeIds: ['1.1', '1.2'], build: () => buildReverseSpeciesExercise(sp(82, 207), 2, 'src:AMP2c', 'AMP 2') },
@@ -141,5 +166,7 @@ export const SOURCE_EXERCISES: SourceExercise[] = [
   { ref: 'TEO ej. 8 · Ca', nodeIds: ['6.3', '7.2'], build: () => buildConfigExercise(20, 2, 'src:TEO8b', 'TEO ej. 8') },
   { ref: 'TEO ej. 8 · Br', nodeIds: ['6.3', '7.2'], build: () => buildConfigExercise(35, 2, 'src:TEO8c', 'TEO ej. 8') },
 ];
+
+export const SOURCE_EXERCISES: SourceExercise[] = [...SOURCE_EXERCISES_1, ...SOURCE_EXERCISES_2];
 
 export const SOURCE_BY_REF = new Map(SOURCE_EXERCISES.map((s) => [s.ref, s]));

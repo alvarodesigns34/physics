@@ -37,7 +37,9 @@ export type AnswerSpec =
   | { kind: 'choice'; options: ChoiceOption[]; correct: string[]; multiple?: boolean }
   | { kind: 'element'; z: number }
   | { kind: 'config'; electrons: number; z: number }
-  | { kind: 'order'; items: ChoiceOption[]; correctOrder: string[] };
+  | { kind: 'order'; items: ChoiceOption[]; correctOrder: string[] }
+  /** Conjunto (n, l, m_l, m_s) válido que describa un electrón del subnivel indicado */
+  | { kind: 'quantum'; n: number; l: number };
 
 export interface ExercisePart {
   id: string;

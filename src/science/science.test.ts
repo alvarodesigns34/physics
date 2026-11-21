@@ -455,3 +455,103 @@ describe('tamaño de la nube electrónica', () => {
     expect(outer(55)).toBeLessThan(10);
   });
 });
+
+import { closestApproach, deflection, impactForAngle, trajectory, finalAngle, fractionAbove, GOLD_NUMBER_DENSITY, sampleAngle, GEIGER_MARSDEN, classicalCollapseTime } from './scattering';
+import { cathodeBeam, cathodeExitDeflection, sectorRadius, massAtRadius } from './instruments';
+import { compare, commonIon, PROPERTIES } from './trends';
+import { momentumSpread, HBAR } from './uncertainty';
+
+describe('dispersión de Rutherford', () => {
+  it('distancia de máximo acercamiento para α de 4,8 MeV en oro ≈ 47 fm', () => {
+    expect(closestApproach(4.8)).toBeCloseTo(47.4, 0);
+  });
+  it('la trayectoria integrada reproduce tan(θ/2) = d/(2b)', () => {
+    for (const b of [0.25, 0.5, 1, 2, 4]) {
+      const traj = trajectory(b, 40000, -400); // la cola coulombiana 1/r exige partir de lejos
+      expect(finalAngle(traj)).toBeCloseTo(deflection(b, 1), 2);
+    }
+    expect(impactForAngle(deflection(3, 2), 2)).toBeCloseTo(3, 10);
+  });
+  it('la fracción de grandes desviaciones es pequeñísima (núcleo diminuto)', () => {
+    const d = closestApproach(4.8);
+    const p90 = fractionAbove(Math.PI / 2, d, GOLD_NUMBER_DENSITY, 4e-7);
+    expect(p90).toBeGreaterThan(1e-5);
+    expect(p90).toBeLessThan(1e-4);
+    expect(GOLD_NUMBER_DENSITY).toBeCloseTo(5.9e28, -27);
+  });
+  it('Monte Carlo: el modelo de Thomson no produce desviaciones > 10°; el nuclear sí', () => {
+    const rng = mulberry32(11);
+    let rut = 0;
+    let tho = 0;
+    const N = 200000;
+    const ten = (10 * Math.PI) / 180;
+    for (let i = 0; i < N; i++) {
+      if (sampleAngle('rutherford', GEIGER_MARSDEN, rng) > ten) rut++;
+      if (sampleAngle('thomson', GEIGER_MARSDEN, rng) > ten) tho++;
+    }
+    expect(tho).toBe(0);
+    const expected = fractionAbove(ten, closestApproach(GEIGER_MARSDEN.energyMeV), GOLD_NUMBER_DENSITY, GEIGER_MARSDEN.thickness);
+    expect(rut / N).toBeGreaterThan(expected * 0.7);
+    expect(rut / N).toBeLessThan(expected * 1.3);
+  });
+  it('colapso clásico del átomo de Rutherford ≈ 1,6·10⁻¹¹ s', () => {
+    expect(classicalCollapseTime()).toBeCloseTo(1.56e-11, 12);
+  });
+});
+
+describe('instrumentos', () => {
+  const setup = { accel: 2000, plates: 200, gap: 0.02, length: 0.05, drift: 0.15, B: 0 };
+  it('tubo de rayos catódicos: la integración coincide con y₁ = qEL²/(2mv²)', () => {
+    const r = cathodeBeam(setup, 4000);
+    expect(r.exitY).toBeCloseTo(cathodeExitDeflection(setup), 4);
+    expect(r.screenY).toBeGreaterThan(0); // hacia la placa positiva
+  });
+  it('compensando con B = E/v el haz no se desvía', () => {
+    const b0 = cathodeBeam(setup).balanceB;
+    const r = cathodeBeam({ ...setup, B: b0 }, 4000);
+    expect(Math.abs(r.screenY)).toBeLessThan(1e-4);
+    expect(r.balanced).toBe(true);
+  });
+  it('espectrómetro de sector magnético: r ∝ √m y la inversa es coherente', () => {
+    const r35 = sectorRadius(34.968853, 1, 2000, 0.3);
+    const r37 = sectorRadius(36.965903, 1, 2000, 0.3);
+    expect(r37 / r35).toBeCloseTo(Math.sqrt(36.965903 / 34.968853), 10);
+    expect(massAtRadius(r35, 1, 2000, 0.3)).toBeCloseTo(34.968853, 6);
+  });
+  it('incertidumbre mínima del paquete gaussiano', () => {
+    expect(momentumSpread(1e-10) * 1e-10).toBeCloseTo(HBAR / 2, 45);
+  });
+});
+
+describe('tendencias periódicas con datos reales', () => {
+  const E = (s: string) => elementBySymbol(s)!;
+  it('mismo periodo y mismo grupo siguen la tendencia (radio, EI, χ)', () => {
+    const r = compare('radio', E('Na'), E('Cl'));
+    expect(r.relation).toBe('mismo-periodo');
+    expect(r.predicted!.symbol).toBe('Na');
+    expect(r.actual!.symbol).toBe('Na');
+    expect(r.exception).toBeNull();
+    expect(compare('ei1', E('Mg'), E('Ca')).actual!.symbol).toBe('Mg');
+    expect(compare('en', E('F'), E('I')).predicted!.symbol).toBe('F');
+  });
+  it('excepciones relevantes: EI (N > O, Be > B) y AE (Cl > F)', () => {
+    const no = compare('ei1', E('N'), E('O'));
+    expect(no.predicted!.symbol).toBe('O');
+    expect(no.actual!.symbol).toBe('N');
+    expect(no.exception).toMatch(/semillena/);
+    expect(compare('ei1', E('Be'), E('B')).exception).toMatch(/np¹/);
+    const fcl = compare('ae', E('F'), E('Cl'));
+    expect(fcl.actual!.symbol).toBe('Cl');
+    expect(fcl.exception).toMatch(/flúor/);
+  });
+  it('Z_ef de Slater crece en el periodo', () => {
+    expect(PROPERTIES.zeff.get(E('Cl'))!).toBeGreaterThan(PROPERTIES.zeff.get(E('Na'))!);
+  });
+  it('iones estables (TEO p.18, AMP 22a)', () => {
+    expect(commonIon(E('Ca')).charge).toBe(2);
+    expect(commonIon(E('Na')).charge).toBe(1);
+    expect(commonIon(E('S')).charge).toBe(-2);
+    expect(commonIon(E('Br')).charge).toBe(-1);
+    expect(commonIon(E('Ar')).charge).toBeNull();
+  });
+});

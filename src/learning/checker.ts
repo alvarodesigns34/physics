@@ -5,6 +5,7 @@ import { parseNumber, relClose, formatNumber } from '../science/numbers';
 import { convert, parseUnit, splitValueAndUnit, UNITS, QUANTITY_LABEL } from '../science/units';
 import { elementByZ, ELEMENTS } from '../science/elements';
 import { diagnoseConfiguration, STATUS_LABEL } from '../science/configuration';
+import { validateQuantumSet } from '../science/quantum';
 import type { AnswerSpec, CheckResult } from './types';
 
 const ok = (message: string, warnings: string[] = [], numericValue?: number): CheckResult => ({ status: 'correcto', correct: true, message, warnings, numericValue });
@@ -39,6 +40,8 @@ export function checkAnswer(spec: AnswerSpec, input: string | string[], ctx: Che
       return checkConfig(spec, String(input));
     case 'order':
       return checkOrder(spec, Array.isArray(input) ? input : String(input).split(','));
+    case 'quantum':
+      return checkQuantum(spec, String(input));
   }
 }
 
@@ -160,4 +163,37 @@ function checkOrder(spec: Extract<AnswerSpec, { kind: 'order' }>, order: string[
   if (firstWrong === -1) return ok('Correcto.');
   const item = spec.items.find((i) => i.id === order[firstWrong]);
   return bad(item?.feedback ?? `La posición ${firstWrong + 1} no es correcta.`);
+}
+
+/** Lee «(3, 1, −1, +1/2)», «3 1 -1 -½» o «3,1,-1,+0.5» y comprueba que describe un electrón del subnivel pedido. */
+export function parseQuantumTuple(input: string): [number, number, number, number] | null {
+  const t = input
+    .replace(/[()\[\]]/g, ' ')
+    .replace(/[−–]/g, '-')
+    .replace(/½/g, '1/2')
+    .trim();
+  const parts = t.split(/\s*[;,]\s*|\s+/).filter(Boolean);
+  if (parts.length !== 4) return null;
+  const num = (x: string) => {
+    if (/^[+-]?\d+\/\d+$/.test(x)) {
+      const [a, b] = x.split('/');
+      return Number(a) / Number(b);
+    }
+    const v = Number(x.replace(',', '.'));
+    return Number.isFinite(v) ? v : NaN;
+  };
+  const vals = parts.map(num);
+  if (vals.some((v) => Number.isNaN(v))) return null;
+  return vals as [number, number, number, number];
+}
+
+function checkQuantum(spec: Extract<AnswerSpec, { kind: 'quantum' }>, input: string): CheckResult {
+  if (!input.trim()) return empty;
+  const q = parseQuantumTuple(input);
+  if (!q) return format('Escribe cuatro números: (n, l, m_l, m_s), por ejemplo (3, 1, −1, +1/2).');
+  const [n, l, ml, ms] = q;
+  const v = validateQuantumSet({ n, l, ml, ms });
+  if (!v.valid) return bad(`Esa combinación no es posible: ${v.errors.map((e) => e.message).join(' ')}`);
+  if (n !== spec.n || l !== spec.l) return bad(`Es una combinación válida, pero describe un electrón ${v.orbital}, no ${spec.n}${'spdf'[spec.l]}. Para ${spec.n}${'spdf'[spec.l]}: n = ${spec.n} y l = ${spec.l}.`);
+  return ok(`Correcto: n = ${n} (nivel), l = ${l} (subnivel ${'spdf'[l]}), m_l = ${ml} (uno de los ${2 * l + 1} orbitales) y m_s = ${ms > 0 ? '+' : '−'}½.`);
 }

@@ -141,6 +141,7 @@ function PartInput({ part, value, onChange, onSubmit, disabled, labelId }: { par
       />
       {a.kind === 'config' && <ConfigPreview text={value as string} />}
       {a.kind === 'numeric' && <span className="small faint">Coma decimal. Potencias: 6,0·10^14 o 6,0e14. Incluye la unidad.</span>}
+      {a.kind === 'quantum' && <span className="small faint">Formato: (n, l, m_l, m_s), por ejemplo (2, 1, 0, −1/2).</span>}
     </div>
   );
 }

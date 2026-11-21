@@ -13,6 +13,7 @@ export type Quantity =
   | 'masa'
   | 'velocidad'
   | 'carga'
+  | 'porcentaje'
   | 'adimensional';
 
 export interface UnitDef {
@@ -62,6 +63,7 @@ export const UNITS: Record<string, UnitDef> = {
   g: U('g', 'masa', 1e-3),
   'm/s': U('m/s', 'velocidad', 1),
   C: U('C', 'carga', 1),
+  '%': U('%', 'porcentaje', 1),
   '': U('', 'adimensional', 1),
 };
 
@@ -123,6 +125,7 @@ export const QUANTITY_LABEL: Record<Quantity, string> = {
   masa: 'masa',
   velocidad: 'velocidad',
   carga: 'carga',
+  porcentaje: 'porcentaje',
   adimensional: 'sin unidades',
 };
 
@@ -132,7 +135,7 @@ export const QUANTITY_LABEL: Record<Quantity, string> = {
 export function splitValueAndUnit(input: string): { numberText: string; unitText: string } {
   const s = input.trim();
   // La unidad empieza en la primera letra (o µ, Å) que no forme parte de «e» exponencial ni de «x10».
-  const m = s.match(/^(.*?[\d)⁰¹²³⁴⁵⁶⁷⁸⁹])\s*([a-zA-ZµμÅ/][^]*)?$/);
+  const m = s.match(/^(.*?[\d)⁰¹²³⁴⁵⁶⁷⁸⁹])\s*([a-zA-ZµμÅ/%][^]*)?$/);
   if (!m) return { numberText: s, unitText: '' };
   let numberText = m[1]!;
   let unitText = (m[2] ?? '').trim();
