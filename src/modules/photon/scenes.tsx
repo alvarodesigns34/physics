@@ -178,7 +178,7 @@ function Photon({ t, delay, createdAt }: { t: Transition; delay: number; created
     }
     if (!sounded.current) {
       sounded.current = true;
-      sfx.photon(t.frequency);
+      sfx.photon(t.frequency, t.type);
     }
     const dur = 1.6;
     const k = Math.min(1, age / dur);

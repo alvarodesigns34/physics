@@ -12,6 +12,7 @@ import { ELEMENTS, elementByZ } from '../../science/elements';
 import { mulberry32, formatNumber } from '../../science/numbers';
 import { useMediaQuery, useReducedMotion } from '../../app/hooks';
 import { MissionPanel } from '../../ui/MissionPanel';
+import { sfx } from '../../app/sound';
 import { EpiTag, Feedback } from '../../ui/common';
 import { Icon } from '../../ui/Icon';
 
@@ -100,6 +101,7 @@ function Spectrometer() {
       const counts = { ...st.counts };
       for (const d of done) {
         const a = isotopes[d]!.a;
+        sfx.detector(1 + d * 0.12);
         counts[a] = (counts[a] ?? 0) + 1;
       }
       st.set({ counts, total: st.total + done.length });

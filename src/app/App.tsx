@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'rea
 import { navigate, useRoute, useReducedMotion, type Route } from './hooks';
 import { useStore, type QualitySetting, type MotionSetting } from '../state/store';
 import { Announcer, Toaster, toast } from '../ui/common';
+import { installUiSounds, setAmbient, sfx } from './sound';
 import { Icon } from '../ui/Icon';
 import { HubScene, HubOverlay } from '../modules/hub/Hub';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
@@ -20,6 +21,7 @@ const HistoryScene = lazy(() => import('../modules/history/History').then((m) =>
 const HistoryOverlay = lazy(() => import('../modules/history/History').then((m) => ({ default: m.HistoryOverlay })));
 const MassScene = lazy(() => import('../modules/masses/MassSpec').then((m) => ({ default: m.MassScene })));
 const MassOverlay = lazy(() => import('../modules/masses/MassSpec').then((m) => ({ default: m.MassOverlay })));
+const GuideOverlay = lazy(() => import('../modules/guide/Guide').then((m) => ({ default: m.GuideOverlay })));
 const PeriodicOverlay = lazy(() => import('../modules/periodic/Periodic').then((m) => ({ default: m.PeriodicOverlay })));
 
 /** Laboratorios disponibles (en el orden del temario). */
@@ -44,6 +46,7 @@ const CRUMB: Record<Route, string> = {
   '/arquitecto': 'Electron Architect',
   '/historia': 'Time Machine',
   '/masas': 'Mass Spectrometry Lab',
+  '/guia': 'Guía de estudio',
 };
 
 function LabsMenu({ route }: { route: Route }) {
@@ -154,6 +157,15 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
         <SegmentedSetting<QualitySetting> label="Calidad gráfica" value={settings.quality} onChange={(v) => set({ quality: v })} options={[{ v: 'auto', label: 'Automática' }, { v: 'alta', label: 'Alta' }, { v: 'media', label: 'Media' }, { v: 'baja', label: 'Baja' }]} />
         <SegmentedSetting<MotionSetting> label="Movimiento" value={settings.motion} onChange={(v) => set({ motion: v })} options={[{ v: 'sistema', label: 'Como el sistema' }, { v: 'reducido', label: 'Reducido' }, { v: 'completo', label: 'Completo' }]} />
         <SegmentedSetting<boolean> label="Sonido" value={settings.sound} onChange={(v) => set({ sound: v })} options={[{ v: false, label: 'Desactivado' }, { v: true, label: 'Activado' }]} />
+        {settings.sound && (
+          <>
+            <SegmentedSetting<boolean> label="Ambiente de cada laboratorio" value={settings.ambient} onChange={(v) => set({ ambient: v })} options={[{ v: true, label: 'Activado' }, { v: false, label: 'Desactivado' }]} />
+            <div className="field">
+              <label htmlFor="vol">Volumen: {Math.round(settings.volume * 100)} %</label>
+              <input id="vol" type="range" min={0} max={1} step={0.05} value={settings.volume} onChange={(e) => set({ volume: Number(e.target.value) })} onPointerUp={() => sfx.success()} />
+            </div>
+          </>
+        )}
         <SegmentedSetting<number> label="Tamaño del texto" value={settings.textScale} onChange={(v) => set({ textScale: v })} options={[{ v: 0.9, label: '90 %' }, { v: 1, label: '100 %' }, { v: 1.15, label: '115 %' }, { v: 1.3, label: '130 %' }]} />
         <SegmentedSetting<'llenado' | 'capas'> label="Orden de las configuraciones" value={settings.configOrder} onChange={(v) => set({ configOrder: v })} options={[{ v: 'llenado', label: 'Orden de llenado (Möller)' }, { v: 'capas', label: 'Por capas' }]} />
         <hr className="divider" />
@@ -215,6 +227,9 @@ function TopBar({ route, onSettings }: { route: Route; onSettings: () => void })
         <a href="#/" aria-current={route === '/' ? 'page' : undefined}>
           Atrio
         </a>
+        <a href="#/guia" aria-current={route === '/guia' ? 'page' : undefined}>
+          Estudiar
+        </a>
         <LabsMenu route={route} />
         <a href="#/entrenamiento" aria-current={route === '/entrenamiento' ? 'page' : undefined}>
           Entrenamiento
@@ -247,6 +262,7 @@ function SceneFor({ route }: { route: Route }) {
     case '/masas':
       return <MassScene />;
     case '/entrenamiento':
+    case '/guia':
       return null;
     default:
       return <HubScene />;
@@ -271,6 +287,8 @@ function OverlayFor({ route }: { route: Route }): ReactNode {
       return <MassOverlay />;
     case '/entrenamiento':
       return <TrainingOverlay />;
+    case '/guia':
+      return <GuideOverlay />;
     default:
       return <HubOverlay />;
   }
@@ -290,6 +308,12 @@ export function App() {
   useEffect(() => {
     document.title = `ATOM · ${CRUMB[effectiveRoute]}`;
   }, [effectiveRoute]);
+  useEffect(() => installUiSounds(), []);
+  const soundOn = useStore((s) => s.settings.sound);
+  const ambientOn = useStore((s) => s.settings.ambient);
+  useEffect(() => {
+    setAmbient(effectiveRoute);
+  }, [effectiveRoute, soundOn, ambientOn]);
 
   return (
     <div className="app" data-motion={reduced ? 'reducido' : 'completo'}>
@@ -304,13 +328,13 @@ export function App() {
             </Suspense>
           </ErrorBoundary>
         ) : (
-          effectiveRoute !== '/entrenamiento' && (
+          effectiveRoute !== '/entrenamiento' && effectiveRoute !== '/guia' && (
             <div className="loading" style={{ padding: 32, textAlign: 'center' }}>
               Este dispositivo no ofrece WebGL: las escenas 3D no están disponibles, pero los paneles, cálculos y ejercicios funcionan.
             </div>
           )
         )}
-        {effectiveRoute === '/entrenamiento' && <div aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'radial-gradient(120% 80% at 50% -20%, rgb(242 169 59 / 0.07), transparent 60%), var(--surface)' }} />}
+        {(effectiveRoute === '/entrenamiento' || effectiveRoute === '/guia') && <div aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'radial-gradient(120% 80% at 50% -20%, rgb(242 169 59 / 0.07), transparent 60%), var(--surface)' }} />}
       </div>
       <div className="overlay">
         <TopBar route={effectiveRoute} onSettings={() => setSettingsOpen(true)} />

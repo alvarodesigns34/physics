@@ -5,6 +5,7 @@ import { parseConfigurationText } from '../science/configuration';
 import { toSuperscript } from '../science/numbers';
 import { lLetter } from '../science/quantum';
 import { nodeTitle } from '../learning/syllabus';
+import { guideAnchor, SECTION_BY_NODE } from '../learning/guide';
 import { Feedback, Rich } from './common';
 import { Icon } from './Icon';
 import { sfx } from '../app/sound';
@@ -21,6 +22,18 @@ export interface ExerciseOutcome {
 }
 
 type Mode = 'practica' | 'examen' | 'campana';
+
+/** Enlace a la sección de la guía que explica el apartado del ejercicio. */
+function TheoryLink({ nodeId, prominent }: { nodeId: string | undefined; prominent: boolean }) {
+  if (!nodeId) return null;
+  const anchor = guideAnchor(nodeId);
+  const sec = SECTION_BY_NODE.get(anchor)?.section;
+  return (
+    <a className={`btn btn--sm ${prominent ? '' : 'btn--ghost'}`} href={`#/guia?n=${anchor}`} style={prominent ? { borderColor: 'var(--accent-line)' } : undefined}>
+      <Icon name="info" size={16} /> {prominent ? '¿No lo entiendes? ' : ''}Repasa la teoría{sec ? `: ${sec.title}` : ''}
+    </a>
+  );
+}
 
 interface PartState {
   value: string | string[];
@@ -313,11 +326,14 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
               </span>
             </Feedback>
           ))}
-          {hints < 3 && (
-            <button type="button" className="btn btn--ghost btn--sm" style={{ alignSelf: 'flex-start' }} onClick={() => setHints((h) => h + 1)}>
-              <Icon name="bulb" size={16} /> Pista {hints + 1} de 3
-            </button>
-          )}
+          <div className="row row--wrap" style={{ gap: 6 }}>
+            {hints < 3 && (
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => setHints((h) => h + 1)}>
+                <Icon name="bulb" size={16} /> Pista {hints + 1} de 3
+              </button>
+            )}
+            <TheoryLink nodeId={exercise.nodeIds[0]} prominent={parts.some((p) => p.attempts > 0 && !p.done)} />
+          </div>
         </section>
       )}
 
@@ -338,6 +354,7 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
             <button type="button" className="btn btn--sm" onClick={() => setShowSolution((s) => !s)} aria-expanded={showSolution}>
               <Icon name="eye" size={16} /> {showSolution ? 'Ocultar' : 'Ver'} resolución completa
             </button>
+            {exam && submittedExam && <TheoryLink nodeId={exercise.nodeIds[0]} prominent={false} />}
             {onNext && (
               <button type="button" className="btn btn--primary btn--sm" onClick={onNext}>
                 {nextLabel} <Icon name="arrow-right" size={16} />

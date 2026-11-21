@@ -340,7 +340,8 @@ export function ForgeOverlay() {
       if (kind === 'e') next.e = Math.min(Math.max(next.z + 3, 2), Math.max(0, s.e + delta));
       if (next.z === s.z && next.n === s.n && next.e === s.e) return;
       setSp(next);
-      if (delta > 0) sfx.add(kind);
+      if (kind === 'p' && next.z !== s.z) sfx.transmute();
+      else if (delta > 0) sfx.add(kind);
       else sfx.remove();
       const nid = identify(next);
       announce(`${nid.element ? nid.element.name : 'Sin elemento'}: ${next.z} protones, ${next.n} neutrones, ${next.e} electrones. ${KIND_LABEL[nid.kind]}${nid.charge ? `, carga ${chargeLabel(nid.charge)}` : ''}.`);

@@ -171,3 +171,47 @@ describe('dominio adaptativo y repaso', () => {
     expect(COVERED_NODES.length).toBeGreaterThanOrEqual(25);
   });
 });
+
+describe('problemas de nivel examen', () => {
+  it('las ternas de elementos siguen la tendencia con datos reales', async () => {
+    const { ELEMENT_TRIPLES } = await import('./generators/exam');
+    const { compare } = await import('../science/trends');
+    const { elementByZ } = await import('../science/elements');
+    for (const t of ELEMENT_TRIPLES)
+      for (const prop of ['radio', 'ei1', 'en'] as const)
+        for (let i = 0; i < 3; i++)
+          for (let j = i + 1; j < 3; j++) {
+            const c = compare(prop, elementByZ(t[i]!)!, elementByZ(t[j]!)!);
+            expect(c.actual, `${t.join('-')} ${prop}`).not.toBeNull();
+            if (c.predicted) expect(c.predicted.z, `${t.join('-')} ${prop}`).toBe(c.actual!.z);
+          }
+  });
+  it('espectro 3 → 1: λ = 102,5 nm, Lyman, UV', async () => {
+    const { buildSpectrumExam } = await import('./generators/exam');
+    const ex = buildSpectrumExam(1, 3, 2, 't');
+    const get = (id: string) => ex.parts.find((p) => p.id === id)!;
+    expect(checkAnswer(get('lineas').answer, '3').correct).toBe(true);
+    expect(checkAnswer(get('lnm').answer, '102,5 nm').correct).toBe(true);
+    expect(checkAnswer(get('eV').answer, '12,1 eV').correct).toBe(true);
+    expect(checkAnswer(get('serie').answer, ['lyman']).correct).toBe(true);
+    expect(checkAnswer(get('reg').answer, ['uv']).correct).toBe(true);
+  });
+  it('ondas: FM de 98,5 MHz → λ ≈ 3,05 m, radio', async () => {
+    const { buildWaveExam } = await import('./generators/exam');
+    const ex = buildWaveExam({ kind: 'nu', value: 98.5, unit: 'MHz', label: 'Una emisora emite a' }, 3, 't');
+    const get = (id: string) => ex.parts.find((p) => p.id === id)!;
+    expect(checkAnswer(get('l').answer, '3,05 m').correct).toBe(true);
+    expect(checkAnswer(get('T').answer, '1,02e-8 s').correct).toBe(true);
+    expect(checkAnswer(get('reg').answer, ['radio']).correct).toBe(true);
+    expect(checkAnswer(get('mol').answer, '3,93e-5 kJ/mol').correct).toBe(true);
+  });
+  it('el examen tipo tiene 8 preguntas que suman 10 puntos', async () => {
+    const { buildMockExam, MOCK_EXAM_PLAN } = await import('./session');
+    expect(MOCK_EXAM_PLAN.reduce((a, q) => a + q.points, 0)).toBe(10);
+    for (let seed = 1; seed < 20; seed++) {
+      const ex = buildMockExam(seed);
+      expect(ex).toHaveLength(8);
+      ex.forEach(assertSelfConsistent);
+    }
+  });
+});

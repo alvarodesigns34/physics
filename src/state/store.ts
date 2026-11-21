@@ -17,6 +17,9 @@ export interface Settings {
   quality: QualitySetting;
   motion: MotionSetting;
   sound: boolean;
+  ambient: boolean;
+  volume: number;
+  seenIntro: boolean;
   textScale: number;
   configOrder: ConfigOrder;
 }
@@ -77,7 +80,7 @@ interface Actions {
 
 export type AppState = PersistedState & Actions;
 
-const DEFAULT_SETTINGS: Settings = { alias: '', quality: 'auto', motion: 'sistema', sound: false, textScale: 1, configOrder: 'llenado' };
+const DEFAULT_SETTINGS: Settings = { alias: '', quality: 'auto', motion: 'sistema', sound: false, ambient: true, volume: 0.8, seenIntro: false, textScale: 1, configOrder: 'llenado' };
 
 function probeStorage(): boolean {
   try {
@@ -174,6 +177,10 @@ export const useStore = create<AppState>()(
       storage: createJSONStorage(() => safeStorage),
       partialize: (s) => ({ settings: s.settings, mastery: s.mastery, cards: s.cards, history: s.history, campaign: s.campaign, exams: s.exams, forge: s.forge, activeMission: s.activeMission }),
       migrate: (persisted) => persisted as PersistedState,
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<PersistedState>;
+        return { ...current, ...p, settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}) } };
+      },
     },
   ),
 );

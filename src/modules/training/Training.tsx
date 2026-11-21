@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../../state/store';
 import { BLOCKS, NODES, nodeTitle, NODE_BY_ID, type ModuleId } from '../../learning/syllabus';
 import { COVERED_NODES, SOURCE_EXERCISES } from '../../learning/registry';
-import { buildExam, selectNext, type Selection } from '../../learning/session';
+import { buildExam, buildMockExam, MOCK_EXAM_PLAN, selectNext, type Selection } from '../../learning/session';
+import { guideAnchor } from '../../learning/guide';
 import { dueCards, masteryLevel, masteryPercent } from '../../learning/mastery';
 import type { Exercise } from '../../learning/types';
 import { ExercisePlayer, type ExerciseOutcome } from '../../ui/ExercisePlayer';
@@ -28,6 +29,17 @@ const MODULE_LABEL: Record<ModuleId, string> = {
   arquitecto: 'Electron Architect',
   periodico: 'Periodic Universe',
   entrenamiento: 'Entrenamiento',
+};
+
+const GEN_LABEL: Record<string, string> = {
+  'examen-masa-iones': 'Isótopos, iones y masa atómica',
+  historia: 'Cuestión: modelos atómicos',
+  'examen-ondas': 'Ondas: caracteriza una radiación',
+  'examen-espectro': 'Espectro del hidrógeno (Rydberg)',
+  'cuantica-conceptos': 'Cuestión: modelo mecanocuántico',
+  'examen-cuantico': 'Configuración y números cuánticos',
+  'examen-elementos': 'Tres elementos: posición y propiedades',
+  'conceptos-varios': 'Cuestión: espectros y notación',
 };
 
 const coveredBlocks = BLOCKS.filter((b) => COVERED_NODES.some((n) => NODE_BY_ID.get(n)?.block === b.id));
@@ -188,6 +200,14 @@ interface ExamRun {
   startedAt: number;
   minutes: number | null;
   scope: string[];
+  /** Puntos de cada pregunta (examen tipo); por defecto, 1 cada una */
+  points?: number[];
+}
+
+function runScore(r: ExamRun): number {
+  const pts = r.exercises.map((_, i) => r.points?.[i] ?? 1);
+  const total = pts.reduce((a, b) => a + b, 0);
+  return r.results.reduce((a, x, i) => a + x.outcome.score * pts[i]!, 0) / Math.max(1e-9, total);
 }
 
 function ExamView() {
@@ -221,7 +241,7 @@ function ExamView() {
           byNode[n].ok += outcome.score;
         }
       }
-      const score = r.results.reduce((a, x) => a + x.outcome.score, 0) / Math.max(1, r.exercises.length);
+      const score = runScore(r);
       recordExam({ scope: r.scope, total: r.exercises.length, score, byNode });
     },
     [recordExam],
@@ -238,7 +258,41 @@ function ExamView() {
   if (!run) {
     return (
       <div className="stack-16">
-        <p className="lead">Sin pistas ni correcciones durante la prueba. Al terminar verás la nota, el resultado por apartados y todas las resoluciones.</p>
+        <div className="card mock-exam">
+          <div className="stack-8">
+            <span className="eyebrow eyebrow--accent">Recomendado antes del examen</span>
+            <span className="h2" style={{ fontSize: '1.9rem' }}>
+              Examen tipo
+            </span>
+            <p className="small muted" style={{ margin: 0, maxWidth: '60ch' }}>
+              La estructura de una prueba real del tema: cinco problemas con varios apartados (isótopos y masa atómica, ondas, espectro del hidrógeno, números cuánticos y tres elementos) y tres cuestiones teóricas. Puntuado sobre 10, con 50 minutos.
+            </p>
+          </div>
+          <ol className="mock-exam__plan">
+            {MOCK_EXAM_PLAN.map((q, i) => (
+              <li key={i}>
+                <span className="mono faint">{i + 1}</span>
+                <span>{GEN_LABEL[q.generator] ?? q.generator}</span>
+                <span className="mono">{q.points.toLocaleString('es-ES')} p</span>
+              </li>
+            ))}
+          </ol>
+          <button
+            type="button"
+            className="btn btn--primary"
+            style={{ alignSelf: 'flex-start' }}
+            onClick={() => {
+              setRun({ exercises: buildMockExam(Math.floor(Math.random() * 1e9)), index: 0, results: [], startedAt: Date.now(), minutes: 50, scope: [], points: MOCK_EXAM_PLAN.map((q) => q.points) });
+              setAnswered(false);
+              setNow(Date.now());
+            }}
+          >
+            Empezar el examen tipo
+          </button>
+        </div>
+        <hr className="divider" />
+        <span className="h3">Examen a medida</span>
+        <p className="small muted" style={{ margin: 0 }}>Sin pistas ni correcciones durante la prueba. Al terminar verás la nota, el resultado por apartados y todas las resoluciones.</p>
         <div className="stack-8">
           <span className="small muted">Bloques</span>
           <ScopePicker value={blocks} onChange={setBlocks} />
@@ -297,7 +351,7 @@ function ExamView() {
   }
 
   if (finished) {
-    const score = run.results.reduce((a, x) => a + x.outcome.score, 0) / run.exercises.length;
+    const score = runScore(run);
     const byNode = new Map<string, { ok: number; total: number }>();
     run.results.forEach(({ exercise, outcome }) =>
       exercise.nodeIds.forEach((n) => {
@@ -339,6 +393,13 @@ function ExamView() {
                   <span className="mono" style={{ width: 36, textAlign: 'right' }}>
                     {Math.round((v.ok / v.total) * 100)}%
                   </span>
+                  {v.ok / v.total < 0.7 ? (
+                    <a href={`#/guia?n=${guideAnchor(n)}`} className="small" style={{ color: 'var(--accent)', width: 56 }}>
+                      Repasar
+                    </a>
+                  ) : (
+                    <span style={{ width: 56 }} />
+                  )}
                 </span>
               </div>
             ))}
@@ -352,7 +413,7 @@ function ExamView() {
                   <span className="mono faint">{i + 1}.</span> {exercise.title}
                 </span>
                 <span className="mono" style={{ color: outcome.score >= 0.7 ? 'var(--ok)' : 'var(--bad)' }}>
-                  {Math.round(outcome.score * 100)} %
+                  {run.points ? `${(Math.round(outcome.score * run.points[i]! * 100) / 100).toLocaleString('es-ES')} / ${run.points[i]!.toLocaleString('es-ES')} p` : `${Math.round(outcome.score * 100)} %`}
                 </span>
               </summary>
               <div className="stack-8 small" style={{ marginTop: 12, color: 'var(--ink-muted)' }}>
@@ -361,6 +422,11 @@ function ExamView() {
                     <span style={{ color: outcome.partResults[k]?.correct ? 'var(--ok)' : 'var(--bad)' }}>{outcome.partResults[k]?.correct ? '✓' : '✗'}</span> <b style={{ fontWeight: 600, color: 'var(--ink)' }}>{p.prompt}:</b> <span className="mono">{p.canonical}</span>. {p.explanation}
                   </div>
                 ))}
+                {outcome.score < 1 && (
+                  <a className="btn btn--sm" style={{ alignSelf: 'flex-start' }} href={`#/guia?n=${guideAnchor(exercise.nodeIds[0]!)}`}>
+                    Repasar la teoría de este problema
+                  </a>
+                )}
               </div>
             </details>
           ))}
@@ -507,7 +573,11 @@ function Sources({ onPick }: { onPick: (e: Exercise) => void }) {
 export function TrainingOverlay() {
   const { query } = useRoute();
   const view = (VIEWS.find((v) => v.id === query.get('v'))?.id ?? 'practica') as View;
-  const [practiceScope, setPracticeScope] = useState<string[]>([]);
+  const nodesParam = query.get('nodes');
+  const [practiceScope, setPracticeScope] = useState<string[]>(() => (nodesParam ? nodesParam.split(',').filter((n) => COVERED_NODES.includes(n)) : []));
+  useEffect(() => {
+    if (nodesParam) setPracticeScope(nodesParam.split(',').filter((n) => COVERED_NODES.includes(n)));
+  }, [nodesParam]);
   const [fixed, setFixed] = useState<Exercise | null>(null);
   const go = (v: View) => navigate(`/entrenamiento?v=${v}`);
   const scroller = useRef<HTMLDivElement>(null);
@@ -534,6 +604,21 @@ export function TrainingOverlay() {
               ))}
             </div>
           </header>
+          {view === 'practica' && practiceScope.length > 0 && !fixed && (
+            <div className="card row row--between row--wrap" style={{ gap: 12, padding: '12px 16px' }}>
+              <span className="small">
+                Practicando: {practiceScope.map((n) => `${n} ${nodeTitle(n)}`).join(' · ')}
+              </span>
+              <span className="row" style={{ gap: 6 }}>
+                <a className="btn btn--ghost btn--sm" href={`#/guia?n=${practiceScope[0]}`}>
+                  Repasar la teoría
+                </a>
+                <button type="button" className="btn btn--sm" onClick={() => { setPracticeScope([]); navigate('/entrenamiento?v=practica'); }}>
+                  Todo el temario
+                </button>
+              </span>
+            </div>
+          )}
           {view === 'practica' && <Practice key={scopeKey} initialScope={practiceScope} fixedExercise={fixed} onClearFixed={() => setFixed(null)} />}
           {view === 'repaso' && (
             <Review
