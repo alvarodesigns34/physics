@@ -16,7 +16,7 @@ import { navigate, useQuality, useReducedMotion } from '../../app/hooks';
 import { useStore } from '../../state/store';
 import { BLOCKS, NODES } from '../../learning/syllabus';
 import { masteryLevel } from '../../learning/mastery';
-import { CHAPTERS, MISSIONS } from '../../learning/campaign';
+import { CHAPTERS, MISSIONS, ROMAN, missionRoute } from '../../learning/campaign';
 import { EpiTag, Stars } from '../../ui/common';
 import { Icon } from '../../ui/Icon';
 
@@ -261,7 +261,7 @@ export function HubOverlay() {
   const play = (id: string) => {
     const m = MISSIONS.find((x) => x.id === id)!;
     startMission(id);
-    navigate(m.lab === 'forja' ? '/forja' : `/fotones?tab=${m.tab ?? 'hidrogeno'}`);
+    navigate(missionRoute(m));
   };
   return (
     <div className="workspace">
@@ -307,7 +307,7 @@ export function HubOverlay() {
           {CHAPTERS.map((ch) => (
             <section key={ch.id} className="section">
               <div className="stack-8" style={{ gap: 2 }}>
-                <span className="eyebrow">Capítulo {ch.id === 1 ? 'I' : 'II'}</span>
+                <span className="eyebrow">Capítulo {ROMAN[ch.id]}</span>
                 <span className="h2" style={{ fontSize: '1.75rem' }}>
                   {ch.title}
                 </span>

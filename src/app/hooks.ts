@@ -3,8 +3,8 @@ import { useStore, type QualitySetting } from '../state/store';
 
 // ── Rutas (hash) ──────────────────────────────────────────────────────────
 
-export type Route = '/' | '/forja' | '/fotones' | '/entrenamiento' | '/campana';
-const ROUTES: Route[] = ['/', '/forja', '/fotones', '/entrenamiento', '/campana'];
+export type Route = '/' | '/forja' | '/fotones' | '/entrenamiento' | '/campana' | '/periodico' | '/cuantico' | '/arquitecto' | '/historia' | '/masas';
+const ROUTES: Route[] = ['/', '/forja', '/fotones', '/entrenamiento', '/campana', '/periodico', '/cuantico', '/arquitecto', '/historia', '/masas'];
 
 function readRoute(): { route: Route; query: URLSearchParams } {
   const raw = window.location.hash.replace(/^#/, '') || '/';

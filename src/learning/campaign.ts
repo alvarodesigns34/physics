@@ -10,7 +10,17 @@ import { energyOrderGenerator } from './generators/photon';
 import { choicePart } from './generators/util';
 import { isoelectronicGenerator } from './generators/nucleus';
 
-export type LabId = 'forja' | 'fotones';
+import type { LabSignal } from '../ui/MissionPanel';
+
+export type LabId = 'forja' | 'fotones' | 'periodico' | 'cuantico' | 'arquitecto' | 'historia' | 'masas';
+
+export const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+
+const LAB_ROUTE: Record<LabId, string> = { forja: '/forja', fotones: '/fotones', periodico: '/periodico', cuantico: '/cuantico', arquitecto: '/arquitecto', historia: '/historia', masas: '/masas' };
+
+export function missionRoute(m: Mission): string {
+  return `${LAB_ROUTE[m.lab]}${m.tab ? `?tab=${m.tab}` : ''}`;
+}
 
 export type MissionStep =
   | { kind: 'forja'; text: string; check: (s: Species) => boolean }
@@ -19,17 +29,18 @@ export type MissionStep =
   | { kind: 'transicion'; text: string; check: (from: number, to: number) => boolean }
   | { kind: 'cascada'; text: string; n: number }
   | { kind: 'espectro'; text: string; answerSymbol: string; mode: 'emision' | 'absorcion' }
-  | { kind: 'ejercicio'; text: string; build: () => Exercise };
+  | { kind: 'ejercicio'; text: string; build: () => Exercise }
+  | { kind: 'lab'; text: string; check: (sig: LabSignal) => boolean };
 
 export interface Mission {
   id: string;
   code: string;
-  chapter: 1 | 2;
+  chapter: number;
   title: string;
   brief: string;
   lab: LabId;
   /** Pestaña del laboratorio que se abre al empezar */
-  tab?: 'ondas' | 'hidrogeno' | 'espectroscopio';
+  tab?: string;
   nodeIds: string[];
   steps: MissionStep[];
 }

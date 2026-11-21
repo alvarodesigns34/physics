@@ -11,15 +11,76 @@ const ForgeOverlay = lazy(() => import('../modules/forge/Forge').then((m) => ({ 
 const PhotonScene = lazy(() => import('../modules/photon/PhotonLab').then((m) => ({ default: m.PhotonScene })));
 const PhotonOverlay = lazy(() => import('../modules/photon/PhotonLab').then((m) => ({ default: m.PhotonOverlay })));
 const TrainingOverlay = lazy(() => import('../modules/training/Training').then((m) => ({ default: m.TrainingOverlay })));
+const PeriodicScene = lazy(() => import('../modules/periodic/Periodic').then((m) => ({ default: m.PeriodicScene })));
+const PeriodicOverlay = lazy(() => import('../modules/periodic/Periodic').then((m) => ({ default: m.PeriodicOverlay })));
 
-const NAV: { route: Route; label: string }[] = [
-  { route: '/', label: 'Atrio' },
-  { route: '/forja', label: 'Atomic Forge' },
-  { route: '/fotones', label: 'Photon Lab' },
-  { route: '/entrenamiento', label: 'Entrenamiento' },
+/** Laboratorios disponibles (en el orden del temario). */
+export const LABS: { route: Route; label: string; blurb: string }[] = [
+  { route: '/forja', label: 'Atomic Forge', blurb: 'Átomos, isótopos e iones' },
+  { route: '/historia', label: 'Time Machine', blurb: 'Modelos y experimentos históricos' },
+  { route: '/fotones', label: 'Photon Lab', blurb: 'Luz, espectros e hidrógeno' },
+  { route: '/masas', label: 'Mass Spectrometry Lab', blurb: 'Isótopos y masa atómica' },
+  { route: '/cuantico', label: 'Quantum Space', blurb: 'Orbitales y números cuánticos' },
+  { route: '/arquitecto', label: 'Electron Architect', blurb: 'Configuración electrónica' },
+  { route: '/periodico', label: 'Periodic Universe', blurb: 'Tabla y propiedades periódicas' },
 ];
 
-const CRUMB: Record<Route, string> = { '/': 'The Matter Experience', '/forja': 'Atomic Forge', '/fotones': 'Photon Lab', '/entrenamiento': 'Centro de entrenamiento', '/campana': 'Campaña' };
+const CRUMB: Record<Route, string> = {
+  '/': 'The Matter Experience',
+  '/forja': 'Atomic Forge',
+  '/fotones': 'Photon Lab',
+  '/entrenamiento': 'Centro de entrenamiento',
+  '/campana': 'Campaña',
+  '/periodico': 'Periodic Universe',
+  '/cuantico': 'Quantum Space',
+  '/arquitecto': 'Electron Architect',
+  '/historia': 'Time Machine',
+  '/masas': 'Mass Spectrometry Lab',
+};
+
+function LabsMenu({ route }: { route: Route }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    window.addEventListener('mousedown', close);
+    window.addEventListener('keydown', esc);
+    return () => {
+      window.removeEventListener('mousedown', close);
+      window.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+  const active = LABS.some((l) => l.route === route);
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <a
+        href="#"
+        role="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-current={active ? 'page' : undefined}
+        onClick={(e) => {
+          e.preventDefault();
+          setOpen((o) => !o);
+        }}
+      >
+        {active ? CRUMB[route] : 'Laboratorios'} <span aria-hidden="true" style={{ opacity: 0.6 }}>▾</span>
+      </a>
+      {open && (
+        <div role="menu" className="labs-menu fade">
+          {LABS.map((l) => (
+            <a key={l.route} role="menuitem" href={`#${l.route}`} aria-current={route === l.route ? 'page' : undefined} onClick={() => setOpen(false)}>
+              <span style={{ display: 'block', color: 'var(--ink)', fontWeight: 550 }}>{l.label}</span>
+              <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-faint)' }}>{l.blurb}</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function hasWebGL(): boolean {
   try {
@@ -143,11 +204,13 @@ function TopBar({ route, onSettings }: { route: Route; onSettings: () => void })
       </button>
       <span className="topbar__spacer" />
       <nav className="topnav" aria-label="Secciones">
-        {NAV.map((n) => (
-          <a key={n.route} href={`#${n.route}`} aria-current={route === n.route ? 'page' : undefined}>
-            {n.label}
-          </a>
-        ))}
+        <a href="#/" aria-current={route === '/' ? 'page' : undefined}>
+          Atrio
+        </a>
+        <LabsMenu route={route} />
+        <a href="#/entrenamiento" aria-current={route === '/entrenamiento' ? 'page' : undefined}>
+          Entrenamiento
+        </a>
       </nav>
       <button type="button" className="btn btn--ghost btn--icon interactive" style={{ pointerEvents: 'auto' }} onClick={() => set({ sound: !sound })} aria-label={sound ? 'Desactivar sonido' : 'Activar sonido'} aria-pressed={sound}>
         <Icon name={sound ? 'sound' : 'mute'} />
@@ -165,6 +228,8 @@ function SceneFor({ route }: { route: Route }) {
       return <ForgeScene />;
     case '/fotones':
       return <PhotonScene />;
+    case '/periodico':
+      return <PeriodicScene />;
     case '/entrenamiento':
       return null;
     default:
@@ -178,6 +243,8 @@ function OverlayFor({ route }: { route: Route }): ReactNode {
       return <ForgeOverlay />;
     case '/fotones':
       return <PhotonOverlay />;
+    case '/periodico':
+      return <PeriodicOverlay />;
     case '/entrenamiento':
       return <TrainingOverlay />;
     default:

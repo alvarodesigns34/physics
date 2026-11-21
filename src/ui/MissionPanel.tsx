@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { Species } from '../science/nucleus';
-import { MISSION_BY_ID, MISSIONS, type LabId, type MissionStep } from '../learning/campaign';
+import { MISSION_BY_ID, MISSIONS, ROMAN, missionRoute, type LabId, type MissionStep } from '../learning/campaign';
 import { useStore } from '../state/store';
 import { ExercisePlayer, type ExerciseOutcome } from './ExercisePlayer';
 import { announce, Stars, toast } from './common';
@@ -10,6 +10,11 @@ import { sfx } from '../app/sound';
 
 /** Estado del laboratorio que las misiones pueden evaluar. `stamp` distingue eventos repetidos. */
 export interface LabSignal {
+  periodic?: { prop: string; selected: number | null; compared: [number, number] | null; view: string };
+  quantum?: { n: number; l: number; m: number; slice: boolean; bohr: boolean; tab: string; sigmaNm: number };
+  architect?: { z: number; e: number; status: string; pauli: boolean; hund: boolean };
+  history?: { tab: string; model: string; alphasR: number; alphasT: number; largeR: number; largeT: number; balanced: boolean; collapsed: boolean };
+  masas?: { z: number; ions: number; measured: number | null };
   species?: Species;
   lambdaNm?: number;
   transition?: { from: number; to: number; stamp: number };
@@ -29,6 +34,8 @@ function stepSatisfied(step: MissionStep, sig: LabSignal): boolean {
       return !!sig.cascade && sig.cascade.n === step.n;
     case 'espectro':
       return !!sig.spectro && sig.spectro.symbol === step.answerSymbol;
+    case 'lab':
+      return step.check(sig);
     default:
       return false;
   }
@@ -78,7 +85,7 @@ export function MissionPanel({ lab, signal }: { lab: LabId; signal: LabSignal })
 
   // Un objetivo solo se cumple con una acción posterior a su activación (evita completar por un
   // estado previo del laboratorio).
-  const signalKey = JSON.stringify([signal.species, signal.lambdaNm, signal.transition?.stamp, signal.cascade?.stamp, signal.spectro?.stamp]);
+  const signalKey = JSON.stringify([signal.species, signal.lambdaNm, signal.transition?.stamp, signal.cascade?.stamp, signal.spectro?.stamp, signal.periodic, signal.quantum, signal.architect, signal.history, signal.masas]);
   const armed = useRef<{ key: string; at: string }>({ key: '', at: '' });
   const armKey = `${activeId}:${stepIdx}:${progress?.status}`;
   if (armed.current.at !== armKey) armed.current = { key: signalKey, at: armKey };
@@ -102,7 +109,7 @@ export function MissionPanel({ lab, signal }: { lab: LabId; signal: LabSignal })
     }
     if (step.kind !== 'ejercicio' && stepSatisfied(step, signal)) advance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signal.species, signal.lambdaNm, signal.transition?.stamp, signal.cascade?.stamp, signal.spectro?.stamp, stepIdx, activeId]);
+  }, [signalKey, stepIdx, activeId]);
 
   const lastOutcome = useRef<ExerciseOutcome | null>(null);
   const onExercise = useCallback(
@@ -122,7 +129,7 @@ export function MissionPanel({ lab, signal }: { lab: LabId; signal: LabSignal })
     <section className="section" aria-label={`Misión ${mission.code}`}>
       <div className="row row--between">
         <span className="eyebrow eyebrow--accent">
-          Misión {mission.code} · Capítulo {mission.chapter === 1 ? 'I' : 'II'}
+          Misión {mission.code} · Capítulo {ROMAN[mission.chapter]}
         </span>
         <button type="button" className="btn btn--ghost btn--sm" onClick={() => setActive(null)} aria-label="Cerrar misión">
           <Icon name="x" size={14} /> Salir
@@ -185,7 +192,7 @@ export function MissionPanel({ lab, signal }: { lab: LabId; signal: LabSignal })
                 className="btn btn--primary btn--sm"
                 onClick={() => {
                   startMission(nextMission.id);
-                  if (nextMission.lab !== lab || nextMission.tab !== mission.tab) navigate(nextMission.lab === 'forja' ? '/forja' : `/fotones?tab=${nextMission.tab ?? 'hidrogeno'}`);
+                  if (nextMission.lab !== lab || nextMission.tab !== mission.tab) navigate(missionRoute(nextMission));
                 }}
               >
                 Siguiente: {nextMission.code} {nextMission.title} <Icon name="arrow-right" size={16} />
