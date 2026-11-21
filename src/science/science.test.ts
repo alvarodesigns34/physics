@@ -584,3 +584,48 @@ describe('diagramas de cajas (Electron Architect)', () => {
     expect(addToSubshell(b, '3d', -1)['3d']).toEqual([1, 1, 1, 1, 1]); // d⁶ → d⁵: quedan cinco desapareados
   });
 });
+
+describe('superficies de contorno de orbitales', () => {
+  it('1s: la esfera del 90 % tiene r ≈ 2,66 a₀', async () => {
+    const { orbitalGrid } = await import('./isosurface');
+    const g = orbitalGrid(1, 0, 0, 64, 0.9);
+    const r = -Math.log(g.iso * Math.sqrt(Math.PI));
+    expect(r).toBeGreaterThan(2.58);
+    expect(r).toBeLessThan(2.74);
+  });
+  it('2p: la rejilla conserva la normalización y el umbral encierra el 90 %', async () => {
+    const { orbitalGrid } = await import('./isosurface');
+    const g = orbitalGrid(2, 1, 0, 56, 0.9);
+    const dx = g.half / (g.size / 2);
+    let tot = 0;
+    for (const v of g.psi) tot += v * v * dx ** 3;
+    expect(tot).toBeGreaterThan(0.97);
+    expect(tot).toBeLessThan(1.03);
+    expect(g.enclosed).toBeGreaterThan(0.89);
+    expect(g.enclosed).toBeLessThan(0.92);
+  });
+});
+
+describe('espectroscopio de prisma (SF11)', () => {
+  it('índice nd del SF11 = 1,78472 (587,56 nm, catálogo SCHOTT)', async () => {
+    const { refractiveIndexSF11 } = await import('./prism');
+    expect(refractiveIndexSF11(587.56)).toBeCloseTo(1.78472, 4);
+    expect(refractiveIndexSF11(400)).toBeGreaterThan(refractiveIndexSF11(700));
+  });
+  it('desviación mínima para λ de diseño y el violeta se desvía más que el rojo', async () => {
+    const { prismGeometry, refractiveIndexSF11 } = await import('./prism');
+    const g = prismGeometry();
+    const d = g.trace(550)!;
+    const n = refractiveIndexSF11(550);
+    const dmin = 2 * Math.asin(n * Math.sin(Math.PI / 6)) - Math.PI / 3;
+    expect(d.deviation).toBeCloseTo(dmin, 6);
+    expect(Math.abs(d.s)).toBeLessThan(1e-9);
+    const v = g.trace(410)!;
+    const r = g.trace(690)!;
+    expect(v.deviation).toBeGreaterThan(r.deviation);
+    expect(v.s).toBeLessThan(0);
+    expect(r.s).toBeGreaterThan(0);
+    // Desviación mínima: cualquier otra λ… y la desviación del diseño es mínima frente a pequeñas variaciones de la incidencia (comprobado por la simetría del rayo interior).
+    expect(Math.abs(d.exit[1] - d.entry[1])).toBeLessThan(1e-9);
+  });
+});

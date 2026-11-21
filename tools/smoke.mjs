@@ -34,8 +34,11 @@ try {
   const base = `http://localhost:${PORT}/`;
 
   await page.goto(base + '#/');
-  await page.waitForTimeout(2500);
-  check((await page.locator('.station-label').count()) === 8, 'Atrio: ocho estaciones etiquetadas');
+  await page.waitForTimeout(1200);
+  check(await page.locator('.intro').isVisible(), 'Bienvenida visible en la primera visita');
+  await page.click('.intro button:text-is("Cerrar")');
+  await page.waitForTimeout(1500);
+  check((await page.locator('.station-label').count()) === 9, 'Atrio: nueve estaciones etiquetadas');
   await page.screenshot({ path: `${OUT}/01-atrio.png` });
 
   await page.click('button:has-text("Empezar")');
@@ -47,6 +50,22 @@ try {
   check(side.includes('Carbono') && side.includes('Núcleo estable'), 'Forja: ¹²C identificado y estable');
   check(side.includes('Misión completada'), 'Misión I-1 completada');
   await page.screenshot({ path: `${OUT}/02-forja-c12.png` });
+
+  await page.goto(base + '#/guia?b=3&n=3.2');
+  await page.waitForTimeout(1200);
+  check((await page.locator('.guide-sec').count()) >= 8 && (await page.locator('canvas.wave-canvas').count()) === 1, 'Guía: bloque 3 con la anatomía de una onda');
+  await page.locator('#sec-3\\.2 .widget').scrollIntoViewIfNeeded();
+  check((await page.locator('#sec-3\\.2 .formula-live').innerText()).includes('m/s'), 'Guía: v = λ·ν calculada en vivo');
+  await page.screenshot({ path: `${OUT}/11-guia-ondas.png` });
+
+  await page.goto(base + '#/fotones');
+  await page.waitForTimeout(1200);
+  check((await page.locator('aside [role=tab][aria-selected=true]').first().innerText()).includes('Ondas'), 'Photon Lab abre en la pestaña Ondas');
+  await page.goto(base + '#/fotones?tab=espectroscopio');
+  await page.waitForTimeout(1800);
+  await page.click('summary:has-text("Medidas del prisma")');
+  check((await page.locator('aside').innerText()).includes('1,7'), 'Espectroscopio: índices del SF11 calculados');
+  await page.screenshot({ path: `${OUT}/12-espectroscopio.png` });
 
   await page.goto(base + '#/fotones?tab=hidrogeno');
   await page.waitForTimeout(1500);
@@ -68,6 +87,12 @@ try {
   check((await page.locator('.feedback--ok').count()) >= 2, 'Entrenamiento: AMP 6 corregido paso a paso');
   await page.screenshot({ path: `${OUT}/04-entrenamiento.png` });
 
+  await page.goto(base + '#/entrenamiento?v=examen');
+  await page.waitForTimeout(800);
+  await page.click('button:has-text("Empezar el examen tipo")');
+  await page.waitForTimeout(600);
+  check((await page.locator('main').innerText()).includes('de 8'), 'Examen tipo: 8 preguntas');
+
   // Laboratorios de las fases 2–4
   await page.goto(base + '#/periodico');
   await page.waitForTimeout(1800);
@@ -80,7 +105,7 @@ try {
   await page.waitForTimeout(1500);
   await page.click('[role=radio]:text-is("3")');
   await page.click('[role=radio]:text-is("2 · d")');
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(2500);
   check((await page.locator('aside').innerText()).includes('nodos angulares'), 'Quantum Space: orbital 3d con sus nodos');
   await page.screenshot({ path: `${OUT}/07-cuantico.png` });
 
@@ -111,6 +136,11 @@ try {
   const m = await browser.newPage({ ...devices['iPhone 13'] });
   const mErrors = [];
   m.on('pageerror', (e) => mErrors.push(e.message));
+  await m.goto(base + '#/guia?b=6');
+  await m.waitForTimeout(1200);
+  await m.click('.intro button:text-is("Cerrar")');
+  await m.waitForTimeout(600);
+  await m.screenshot({ path: `${OUT}/13-movil-guia.png` });
   await m.goto(base + '#/forja');
   await m.waitForTimeout(2000);
   await m.screenshot({ path: `${OUT}/05-movil-forja.png` });

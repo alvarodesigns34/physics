@@ -48,7 +48,7 @@ let stampCounter = 0;
 const nextStamp = () => ++stampCounter;
 
 export const usePhoton = create<PhotonState>((set, get) => ({
-  tab: 'hidrogeno',
+  tab: 'ondas',
   lambdaNm: 700,
   level: 1,
   mode: 'emision',

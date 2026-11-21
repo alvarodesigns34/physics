@@ -17,6 +17,7 @@ import { ELEMENTS, CATEGORY_LABEL, elementBySymbol, displayWeight } from '../../
 import { MissionPanel } from '../../ui/MissionPanel';
 import { EpiTag, announce } from '../../ui/common';
 import { Icon } from '../../ui/Icon';
+import { RealScale } from './RealScale';
 
 /** Unidades de escena por radio de Bohr para la nube (la escala del núcleo NO es real). */
 const CLOUD_SCALE = 1.15;
@@ -491,6 +492,8 @@ export function ForgeOverlay() {
               </div>
             </section>
           )}
+
+          {sp.z > 0 && <RealScale z={sp.z} a={sp.z + sp.n} />}
 
           <section className="section">
             <IsotopeLadder sp={sp} table={table} onPick={(n) => setSp({ ...sp, n })} />

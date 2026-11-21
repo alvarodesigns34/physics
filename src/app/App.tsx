@@ -206,10 +206,58 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         <p className="small faint" style={{ marginTop: 'auto' }}>
-          ATOM · Fase 1. Datos: CODATA 2018, NIST, IUPAC/CIAAW y NUBASE (vía mendeleev). Sin cuentas ni seguimiento: todo se guarda en este navegador.
+          ATOM. Datos: CODATA 2018, NIST, IUPAC/CIAAW y NUBASE (vía mendeleev). Sin cuentas ni seguimiento: todo se guarda en este navegador.
         </p>
       </div>
     </>
+  );
+}
+
+function Intro() {
+  const set = useStore((s) => s.setSettings);
+  const sound = useStore((s) => s.settings.sound);
+  const btn = useRef<HTMLButtonElement>(null);
+  useEffect(() => btn.current?.focus(), []);
+  const go = (to: string) => {
+    set({ seenIntro: true });
+    navigate(to);
+  };
+  return (
+    <div className="intro fade" role="dialog" aria-modal="true" aria-labelledby="intro-title">
+      <div className="intro__card enter">
+        <div className="stack-12">
+          <span className="eyebrow eyebrow--accent">ATOM · Estructura atómica y sistema periódico</span>
+          <h1 id="intro-title" className="display" style={{ fontSize: 'clamp(2.2rem, 5vw, 3.2rem)', lineHeight: 1.02 }}>
+            Todo el tema, para verlo, tocarlo y aprobarlo.
+          </h1>
+          <p className="lead" style={{ margin: 0 }}>
+            Laboratorios en 3D con física de verdad, una guía con la teoría que entra en el examen y ejercicios que se corrigen paso a paso. Elige por dónde empezar: todo está abierto.
+          </p>
+        </div>
+        <div className="intro__paths">
+          <button ref={btn} type="button" className="intro__path" onClick={() => go('/guia')}>
+            <span className="h3">Estudiar</span>
+            <span className="small muted">Teoría por apartados con ejemplos interactivos y fórmulas.</span>
+          </button>
+          <button type="button" className="intro__path" onClick={() => go('/')}>
+            <span className="h3">Explorar</span>
+            <span className="small muted">Siete laboratorios 3D y una campaña de 35 misiones.</span>
+          </button>
+          <button type="button" className="intro__path" onClick={() => go('/entrenamiento?v=examen')}>
+            <span className="h3">Practicar</span>
+            <span className="small muted">Ejercicios adaptativos, repaso espaciado y examen tipo.</span>
+          </button>
+        </div>
+        <div className="row row--between row--wrap" style={{ gap: 12 }}>
+          <label className="row small muted" style={{ gap: 8, cursor: 'pointer' }}>
+            <input type="checkbox" checked={sound} onChange={(e) => set({ sound: e.target.checked })} /> Activar sonido (ambiente y efectos)
+          </label>
+          <button type="button" className="btn btn--ghost btn--sm" onClick={() => set({ seenIntro: true })}>
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -310,6 +358,7 @@ export function App() {
   }, [effectiveRoute]);
   useEffect(() => installUiSounds(), []);
   const soundOn = useStore((s) => s.settings.sound);
+  const seenIntro = useStore((s) => s.settings.seenIntro);
   const ambientOn = useStore((s) => s.settings.ambient);
   useEffect(() => {
     setAmbient(effectiveRoute);
@@ -346,6 +395,7 @@ export function App() {
           </ErrorBoundary>
         </main>
       </div>
+      {!seenIntro && <Intro />}
       {settingsOpen && <SettingsDrawer onClose={() => setSettingsOpen(false)} />}
       <Announcer />
       <Toaster />

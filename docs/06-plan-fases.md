@@ -41,5 +41,12 @@ Cada fase deja el producto **ejecutable, integrado, probado y visualmente cohere
 - 159 pruebas superadas, entre ellas: trayectoria coulombiana integrada frente a tan(θ/2) = d/2b; Monte Carlo frente a la sección eficaz (Thomson: 0 desviaciones > 10°); tubo de Thomson integrado frente a y₁ = qEL²/2mv² y compensación B = E/v; tendencias con datos reales y excepciones N/O, Be/B y F/Cl; diagramas de cajas (Pauli, Hund, excepción del Cr); autoconsistencia de todos los generadores; y cobertura de 54 de 54 apartados.
 - Prueba de humo en navegador: 15 de 15 comprobaciones en todos los laboratorios, escritorio y móvil.
 
+## Fase 4b · Preparación del examen ✅
+- Guía de estudio (/guia) con 7 lecciones, formulario y 10 widgets interactivos (incluida la anatomía de una onda).
+- 5 generadores de problemas compuestos de nivel examen y «Examen tipo» (8 preguntas, 10 puntos, 50 min).
+- Enlaces «Repasa la teoría» desde cada ejercicio y desde el informe del examen.
+- Realismo 3D: superficies de orbital del 90 % (marching cubes), espectroscopio de prisma SF11 con trazado de rayos, visor de escala real del átomo y arquitectura del Atrio.
+- Sonido ampliado: ambientes por laboratorio y efectos por acción.
+
 ## Fase 5 · Pulido y producción
 - Auditoría de accesibilidad con lectores de pantalla, presupuesto de rendimiento en dispositivos de gama baja, PWA sin conexión, informe de progreso exportable en PDF y modo docente (asignar misiones y exámenes).
