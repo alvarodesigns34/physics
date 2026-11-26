@@ -9,6 +9,10 @@ export interface NodeMastery {
   attempts: number;
   correct: number;
   lastSeen: number;
+  /** Información de Fisher acumulada Σ w·p(1−p): mide cuánta evidencia respalda θ */
+  info?: number;
+  /** Aciertos «demostrados»: al primer intento, sin pistas y con dificultad ≥ 2 */
+  demonstrated?: number;
 }
 
 export interface ReviewCard {
@@ -33,17 +37,63 @@ export function initialMastery(): NodeMastery {
  * K decrece con el número de intentos para estabilizar la estimación.
  */
 export function updateMastery(m: NodeMastery, difficulty: Difficulty, correct: boolean, hintsUsed: number, now: number): NodeMastery {
+  return updateMasteryY(m, difficulty, correct ? 1 : 0, hintsUsed, now);
+}
+
+/**
+ * Actualización con resultado continuo y ∈ [0, 1] (crédito parcial de un problema compuesto):
+ * Δθ = K·(y − p), con la ganancia reducida por las pistas cuando y > p. Acumula la información de Fisher
+ * p(1 − p) para poder expresar la incertidumbre de la estimación.
+ */
+export function updateMasteryY(m: NodeMastery, difficulty: Difficulty, y: number, hintsUsed: number, now: number, weight = 1): NodeMastery {
+  const yy = Math.min(1, Math.max(0, Number.isFinite(y) ? y : 0));
+  const w = Math.min(1, Math.max(0, weight));
   const p = pCorrect(m.theta, difficulty);
   const K = Math.max(0.35, 1.2 / Math.sqrt(1 + m.attempts / 3));
-  const hintFactor = [1, 0.7, 0.45, 0.25][Math.min(3, hintsUsed)]!;
-  const delta = correct ? K * hintFactor * (1 - p) : -K * p;
+  const hintFactor = [1, 0.7, 0.45, 0.25][Math.min(3, Math.max(0, hintsUsed))]!;
+  const delta = yy > p ? K * w * hintFactor * (yy - p) : K * w * (yy - p);
+  const info = (m.info ?? estimatedInfo(m)) + w * p * (1 - p);
   return {
     theta: Math.max(-3, Math.min(3, m.theta + delta)),
     attempts: m.attempts + 1,
-    correct: m.correct + (correct ? 1 : 0),
+    correct: m.correct + (yy >= 0.999 ? 1 : 0),
     lastSeen: now,
+    info,
+    demonstrated: (m.demonstrated ?? 0) + (yy >= 0.999 && hintsUsed === 0 && difficulty >= 2 ? 1 : 0),
   };
 }
+
+/** Información aproximada para registros antiguos (sin campo info). */
+function estimatedInfo(m: NodeMastery): number {
+  return m.attempts * 0.2;
+}
+
+export type EvidenceLevel = 'sin-datos' | 'escasa' | 'moderada' | 'solida';
+
+export interface MasteryEstimate {
+  /** Probabilidad estimada de acertar un ítem de dificultad media (%) */
+  mid: number;
+  /** Intervalo aproximado (±1 error típico), en % redondeado a 5 */
+  low: number;
+  high: number;
+  evidence: EvidenceLevel;
+  demonstrated: number;
+}
+
+/**
+ * Estimación con su incertidumbre. Error típico de θ ≈ 1/√(I + I₀), con I₀ = 0,6 como información a priori.
+ * Se redondea a múltiplos de 5 para no transmitir una precisión que el modelo no tiene.
+ */
+export function masteryEstimate(m: NodeMastery | undefined): MasteryEstimate {
+  if (!m || m.attempts === 0) return { mid: 0, low: 0, high: 0, evidence: 'sin-datos', demonstrated: 0 };
+  const info = m.info ?? estimatedInfo(m);
+  const se = 1 / Math.sqrt(info + 0.6);
+  const r5 = (x: number) => Math.round(x * 20) * 5;
+  const evidence: EvidenceLevel = m.attempts < 3 || se > 1 ? 'escasa' : se > 0.6 ? 'moderada' : 'solida';
+  return { mid: r5(pCorrect(m.theta, 2)), low: r5(pCorrect(m.theta - se, 2)), high: r5(pCorrect(m.theta + se, 2)), evidence, demonstrated: m.demonstrated ?? 0 };
+}
+
+export const EVIDENCE_LABEL: Record<EvidenceLevel, string> = { 'sin-datos': 'sin datos', escasa: 'evidencia escasa', moderada: 'evidencia moderada', solida: 'evidencia sólida' };
 
 /** Dominio mostrado al alumno: probabilidad de acertar un ítem de dificultad media. */
 export function masteryPercent(m: NodeMastery | undefined): number {
@@ -56,7 +106,8 @@ export type MasteryLevel = 'sin-datos' | 'iniciado' | 'en-progreso' | 'dominado'
 export function masteryLevel(m: NodeMastery | undefined): MasteryLevel {
   if (!m || m.attempts === 0) return 'sin-datos';
   const p = masteryPercent(m);
-  if (p >= 80 && m.attempts >= 3) return 'dominado';
+  // «Dominado» exige además algún acierto demostrado (primer intento, sin pistas, dificultad ≥ 2) en registros nuevos.
+  if (p >= 80 && m.attempts >= 3 && (m.demonstrated === undefined || m.demonstrated >= 1)) return 'dominado';
   if (p >= 50) return 'en-progreso';
   return 'iniciado';
 }

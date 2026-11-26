@@ -1,11 +1,12 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import type { CheckResult, Exercise, ExercisePart } from '../learning/types';
+import type { CheckResult, ErrorKind, Exercise, ExercisePart, SkillId } from '../learning/types';
+import type { PartRecord } from '../learning/evidence';
 import { checkAnswer } from '../learning/checker';
 import { parseConfigurationText } from '../science/configuration';
 import { toSuperscript } from '../science/numbers';
 import { lLetter } from '../science/quantum';
 import { nodeTitle } from '../learning/syllabus';
-import { guideAnchor, SECTION_BY_NODE } from '../learning/guide';
+import { guideAnchorFor, SECTION_BY_NODE } from '../learning/guide';
 import { Feedback, Rich } from './common';
 import { Icon } from './Icon';
 import { sfx } from '../app/sound';
@@ -19,14 +20,16 @@ export interface ExerciseOutcome {
   firstTry: boolean;
   /** Resultado por paso (modo examen) */
   partResults: { id: string; correct: boolean }[];
+  /** Registro detallado por paso: errores clasificados, arrastre y cifras (para la evidencia por competencias) */
+  parts: PartRecord[];
 }
 
 type Mode = 'practica' | 'examen' | 'campana';
 
 /** Enlace a la sección de la guía que explica el apartado del ejercicio. */
-function TheoryLink({ nodeId, prominent }: { nodeId: string | undefined; prominent: boolean }) {
+function TheoryLink({ nodeId, prominent, generatorId }: { nodeId: string | undefined; prominent: boolean; generatorId?: string }) {
   if (!nodeId) return null;
-  const anchor = guideAnchor(nodeId);
+  const anchor = guideAnchorFor(nodeId, generatorId);
   const sec = SECTION_BY_NODE.get(anchor)?.section;
   return (
     <a className={`btn btn--sm ${prominent ? '' : 'btn--ghost'}`} href={`#/guia?n=${anchor}`} style={prominent ? { borderColor: 'var(--accent-line)' } : undefined}>
@@ -42,6 +45,15 @@ interface PartState {
   done: boolean;
   revealed: boolean;
   credit: number;
+  errors: { kind: ErrorKind; skill?: SkillId }[];
+  carried: boolean;
+  sigFigIssue: boolean;
+}
+
+const freshPart = (p: ExercisePart): PartState => ({ value: initialValue(p), attempts: 0, result: null, done: false, revealed: false, credit: 0, errors: [], carried: false, sigFigIssue: false });
+
+function toRecords(ex: Exercise, parts: PartState[]): PartRecord[] {
+  return parts.map((p, i) => ({ id: ex.parts[i]!.id, credit: p.credit, attempts: p.attempts, revealed: p.revealed, errors: p.errors, carried: p.carried, sigFigIssue: p.sigFigIssue }));
 }
 
 function initialValue(p: ExercisePart): string | string[] {
@@ -160,7 +172,7 @@ function PartInput({ part, value, onChange, onSubmit, disabled, labelId }: { par
 }
 
 export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = 'Siguiente', showMeta = true }: { exercise: Exercise; mode: Mode; onFinish?: (o: ExerciseOutcome) => void; onNext?: () => void; nextLabel?: string; showMeta?: boolean }) {
-  const [parts, setParts] = useState<PartState[]>(() => exercise.parts.map((p) => ({ value: initialValue(p), attempts: 0, result: null, done: false, revealed: false, credit: 0 })));
+  const [parts, setParts] = useState<PartState[]>(() => exercise.parts.map(freshPart));
   const [hints, setHints] = useState(0);
   const [showSolution, setShowSolution] = useState(false);
   const [submittedExam, setSubmittedExam] = useState(false);
@@ -169,7 +181,7 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
   const exam = mode === 'examen';
 
   useEffect(() => {
-    setParts(exercise.parts.map((p) => ({ value: initialValue(p), attempts: 0, result: null, done: false, revealed: false, credit: 0 })));
+    setParts(exercise.parts.map(freshPart));
     setHints(0);
     setShowSolution(false);
     setSubmittedExam(false);
@@ -193,7 +205,7 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
     finished.current = true;
     const score = parts.reduce((a, p) => a + p.credit, 0) / parts.length;
     const revealed = parts.filter((p) => p.revealed).length;
-    const outcome: ExerciseOutcome = { correct: score >= 0.7 && revealed === 0, score, hintsUsed: hints, revealed, firstTry: parts.every((p) => p.attempts === 1 && !p.revealed), partResults: parts.map((p, i) => ({ id: exercise.parts[i]!.id, correct: p.credit > 0 })) };
+    const outcome: ExerciseOutcome = { correct: score >= 0.7 && revealed === 0, score, hintsUsed: hints, revealed, firstTry: parts.every((p) => p.attempts === 1 && !p.revealed), partResults: parts.map((p, i) => ({ id: exercise.parts[i]!.id, correct: p.credit > 0 })), parts: toRecords(exercise, parts) };
     if (outcome.correct) sfx.success();
     onFinish?.(outcome);
   }, [allDone, exam, parts, hints, onFinish, exercise]);
@@ -211,21 +223,33 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
     const attempts = st.attempts + 1;
     if (result.correct) {
       sfx.success();
-      update(i, { result, attempts, done: true, credit: attempts === 1 ? 1 : 0.5 });
+      update(i, { result, attempts, done: true, credit: attempts === 1 ? 1 : 0.5, carried: result.status === 'correcto-arrastre', sigFigIssue: result.errorKind === 'cifras' });
     } else {
       sfx.error();
-      update(i, { result, attempts });
+      update(i, { result, attempts, errors: result.errorKind ? [...st.errors, { kind: result.errorKind, skill: result.errorSkill }] : st.errors });
     }
   };
 
   const reveal = (i: number) => update(i, { revealed: true, done: true, credit: 0 });
 
   const submitExam = () => {
-    const results = exercise.parts.map((p, i) => checkAnswer(p.answer, parts[i]!.value, { previousWrong }));
-    setParts((ps) => ps.map((p, i) => ({ ...p, result: results[i]!, attempts: 1, done: true, credit: results[i]!.correct ? 1 : 0 })));
+    // Corrección secuencial: un paso que aplica bien un resultado previo erróneo se acepta (arrastre) y el
+    // error solo se penaliza una vez, en su paso de origen.
+    const prev: Record<string, number> = {};
+    const results = exercise.parts.map((p, i) => {
+      const r = checkAnswer(p.answer, parts[i]!.value, { previousWrong: { ...prev } });
+      if ((!r.correct || r.status === 'correcto-arrastre') && r.numericValue !== undefined) prev[p.id] = r.numericValue;
+      return r;
+    });
+    const next = parts.map((p, i) => {
+      const r = results[i]!;
+      const answered = r.status !== 'vacio';
+      return { ...p, result: r, attempts: 1, done: true, credit: r.correct ? 1 : 0, errors: !r.correct && r.errorKind ? [{ kind: r.errorKind, skill: r.errorSkill }] : !answered ? [{ kind: 'incompleto' as const }] : [], carried: r.status === 'correcto-arrastre', sigFigIssue: r.correct && r.errorKind === 'cifras' };
+    });
+    setParts(next);
     setSubmittedExam(true);
     const score = results.filter((r) => r.correct).length / results.length;
-    onFinish?.({ correct: score >= 0.7, score, hintsUsed: 0, revealed: 0, firstTry: score === 1, partResults: results.map((r, i) => ({ id: exercise.parts[i]!.id, correct: r.correct })) });
+    onFinish?.({ correct: score >= 0.7, score, hintsUsed: 0, revealed: 0, firstTry: score === 1, partResults: results.map((r, i) => ({ id: exercise.parts[i]!.id, correct: r.correct })), parts: toRecords(exercise, next) });
   };
 
   // En modo paso a paso, solo se muestran los pasos hasta el primero sin terminar.
@@ -243,9 +267,8 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
                 {n} · {nodeTitle(n)}
               </span>
             ))}
-            <span className="chip" aria-label={`Dificultad ${exercise.difficulty} de 3`}>
-              {'●'.repeat(exercise.difficulty)}
-              <span className="faint">{'●'.repeat(3 - exercise.difficulty)}</span>
+            <span className={`level-chip level-chip--${exercise.difficulty}`} style={{ alignSelf: 'center' }}>
+              {exercise.difficulty === 1 ? 'Básico' : exercise.difficulty === 2 ? 'Nivel examen' : 'Avanzado'}
             </span>
           </div>
         )}
@@ -332,7 +355,7 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
                 <Icon name="bulb" size={16} /> Pista {hints + 1} de 3
               </button>
             )}
-            <TheoryLink nodeId={exercise.nodeIds[0]} prominent={parts.some((p) => p.attempts > 0 && !p.done)} />
+            <TheoryLink nodeId={exercise.nodeIds[0]} generatorId={exercise.generatorId} prominent={parts.some((p) => p.attempts > 0 && !p.done)} />
           </div>
         </section>
       )}
@@ -354,7 +377,7 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
             <button type="button" className="btn btn--sm" onClick={() => setShowSolution((s) => !s)} aria-expanded={showSolution}>
               <Icon name="eye" size={16} /> {showSolution ? 'Ocultar' : 'Ver'} resolución completa
             </button>
-            {exam && submittedExam && <TheoryLink nodeId={exercise.nodeIds[0]} prominent={false} />}
+            {exam && submittedExam && <TheoryLink nodeId={exercise.nodeIds[0]} generatorId={exercise.generatorId} prominent={false} />}
             {onNext && (
               <button type="button" className="btn btn--primary btn--sm" onClick={onNext}>
                 {nextLabel} <Icon name="arrow-right" size={16} />

@@ -1,4 +1,4 @@
-# Comprobaciones en cada push y pull request: tipos, pruebas y compilación.
+# Comprobaciones en cada push y pull request: tipos, pruebas, compilación y prueba en navegador.
 name: Comprobaciones
 
 on:
@@ -15,5 +15,32 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 3
+
+  e2e:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      # Prueba de humo de extremo a extremo (escritorio y móvil) con esperas basadas en estados observables
+      - run: npm run e2e
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturas-e2e
+          path: test-results
+          retention-days: 7

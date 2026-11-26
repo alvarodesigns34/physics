@@ -48,7 +48,7 @@ export function orbitalGrid(n: number, l: number, m: number, size: number, p = 0
   const rTop = Math.sqrt(3) * half;
   const R = new Float32Array(tab + 1);
   for (let i = 0; i <= tab; i++) R[i] = radialWavefunction(n, l, Z, (i / tab) * rTop);
-  const dens: number[] = new Array(size * size * size);
+  const dens = new Float32Array(size * size * size);
   let k = 0;
   for (let z = 0; z < size; z++) {
     const cz = coords[z]!;
@@ -71,17 +71,50 @@ export function orbitalGrid(n: number, l: number, m: number, size: number, p = 0
       }
     }
   }
-  const total = dens.reduce((a, b) => a + b, 0) * dV;
-  const target = p * Math.min(1, total);
-  const sorted = Float64Array.from(dens).sort().reverse();
-  let acc = 0;
-  let thr = sorted[0]!;
-  for (let i = 0; i < sorted.length; i++) {
-    acc += sorted[i]! * dV;
-    if (acc >= target) {
-      thr = sorted[i]!;
-      break;
-    }
+  const { threshold, enclosed } = thresholdForFraction(dens, dV, p);
+  return { size, half, psi, iso: Math.sqrt(threshold), enclosed };
+}
+
+/**
+ * Umbral t tal que la suma de los valores ≥ t (por dV) alcanza la fracción p del total (acotado a 1).
+ * Equivale a ordenar de mayor a menor y acumular, pero en O(N): histograma logarítmico y orden exacto
+ * solo dentro del intervalo donde se alcanza la fracción.
+ */
+export function thresholdForFraction(dens: Float32Array, dV: number, p: number): { threshold: number; enclosed: number } {
+  let total = 0;
+  let max = 0;
+  for (let i = 0; i < dens.length; i++) {
+    const d = dens[i]!;
+    total += d;
+    if (d > max) max = d;
   }
-  return { size, half, psi, iso: Math.sqrt(thr), enclosed: acc };
+  total *= dV;
+  const target = p * Math.min(1, total);
+  if (max === 0) return { threshold: 0, enclosed: 0 };
+  const BINS = 4096;
+  const lo = Math.log(max) - 40; // por debajo de e⁻⁴⁰·máx la contribución es despreciable
+  const scale = BINS / 40;
+  const binOf = (d: number) => (d <= 0 ? -1 : Math.min(BINS - 1, Math.floor((Math.log(d) - lo) * scale)));
+  const w = new Float64Array(BINS);
+  for (let i = 0; i < dens.length; i++) {
+    const b = binOf(dens[i]!);
+    if (b >= 0) w[b]! += dens[i]!;
+  }
+  let acc = 0;
+  let bin = BINS - 1;
+  for (; bin >= 0; bin--) {
+    if ((acc + w[bin]!) * dV >= target) break;
+    acc += w[bin]!;
+  }
+  if (bin < 0) return { threshold: 0, enclosed: acc * dV };
+  const inBin: number[] = [];
+  for (let i = 0; i < dens.length; i++) if (binOf(dens[i]!) === bin) inBin.push(dens[i]!);
+  inBin.sort((a, b) => b - a);
+  let thr = inBin[0]!;
+  for (const d of inBin) {
+    acc += d;
+    thr = d;
+    if (acc * dV >= target) break;
+  }
+  return { threshold: thr, enclosed: acc * dV };
 }

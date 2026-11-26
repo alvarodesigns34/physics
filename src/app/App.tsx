@@ -123,6 +123,8 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
   const exportProgress = useStore((s) => s.exportProgress);
   const importProgress = useStore((s) => s.importProgress);
   const resetProgress = useStore((s) => s.resetProgress);
+  const undoImport = useStore((s) => s.undoImport);
+  const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const storageOk = useStore((s) => s.storageAvailable);
   const fileRef = useRef<HTMLInputElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -171,6 +173,11 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
         <hr className="divider" />
         <div className="stack-12">
           <span className="h3">Progreso</span>
+          {importMsg && (
+            <p className="small" role="status" style={{ color: importMsg.ok ? 'var(--ok)' : 'var(--bad)' }}>
+              {importMsg.text}
+            </p>
+          )}
           {!storageOk && <p className="small" style={{ color: 'var(--warn)' }}>Este navegador no permite guardar datos: el progreso solo durará mientras la página esté abierta. Exporta un archivo para conservarlo.</p>}
           <div className="row row--wrap">
             <button type="button" className="btn btn--sm" onClick={download}>
@@ -187,10 +194,23 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
               onChange={async (e) => {
                 const f = e.target.files?.[0];
                 if (!f) return;
-                toast(importProgress(await f.text()) ? 'Progreso importado' : 'El archivo no es un progreso de ATOM válido');
+                const res = importProgress(await f.text());
+                setImportMsg(res.ok ? { ok: true, text: 'Progreso importado. Tu progreso anterior se ha guardado por si quieres deshacerlo.' } : { ok: false, text: `No se ha importado nada: ${res.issues.slice(0, 3).join(' ')}${res.issues.length > 3 ? ` (y ${res.issues.length - 3} problema(s) más)` : ''} Tu progreso actual no ha cambiado.` });
                 e.target.value = '';
               }}
             />
+            {importMsg?.ok && (
+              <button
+                type="button"
+                className="btn btn--sm"
+                onClick={() => {
+                  if (undoImport()) toast('Importación deshecha');
+                  setImportMsg(null);
+                }}
+              >
+                Deshacer importación
+              </button>
+            )}
             <button
               type="button"
               className="btn btn--ghost btn--sm"
@@ -258,6 +278,49 @@ function Intro() {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Barra de pestañas inferior para pantallas táctiles estrechas (la barra superior se oculta). */
+function MobileNav({ route }: { route: Route }) {
+  const [labsOpen, setLabsOpen] = useState(false);
+  const labActive = LABS.some((l) => l.route === route);
+  useEffect(() => setLabsOpen(false), [route]);
+  return (
+    <>
+      {labsOpen && (
+        <>
+          <div className="drawer-backdrop" onClick={() => setLabsOpen(false)} />
+          <div className="mobile-labs fade" role="dialog" aria-label="Laboratorios">
+            <span className="eyebrow">Laboratorios</span>
+            {LABS.map((l) => (
+              <a key={l.route} href={`#${l.route}`} aria-current={route === l.route ? 'page' : undefined}>
+                <span style={{ fontWeight: 600 }}>{l.label}</span>
+                <span className="small faint">{l.blurb}</span>
+              </a>
+            ))}
+          </div>
+        </>
+      )}
+      <nav className="mobile-nav" aria-label="Secciones">
+        <a href="#/" aria-current={route === '/' ? 'page' : undefined}>
+          <Icon name="target" size={20} />
+          <span>Atrio</span>
+        </a>
+        <a href="#/guia" aria-current={route === '/guia' ? 'page' : undefined}>
+          <Icon name="info" size={20} />
+          <span>Estudiar</span>
+        </a>
+        <button type="button" aria-expanded={labsOpen} aria-current={labActive ? 'page' : undefined} onClick={() => setLabsOpen((o) => !o)}>
+          <Icon name="flask" size={20} />
+          <span>Laboratorios</span>
+        </button>
+        <a href="#/entrenamiento" aria-current={route === '/entrenamiento' ? 'page' : undefined}>
+          <Icon name="star" size={20} />
+          <span>Entrenar</span>
+        </a>
+      </nav>
+    </>
   );
 }
 
@@ -383,7 +446,7 @@ export function App() {
             </div>
           )
         )}
-        {(effectiveRoute === '/entrenamiento' || effectiveRoute === '/guia') && <div aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'radial-gradient(120% 80% at 50% -20%, rgb(242 169 59 / 0.07), transparent 60%), var(--surface)' }} />}
+        {(effectiveRoute === '/entrenamiento' || effectiveRoute === '/guia') && <div aria-hidden="true" className="page-bg" />}
       </div>
       <div className="overlay">
         <TopBar route={effectiveRoute} onSettings={() => setSettingsOpen(true)} />
@@ -395,6 +458,7 @@ export function App() {
           </ErrorBoundary>
         </main>
       </div>
+      <MobileNav route={effectiveRoute} />
       {!seenIntro && <Intro />}
       {settingsOpen && <SettingsDrawer onClose={() => setSettingsOpen(false)} />}
       <Announcer />

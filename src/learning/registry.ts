@@ -44,7 +44,9 @@ import {
   miscGenerator,
 } from './generators/extra';
 import { SOURCE_EXERCISES_2 } from './sources2';
+import { SOURCE_EXERCISES_3 } from './sources3';
 import { EXAM_GENERATORS } from './generators/exam';
+import { EXAM2_GENERATORS } from './generators/exam2';
 
 export const GENERATORS: ExerciseGenerator[] = [
   speciesGenerator,
@@ -75,6 +77,7 @@ export const GENERATORS: ExerciseGenerator[] = [
   valenceGenerator,
   miscGenerator,
   ...EXAM_GENERATORS,
+  ...EXAM2_GENERATORS,
 ];
 
 export const GENERATOR_BY_ID = new Map(GENERATORS.map((g) => [g.id, g]));
@@ -171,6 +174,15 @@ const SOURCE_EXERCISES_1: SourceExercise[] = [
   { ref: 'TEO ej. 8 · Br', nodeIds: ['6.3', '7.2'], build: () => buildConfigExercise(35, 2, 'src:TEO8c', 'TEO ej. 8') },
 ];
 
-export const SOURCE_EXERCISES: SourceExercise[] = [...SOURCE_EXERCISES_1, ...SOURCE_EXERCISES_2];
+export const SOURCE_EXERCISES: SourceExercise[] = [...SOURCE_EXERCISES_1, ...SOURCE_EXERCISES_2, ...SOURCE_EXERCISES_3];
+
+/** Nivel orientativo de un ejercicio de las fuentes (1 básico, 2 examen, 3 avanzado). */
+export function sourceLevel(s: SourceExercise): 1 | 2 | 3 {
+  const lv = (s as SourceExercise & { level?: 1 | 2 | 3 }).level;
+  if (lv) return lv;
+  const ex = s.build();
+  const d = ex.difficulty;
+  return ex.parts.length >= 5 && d >= 2 ? 3 : d;
+}
 
 export const SOURCE_BY_REF = new Map(SOURCE_EXERCISES.map((s) => [s.ref, s]));

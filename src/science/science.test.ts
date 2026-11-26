@@ -1,3 +1,4 @@
+import { CODATA as CODATA } from './constants';
 import { describe, expect, it } from 'vitest';
 import { formatNumber, parseNumber, roundSig, sciParts } from './numbers';
 import { convert, parseUnit, splitValueAndUnit } from './units';
@@ -512,6 +513,61 @@ describe('instrumentos', () => {
     expect(Math.abs(r.screenY)).toBeLessThan(1e-4);
     expect(r.balanced).toBe(true);
   });
+  // ── Validación independiente del integrador de Boris (soluciones analíticas) ──
+  const qm = CODATA.e / CODATA.me;
+  const v0 = (s: { accel: number }) => Math.sqrt(2 * qm * s.accel);
+  it('Boris, solo E: deflexión en pantalla = (qEL/mv²)·(L/2 + D) con error relativo < 1e-9', () => {
+    const r = cathodeBeam(setup, 200);
+    const E = setup.plates / setup.gap;
+    const v = v0(setup);
+    const exact = ((qm * E * setup.length) / (v * v)) * (setup.length / 2 + setup.drift);
+    expect(Math.abs(r.screenY - exact) / exact).toBeLessThan(1e-9);
+    expect(Math.abs(r.exitY - cathodeExitDeflection(setup)) / cathodeExitDeflection(setup)).toBeLessThan(1e-9);
+  });
+  it('Boris, solo B: |v| se conserva y la trayectoria es la circunferencia r = mv/(qB)', () => {
+    const s2 = { ...setup, plates: 0, B: 5e-4 };
+    const v = v0(s2);
+    const R = v / (qm * s2.B);
+    const r = cathodeBeam(s2, 2000);
+    // y(L) sobre la circunferencia que parte tangente al eje x: R − √(R² − L²) (el electrón se curva hacia +y con B en −z)
+    // B en −z se opone a la fuerza eléctrica sobre el electrón: la curva va hacia −y.
+    const exact = -(R - Math.sqrt(R * R - setup.length * setup.length));
+    expect(Math.abs(r.exitY - exact) / Math.abs(exact)).toBeLessThan(1e-5);
+    // Conservación de la energía cinética: la pendiente de salida corresponde a una velocidad de módulo v
+    const ang = Math.asin(setup.length / R);
+    const slopeExact = -Math.tan(ang);
+    const slope = (r.screenY - r.exitY) / setup.drift;
+    expect(Math.abs(slope - slopeExact) / Math.abs(slopeExact)).toBeLessThan(1e-5);
+  });
+  it('Boris, campos cruzados compensados (B = E/v): el haz no se desvía (deriva E×B exacta)', () => {
+    const b0 = cathodeBeam(setup).balanceB;
+    const r = cathodeBeam({ ...setup, B: b0 }, 100);
+    expect(Math.abs(r.screenY)).toBeLessThan(1e-12);
+  });
+  it('Boris: con E y B no compensados converge (error relativo < 1e-5 con 400 pasos y ×10 menor con 3200)', () => {
+    const s3 = { ...setup, B: 5e-4 };
+    const ref = cathodeBeam(s3, 256000).screenY;
+    const e400 = Math.abs(cathodeBeam(s3, 400).screenY - ref);
+    const e3200 = Math.abs(cathodeBeam(s3, 3200).screenY - ref);
+    expect(e400 / Math.abs(ref)).toBeLessThan(1e-5);
+    expect(e3200).toBeLessThan(e400 / 10);
+  });
+  it('choque con la placa: el punto de impacto está exactamente en |y| = d/2 y no hay punto en pantalla', () => {
+    const r = cathodeBeam({ ...setup, plates: 3000 }, 400);
+    expect(r.hitsPlate).toBe(true);
+    expect(Number.isNaN(r.screenY)).toBe(true);
+    expect(Math.abs(r.path[r.path.length - 1]!)).toBeCloseTo(setup.gap / 2, 8); // Float32 en el trazado
+  });
+  it('B muy intenso: el haz se curva hacia atrás sin bucles infinitos', () => {
+    const r = cathodeBeam({ ...setup, plates: 0, gap: 1, B: 0.05 }, 400);
+    expect(r.turnsBack || r.hitsPlate).toBe(true);
+    expect(Number.isNaN(r.screenY)).toBe(true);
+  });
+  it('entradas inválidas: errores comprensibles', () => {
+    expect(() => cathodeBeam({ ...setup, accel: 0 })).toThrow(/aceleración/);
+    expect(() => cathodeBeam({ ...setup, gap: NaN })).toThrow(/separación/);
+    expect(() => cathodeBeam({ ...setup, drift: -1 })).toThrow(/pantalla/);
+  });
   it('espectrómetro de sector magnético: r ∝ √m y la inversa es coherente', () => {
     const r35 = sectorRadius(34.968853, 1, 2000, 0.3);
     const r37 = sectorRadius(36.965903, 1, 2000, 0.3);
@@ -606,6 +662,37 @@ describe('superficies de contorno de orbitales', () => {
   });
 });
 
+describe('dominio y casos degenerados', () => {
+  it('masa media: abundancias nulas, negativas, no finitas o > 100 % se rechazan con un mensaje claro', async () => {
+    const { averageAtomicMass, twoIsotopeAbundance } = await import('./massSpec');
+    expect(() => averageAtomicMass([{ mass: 35, abundance: 0 }, { mass: 37, abundance: 0 }])).toThrow(/suman 0/);
+    expect(() => averageAtomicMass([{ mass: 35, abundance: -1 }])).toThrow(/no negativo/);
+    expect(() => averageAtomicMass([{ mass: NaN, abundance: 50 }])).toThrow(/positivo/);
+    expect(() => averageAtomicMass([{ mass: 35, abundance: Infinity }])).toThrow(/no negativo/);
+    expect(() => averageAtomicMass([{ mass: 35, abundance: 120 }])).toThrow(/100 %/);
+    expect(() => twoIsotopeAbundance(35, 35, 35)).toThrow(/iguales/);
+    expect(() => twoIsotopeAbundance(35, 37, 38)).toThrow(/entre/);
+    // Propiedad: la media ponderada está siempre entre la masa mínima y la máxima
+    for (let k = 0; k < 200; k++) {
+      const a = Math.random() * 100;
+      const r = averageAtomicMass([{ mass: 10.01, abundance: a }, { mass: 11.01, abundance: 100 - a }]).value;
+      expect(r).toBeGreaterThanOrEqual(10.01 - 1e-12);
+      expect(r).toBeLessThanOrEqual(11.01 + 1e-12);
+    }
+  });
+  it('prisma: Sellmeier fuera de su intervalo de validez y rayos que no atraviesan se informan', async () => {
+    const { refractiveIndexSF11, prismGeometry } = await import('./prism');
+    expect(() => refractiveIndexSF11(300)).toThrow(/370/);
+    expect(() => refractiveIndexSF11(NaN)).toThrow();
+    const g = prismGeometry();
+    expect(g.traceDetailed(250)).toBe('fuera-de-dominio');
+    // Todo el visible que usa la interfaz (370–760 nm) llega a la pantalla
+    for (let l = 370; l <= 760; l += 1) expect(g.trace(l), `λ = ${l}`).not.toBeNull();
+    // Índice monótono decreciente en el visible (dispersión normal)
+    for (let l = 380; l < 760; l += 10) expect(refractiveIndexSF11(l)).toBeGreaterThan(refractiveIndexSF11(l + 10));
+  });
+});
+
 describe('espectroscopio de prisma (SF11)', () => {
   it('índice nd del SF11 = 1,78472 (587,56 nm, catálogo SCHOTT)', async () => {
     const { refractiveIndexSF11 } = await import('./prism');
@@ -627,5 +714,84 @@ describe('espectroscopio de prisma (SF11)', () => {
     expect(r.s).toBeGreaterThan(0);
     // Desviación mínima: cualquier otra λ… y la desviación del diseño es mínima frente a pequeñas variaciones de la incidencia (comprobado por la simetría del rayo interior).
     expect(Math.abs(d.exit[1] - d.entry[1])).toBeLessThan(1e-9);
+  });
+});
+
+describe('marching cubes propio', () => {
+  it('esfera: radio y área convergen a los exactos (4πR²)', async () => {
+    const { polygonize, meshArea } = await import('./marching');
+    const R = 0.6;
+    const half = 1;
+    for (const size of [24, 48]) {
+      const f = new Float32Array(size ** 3);
+      const hs = size / 2;
+      for (let z = 0; z < size; z++) for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+        const c = (i: number) => ((i - hs) / hs) * half;
+        f[x + y * size + z * size * size] = -Math.hypot(c(x), c(y), c(z)); // f > iso dentro
+      }
+      const m = polygonize(f, size, -R, half);
+      // Todos los vértices sobre la esfera (interpolación lineal de una función lineal en r: exacta salvo por la curvatura)
+      let maxErr = 0;
+      for (let i = 0; i < m.positions.length; i += 3) maxErr = Math.max(maxErr, Math.abs(Math.hypot(m.positions[i]!, m.positions[i + 1]!, m.positions[i + 2]!) - R));
+      expect(maxErr).toBeLessThan(size === 24 ? 0.01 : 0.003);
+      const relA = Math.abs(meshArea(m.positions) - 4 * Math.PI * R * R) / (4 * Math.PI * R * R);
+      expect(relA).toBeLessThan(size === 24 ? 0.03 : 0.01);
+      // Normales unitarias y hacia fuera (−∇f apunta al exterior)
+      for (let i = 0; i < m.normals.length; i += 3) {
+        const dot = m.normals[i]! * m.positions[i]! + m.normals[i + 1]! * m.positions[i + 1]! + m.normals[i + 2]! * m.positions[i + 2]!;
+        expect(dot).toBeGreaterThan(0);
+      }
+    }
+  });
+  it('coincide con el marching cubes de three.js en número de triángulos (orbital 3d)', async () => {
+    const { polygonize } = await import('./marching');
+    const { orbitalGrid } = await import('./isosurface');
+    const THREE = await import('three');
+    const { MarchingCubes } = await import('three/examples/jsm/objects/MarchingCubes.js');
+    const g = orbitalGrid(3, 2, 0, 40, 0.9);
+    const mine = polygonize(g.psi, 40, g.iso, g.half);
+    const mc = new MarchingCubes(40, new THREE.MeshBasicMaterial(), false, false, 200000);
+    mc.isolation = g.iso;
+    mc.field.set(g.psi);
+    mc.update();
+    // three omite la capa exterior de celdas; con el orbital contenido en la rejilla el resultado coincide.
+    expect(mine.triangles).toBe(mc.count / 3);
+  });
+});
+
+describe('umbral de probabilidad en O(N)', () => {
+  it('coincide exactamente con ordenar y acumular', async () => {
+    const { thresholdForFraction } = await import('./isosurface');
+    const { mulberry32 } = await import('./numbers');
+    const rng = mulberry32(9);
+    for (let t = 0; t < 20; t++) {
+      const d = new Float32Array(5000).map(() => Math.exp(-20 * rng()) * rng());
+      const dV = 0.01;
+      const p = 0.5 + 0.49 * rng();
+      const ref = Float64Array.from(d).sort().reverse();
+      const total = ref.reduce((a, b) => a + b, 0) * dV;
+      let acc = 0;
+      let thr = ref[0]!;
+      for (const v of ref) {
+        acc += v * dV;
+        thr = v;
+        if (acc >= p * Math.min(1, total)) break;
+      }
+      const got = thresholdForFraction(d, dV, p);
+      expect(got.threshold).toBe(thr);
+      expect(got.enclosed).toBeCloseTo(acc, 12);
+    }
+  });
+});
+
+describe('estado y radiactividad (póster del sistema periódico)', () => {
+  it('Br y Hg líquidos; 11 gases; Tc, Pm y Z ≥ 84 sin isótopos estables', async () => {
+    const { standardState, isRadioactive } = await import('./data/elementState');
+    expect(standardState(35)).toBe('liquido');
+    expect(standardState(80)).toBe('liquido');
+    expect(Array.from({ length: 118 }, (_, i) => i + 1).filter((z) => standardState(z) === 'gas')).toEqual([1, 2, 7, 8, 9, 10, 17, 18, 36, 54, 86]);
+    expect(standardState(118)).toBe('desconocido');
+    expect([43, 61, 84, 92].every(isRadioactive)).toBe(true);
+    expect([26, 82, 83].some(isRadioactive)).toBe(false);
   });
 });

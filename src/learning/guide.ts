@@ -2,7 +2,7 @@
  * Guía de estudio: el temario explicado para el examen. Cada sección corresponde a un nodo de la
  * matriz de cobertura e incluye lo esencial, fórmulas con unidades, errores típicos y un consejo de examen.
  */
-export type WidgetId = 'notacion' | 'onda' | 'espectro-em' | 'rydberg' | 'numeros-cuanticos' | 'configuracion' | 'tendencias' | 'masa-media' | 'modelos' | 'particulas';
+export type WidgetId = 'rydberg-inverso' | 'notacion' | 'onda' | 'espectro-em' | 'rydberg' | 'numeros-cuanticos' | 'configuracion' | 'tendencias' | 'masa-media' | 'modelos' | 'particulas';
 
 export interface Formula {
   expr: string;
@@ -12,6 +12,8 @@ export interface Formula {
 
 export interface GuideSection {
   node: string;
+  /** Identificador propio cuando hay varias secciones del mismo apartado */
+  id?: string;
   title: string;
   body: string[];
   formulas?: Formula[];
@@ -257,6 +259,20 @@ export const LESSONS: Lesson[] = [
         mistakes: ['Decir que Balmer está en el infrarrojo (errata de los apuntes): está en el visible y el UV cercano.'],
       },
       {
+        node: '3.7',
+        id: '3.7-inv',
+        title: 'El problema inverso: hallar n₂ (o n₁) a partir de una línea',
+        body: [
+          'Es el ejercicio de espectros que más cuesta en el examen porque hay que **despejar** dentro de la ecuación de Rydberg. La clave es no hacerlo de una vez, sino en pasos pequeños, comprobando cada uno.',
+          '**1.** Pasa el dato a número de ondas: si te dan λ, calcula 1/λ (en m); si te dan ν, 1/λ = ν/c. **2.** Divide entre R: (1/λ)/R = 1/n₁² − 1/n₂². **3.** Despeja: 1/n₂² = 1/n₁² − (1/λ)/R. **4.** Invierte: n₂² = 1/(…). **5.** Raíz cuadrada y redondea al entero más próximo.',
+          'Si lo que falta es n₁ (te dan n₂), el paso 3 cambia: 1/n₁² = (1/λ)/R + 1/n₂². Comprueba siempre que el resultado es un entero (o muy cercano) y que n₂ > n₁.',
+        ],
+        formulas: [{ expr: 'n₂ = 1 / √(1/n₁² − 1/(λ·R))', vars: [['n₁', 'nivel inferior (fija la serie)', '—'], ['λ', 'longitud de onda', 'm'], ['R', '1,097·10⁷', 'm⁻¹']], note: 'Con frecuencia: 1/λ = ν/c.' }],
+        widget: 'rydberg-inverso',
+        mistakes: ['Usar λ en nm sin pasar a metros (sale n₂² absurdo).', 'Restar al revés y obtener 1/n₂² negativo.', 'Olvidar invertir o hacer la raíz: n₂² = 25 → n₂ = 5, no 25.', 'Aceptar un n₂ no entero sin sospechar de los cálculos.'],
+        tip: 'Cuando el resultado salga 7,99 o 5,02, el nivel es 8 o 5: la diferencia viene del redondeo de los datos. Si sale 5,5, revisa el cálculo.',
+      },
+      {
         node: '3.8',
         title: 'Cuántas líneas aparecen',
         body: ['Si se excitan los átomos hasta el nivel n, al desexcitarse pueden aparecer todas las parejas de niveles posibles.'],
@@ -276,6 +292,31 @@ export const LESSONS: Lesson[] = [
           { label: 'Energía', work: 'E = h·ν = 1,94·10⁻¹⁸ J = 12,1 eV', why: 'Para pasar a eV se divide entre 1,602·10⁻¹⁹.' },
           { label: 'Región y serie', work: 'Ultravioleta · serie de Lyman', why: 'λ < 380 nm; termina en n = 1.' },
           { label: 'Comparación', work: 'E₃ − E₁ (12,1 eV) > E₃ − E₂ (1,9 eV)', why: 'Los niveles se juntan al subir (Eₙ ∝ −1/n²): bajar hasta n = 1 libera mucha más energía.' },
+        ],
+      },
+      {
+        title: '¿Qué línea de Paschen tiene esta frecuencia?',
+        source: 'AMP 9',
+        statement: 'Indica qué línea de la serie de Paschen tiene una frecuencia de 2,34·10¹⁴ s⁻¹. Datos: c = 3·10⁸ m/s; R = 109 740 cm⁻¹.',
+        steps: [
+          { label: 'Datos clave', work: 'Paschen → n₁ = 3; incógnita n₂', why: 'La serie fija el nivel inferior.' },
+          { label: 'Número de ondas', work: '1/λ = ν/c = 2,34·10¹⁴ / 3·10⁸ = 7,80·10⁵ m⁻¹', why: 'De c = λ·ν se obtiene 1/λ = ν/c.' },
+          { label: 'Divide entre R', work: '7,80·10⁵ / 1,0974·10⁷ = 0,07108', why: 'R en m⁻¹ (109 740 cm⁻¹ × 100). Queda 1/3² − 1/n₂² = 0,07108.' },
+          { label: 'Despeja', work: '1/n₂² = 1/9 − 0,07108 = 0,04003', why: 'Pasamos 1/n₂² a un miembro y lo demás al otro.' },
+          { label: 'Invierte y raíz', work: 'n₂² = 24,98 → n₂ = 5', why: 'Debe salir (casi) entero.' },
+          { label: 'Respuesta', work: 'Segunda línea de Paschen (5 → 3)', why: 'La primera es 4 → 3; la segunda, 5 → 3.' },
+        ],
+      },
+      {
+        title: 'Balmer a 389 nm: ¿qué n₂?',
+        source: 'HOJ 11',
+        statement: '¿Qué valor de n₂ en la ecuación de Rydberg corresponde a la línea de la serie de Balmer a 389 nm? Dato: R = 1,097·10⁷ m⁻¹.',
+        steps: [
+          { label: 'Datos clave', work: 'Balmer → n₁ = 2; λ = 389 nm = 3,89·10⁻⁷ m', why: 'Siempre a metros antes de operar.' },
+          { label: 'Número de ondas', work: '1/λ = 1/3,89·10⁻⁷ = 2,571·10⁶ m⁻¹', why: '' },
+          { label: 'Divide entre R', work: '2,571·10⁶ / 1,097·10⁷ = 0,2343', why: 'Queda 1/4 − 1/n₂² = 0,2343.' },
+          { label: 'Despeja', work: '1/n₂² = 0,25 − 0,2343 = 0,01566', why: '' },
+          { label: 'Invierte y raíz', work: 'n₂² = 63,9 → n₂ = 7,99 ≈ 8', why: 'El 7,99 se debe al redondeo de λ: el nivel es 8.' },
         ],
       },
     ],
@@ -505,7 +546,17 @@ export const LESSONS: Lesson[] = [
   },
 ];
 
-export const SECTION_BY_NODE = new Map(LESSONS.flatMap((l) => l.sections.map((s) => [s.node, { lesson: l, section: s }] as const)));
+export const SECTION_BY_NODE = new Map<string, { lesson: Lesson; section: GuideSection }>();
+for (const l of LESSONS) for (const sec of l.sections) {
+  const key = sec.id ?? sec.node;
+  if (!SECTION_BY_NODE.has(key)) SECTION_BY_NODE.set(key, { lesson: l, section: sec });
+}
+
+/** Sección de la guía para un ejercicio (algunos generadores tienen una sección específica). */
+export function guideAnchorFor(nodeId: string, generatorId?: string): string {
+  if (generatorId === 'serie-inversa') return '3.7-inv';
+  return guideAnchor(nodeId);
+}
 
 /** Sección de la guía más cercana para un nodo (si el nodo no tiene sección propia, la de su bloque). */
 export function guideAnchor(nodeId: string): string {
@@ -513,3 +564,75 @@ export function guideAnchor(nodeId: string): string {
   const block = Number(nodeId.split('.')[0]);
   return LESSONS.find((l) => l.block === block)?.sections[0]?.node ?? '1.1';
 }
+
+/**
+ * Notas de rigor: cuando los apuntes usan una convención, una simplificación o tienen una errata, se
+ * muestran tres niveles para no confundir: qué dicen los apuntes, qué responder en el examen y la
+ * explicación científicamente rigurosa. Referencias: docs/01-matriz-cobertura.md (E1–E22) y
+ * docs/07-segunda-generacion.md (E23–E29).
+ */
+export interface RigorNote {
+  id: string;
+  node: string;
+  title: string;
+  clase: string;
+  examen: string;
+  rigor: string;
+}
+
+export const RIGOR_NOTES: RigorNote[] = [
+  { id: 'E1', node: '3.1', title: 'Las abundancias del ejemplo del cloro', clase: 'Cl-35 74,771 % y Cl-37 24,229 % → 35,453 u.', examen: 'Usa los datos que te den y comprueba que las abundancias sumen 100 %.', rigor: 'Esas abundancias suman 99 %: con ellas sale 35,10 u. El resultado 35,453 u corresponde a 75,771 %.' },
+  { id: 'E2', node: '3.7', title: 'Región de la serie de Balmer', clase: 'La tabla de series pone «Visible/Infrarrojo».', examen: 'Balmer: visible (y ultravioleta cercano).', rigor: 'Las líneas de Balmer van de 656 nm al límite de 364,6 nm: visible y UV cercano, nunca infrarrojo.' },
+  { id: 'E3', node: '4.1', title: 'Signo de la energía del fotón', clase: 'E = E_f − E_i = h·ν ≤ 0 en la emisión.', examen: 'E_fotón = |E_f − E_i| = h·ν; di si se emite o se absorbe.', rigor: 'h·ν es siempre positiva. Lo que cambia de signo es ΔE del átomo: negativo al emitir, positivo al absorber.' },
+  { id: 'E4', node: '6.7', title: '¿Excepciones a Hund?', clase: 'Cr, Mo, Cu, Ag y Au son «excepciones a la regla de Hund».', examen: 'Cr = [Ar] 3d⁵ 4s¹ y Cu = [Ar] 3d¹⁰ 4s¹ (excepciones).', rigor: 'Son excepciones al orden de llenado (Möller), no a Hund: el Cr 3d⁵ 4s¹ cumple Hund con 6 electrones desapareados.' },
+  { id: 'E8', node: '5.4', title: '¿n solo llega hasta 7?', clase: 'n toma valores «desde 1 hasta 7».', examen: 'n = 1, 2, 3… (en los átomos conocidos, en estado fundamental, hasta 7).', rigor: 'n puede ser cualquier entero positivo; el 7 es el nivel más alto ocupado en el estado fundamental de los elementos conocidos. Los estados excitados usan n mayores.' },
+  { id: 'E9', node: '5.4', title: 'El espín no es un giro', clase: 's: «sentido de giro del electrón sobre sí mismo».', examen: 'm_s = +½ o −½; dos orientaciones posibles del espín.', rigor: 'El espín es un momento angular intrínseco sin equivalente clásico: el electrón no es una bolita que gira. La imagen del giro es solo una analogía.' },
+  { id: 'E11', node: '7.6', title: '¿Z_ef constante en un grupo?', clase: 'Z_ef «es constante a lo largo de un grupo»; electrones internos apantallan 1.', examen: 'En un grupo, Z_ef casi constante y aumenta el número de capas → aumenta el radio.', rigor: 'Con las reglas de Slater, la capa n − 1 apantalla 0,85 y solo las anteriores 1,00; Z_ef del electrón de valencia crece algo al bajar (Li 1,3; Na 2,2; K 2,2), pero mucho menos que el aumento del tamaño.' },
+  { id: 'E13', node: '7.10', title: 'Afinidad electrónica del Mn y el Zn', clase: 'Ejercicio 20: ordenar Zn, Mn, P, Cl, Rb por afinidad.', examen: 'Razona con la tendencia y menciona que Mn (3d⁵) y Zn (3d¹⁰) tienen subcapas estables.', rigor: 'Mn y Zn no forman aniones estables en fase gaseosa (AE ≤ 0). Datos: Rb 47, P 72, Cl 349 kJ/mol.' },
+  { id: 'E23', node: '3.5', title: 'Intensidad de las líneas', clase: '«La intensidad de las líneas es proporcional al número de átomos».', examen: 'Más átomos → líneas más intensas (análisis cuantitativo).', rigor: 'Solo es aproximadamente proporcional en muestras poco densas y en las mismas condiciones; también influyen la probabilidad de cada transición, la temperatura y la autoabsorción.' },
+  { id: 'E25', node: '2.4', title: '¿Cuántas α rebotan?', clase: 'Póster: «muy pocas (1/10 000 aprox.) se desviaban más de unos 10°».', examen: 'La mayoría pasa sin desviarse, muy pocas se desvían mucho y alguna rebota.', rigor: 'La fracción depende del espesor de la lámina y de la energía de las α. El dato histórico más citado (Geiger y Marsden, 1909) es ≈ 1 de cada 8 000 α reflejadas (> 90°) con lámina de platino. La Time Machine la calcula con la fórmula de Rutherford.' },
+  { id: 'E26', node: '7.8', title: 'Por qué un catión es más pequeño', clase: 'Menos electrones → menos apantallamiento → mayor Z_ef → menor radio.', examen: 'Esa explicación es la esperada; añade que hay menos repulsión entre electrones.', rigor: 'En muchos cationes la razón principal es que pierden la capa externa completa (Na → Na⁺ pierde la capa n = 3).' },
+  { id: 'E27', node: '3.3', title: 'La «estación de radio» de 200 nm', clase: 'Hoja, ej. 8: una estación de radio emite con λ = 200 nm.', examen: 'Calcula ν y E con los datos (1,5·10¹⁵ Hz; 9,94·10⁻¹⁹ J).', rigor: '200 nm es ultravioleta, no radio: las emisoras usan λ de metros (FM ≈ 3 m). El cálculo es el mismo, pero conviene notarlo.' },
+  { id: 'E28', node: '7.3', title: 'ns² no siempre es el grupo 2', clase: 'Hoja, ej. 14c: configuración externa ns² → grupo 2.', examen: 'Grupo 2 (alcalinotérreos); primer elemento: berilio.', rigor: 'El helio (1s²) también termina en ns², pero es un gas noble (grupo 18): su única capa está completa.' },
+  { id: 'E29', node: '7.8', title: 'El Ne en una serie de radios iónicos', clase: 'Hoja, ej. 19: ordenar N³⁻, O²⁻, F⁻, Ne, Na⁺, Mg²⁺ por radio.', examen: 'Ordena por Z: Mg²⁺ < Na⁺ < Ne < F⁻ < O²⁻ < N³⁻.', rigor: 'El Ne es un átomo neutro y su radio (de van der Waals) no se mide igual que los iónicos; la regla «más Z, menor radio» sí se aplica a la serie isoelectrónica.' },
+];
+
+/** Trucos y reglas mnemotécnicas por sección (clave: id de sección o apartado). */
+export const TRICKS: Record<string, string[]> = {
+  '1.1': ['«Z es el DNI del átomo»: si cambia Z, cambia el elemento. A y la carga no lo cambian.', 'Orden infalible en las tablas: Z → protones; A − Z → neutrones; Z − carga → electrones.'],
+  '1.4': ['Carga negativa = electrones de MÁS: O²⁻ tiene 8 + 2 = 10. Carga positiva = electrones de MENOS: Al³⁺ tiene 13 − 3 = 10.', 'Truco del signo: «e⁻ = Z − q» funciona siempre si escribes q con su signo.'],
+  '1.5': ['Cuenta electrones, no protones: N³⁻, O²⁻, F⁻, Ne, Na⁺, Mg²⁺ y Al³⁺ tienen todos 10.', 'En una serie isoelectrónica, el de MÁS protones es el MÁS pequeño: tira más de los mismos electrones.'],
+  '2.4': ['Resume Rutherford en tres frases: «casi todas pasan → vacío; pocas se desvían → algo positivo; alguna rebota → núcleo pequeño y masivo».'],
+  '3.1': ['Comprobación en 2 segundos: la media debe quedar más cerca del isótopo más abundante (Cl: 35,45, cerca de 35).', 'Problema inverso (abundancias): llama x a una y 100 − x a la otra; la ecuación es de primer grado.'],
+  '3.2': ['λ y ν son como un balancín: λ·ν = c fijo. Si una sube, la otra baja en la misma proporción.', 'Prefijos que caen siempre: nm = 10⁻⁹ m, µm = 10⁻⁶ m, MHz = 10⁶ Hz, GHz = 10⁹ Hz, fs = 10⁻¹⁵ s.', 'Orden de magnitud del visible: λ ≈ 5·10⁻⁷ m, ν ≈ 6·10¹⁴ Hz, E ≈ 4·10⁻¹⁹ J ≈ 2,5 eV. Si te sale muy distinto, revisa las potencias.'],
+  '3.3': ['Regla de memoria (de menor λ a mayor): «Gamma Xilofón Ultra Visible Infla Micro Radios» → γ, X, UV, visible, IR, microondas, radio.', 'En el visible: «el rojo es lento y largo» (λ grande, ν pequeña); el violeta, «corto y rápido».'],
+  '3.4': ['E = h·c/λ: λ va DIVIDIENDO. Si te sale E ≈ 10⁻⁴⁰ J, has multiplicado por λ.', 'J → eV: divide entre 1,602·10⁻¹⁹ (salen números «normales», 1–15 eV). eV → J: multiplica.'],
+  '3.6': ['R en cm⁻¹ (109 740) → multiplica por 100 para tenerla en m⁻¹ (1,0974·10⁷). Si tu λ sale 100 veces grande, es eso.', 'n₁ es SIEMPRE el pequeño (el de abajo) y n₂ el grande: así el paréntesis es positivo.'],
+  '3.7': ['Series de abajo arriba: «Le Bailo Pasodobles Bien Pronto» → Lyman (1), Balmer (2), Paschen (3), Brackett (4), Pfund (5).', 'Lyman = ultravioleta, Balmer = visible (y UV cercano), las demás = infrarrojo.', 'k-ésima línea de una serie: n₂ = n₁ + k. Tercera de Balmer → 5 → 2.'],
+  '3.7-inv': ['Cinco pasos y nunca falla: 1/λ → ÷R → resta de 1/n₁² → invierte → raíz.', 'Si n₂ sale 4,98 o 7,99, el nivel es 5 u 8 (redondeo de datos). Si sale 5,5, hay un error de cálculo.', 'Para n₁ (te dan n₂): el término 1/n₂² pasa SUMANDO.'],
+  '3.8': ['Líneas desde el nivel n: n(n − 1)/2. Desde 4 → 6; desde 5 → 10; desde 6 → 15.'],
+  '4.1': ['Sube = absorbe energía; baja = emite un fotón. El fotón siempre tiene E positiva.'],
+  '4.2': ['Energías del H para memorizar: −13,6 / −3,40 / −1,51 / −0,85 eV (n = 1, 2, 3, 4).'],
+  '5.4': ['Valida en cascada: n ≥ 1 → l de 0 a n − 1 → m de −l a +l → s = ±½. Falla el primero que no cumpla.', 'Letras: s p d f = l 0 1 2 3 («Sin Pena De Falla»).', 'Truco de examen: no existe 1p, 2d ni 3f (l nunca llega a n).'],
+  '5.5': ['Orbitales por subnivel: 1, 3, 5, 7 (impares). Electrones: 2, 6, 10, 14 (el doble).', 'Nivel n: n² orbitales y 2n² electrones (n = 3 → 9 y 18).'],
+  '6.3': ['Möller: escribe la escalera s / p / d / f y lee en diagonal de arriba-derecha a abajo-izquierda.', 'Atajo n + l: menor suma, antes; empate → menor n primero. Por eso 4s (4 + 0) va antes que 3d (3 + 2).', 'Comprueba sumando los exponentes: deben dar el número de electrones.'],
+  '6.4': ['Hund = «autobús»: nadie se sienta con otro mientras haya asientos libres.', 'Desapareados rápidos: p¹ 1, p² 2, p³ 3, p⁴ 2, p⁵ 1, p⁶ 0; d⁵ 5, d⁶ 4.'],
+  '6.5': ['¿Hueco debajo y electrón arriba? → excitado. ¿Subnivel que no existe o con más electrones de los que caben? → imposible.'],
+  '6.7': ['Excepciones del temario: Cr y Mo (d⁵ s¹), Cu, Ag y Au (d¹⁰ s¹). «Medio lleno o lleno» compensa.'],
+  '6.8': ['Cationes de transición: los electrones salen primero del 4s (el de mayor n), no del 3d: Fe²⁺ = [Ar] 3d⁶.'],
+  '7.2': ['Periodo = n más alto. Grupo: s → nº de electrones s; p → 12 + nº de electrones p; d → 2 + nº de electrones d.'],
+  '7.5': ['Gana o pierde lo mínimo para ser gas noble: grupos 1, 2, 13 → +1, +2, +3; 15, 16, 17 → −3, −2, −1.'],
+  '7.7': ['Radio: crece hacia ABAJO y hacia la IZQUIERDA. El más grande de la tabla está abajo a la izquierda (Cs, Fr).'],
+  '7.9': ['EI, afinidad y electronegatividad van JUNTAS: crecen hacia arriba y a la derecha (hacia el F). El radio y el carácter metálico, al revés.', 'Excepciones que caen: Be > B, Mg > Al, N > O y P > S.'],
+  '7.11': ['El más electronegativo es el F (3,98); luego O, N y Cl. Los menos, los alcalinos de abajo (Cs, Fr).'],
+};
+
+/** Estrategia general para cualquier problema numérico de examen. */
+export const EXAM_STRATEGY: string[] = [
+  'Lee el enunciado y subraya datos e incógnita. Escribe los datos con sus unidades.',
+  'Pasa todo al SI ANTES de operar (nm → m, cm⁻¹ → m⁻¹, MHz → Hz).',
+  'Escribe la fórmula general y despeja la incógnita con letras; sustituye al final.',
+  'Opera con al menos 4 cifras en los resultados intermedios; redondea solo el resultado final.',
+  'Comprueba el orden de magnitud y la unidad del resultado (¿tiene sentido?).',
+  'Contesta con una frase si se pide razonar: «… porque …».',
+];
