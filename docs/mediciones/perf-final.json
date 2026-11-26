@@ -1,0 +1,132 @@
+{
+  "date": "2026-11-26T22:27:37.543Z",
+  "renderer": "SwiftShader (software)",
+  "results": [
+    {
+      "route": "/",
+      "readyMs": 239,
+      "fps": 2.2,
+      "p95FrameMs": 583.3,
+      "longTasks": 5,
+      "longMaxMs": 560,
+      "heapMB": 20
+    },
+    {
+      "route": "/forja",
+      "readyMs": 1490,
+      "fps": 6.6,
+      "p95FrameMs": 183.4,
+      "longTasks": 20,
+      "longMaxMs": 187,
+      "heapMB": 25
+    },
+    {
+      "route": "/historia",
+      "readyMs": 702,
+      "fps": 5.9,
+      "p95FrameMs": 216.6,
+      "longTasks": 18,
+      "longMaxMs": 207,
+      "heapMB": 23
+    },
+    {
+      "route": "/fotones",
+      "readyMs": 742,
+      "fps": 6.2,
+      "p95FrameMs": 233.3,
+      "longTasks": 18,
+      "longMaxMs": 226,
+      "heapMB": 14
+    },
+    {
+      "route": "/fotones?tab=hidrogeno",
+      "readyMs": 731,
+      "fps": 6.8,
+      "p95FrameMs": 166.7,
+      "longTasks": 21,
+      "longMaxMs": 176,
+      "heapMB": 18
+    },
+    {
+      "route": "/fotones?tab=espectroscopio",
+      "readyMs": 726,
+      "fps": 3,
+      "p95FrameMs": 400,
+      "longTasks": 9,
+      "longMaxMs": 405,
+      "heapMB": 26
+    },
+    {
+      "route": "/masas",
+      "readyMs": 1153,
+      "fps": 5.9,
+      "p95FrameMs": 233.3,
+      "longTasks": 17,
+      "longMaxMs": 242,
+      "heapMB": 29
+    },
+    {
+      "route": "/cuantico",
+      "readyMs": 762,
+      "fps": 5.1,
+      "p95FrameMs": 233.3,
+      "longTasks": 15,
+      "longMaxMs": 1164,
+      "heapMB": 24
+    },
+    {
+      "route": "/arquitecto",
+      "readyMs": 847,
+      "fps": 6.7,
+      "p95FrameMs": 166.7,
+      "longTasks": 20,
+      "longMaxMs": 178,
+      "heapMB": 20
+    },
+    {
+      "route": "/periodico",
+      "readyMs": 705,
+      "fps": 3.7,
+      "p95FrameMs": 316.7,
+      "longTasks": 11,
+      "longMaxMs": 322,
+      "heapMB": 29
+    },
+    {
+      "route": "/guia?b=3",
+      "readyMs": 978,
+      "fps": 60.2,
+      "p95FrameMs": 16.7,
+      "longTasks": 0,
+      "longMaxMs": 0,
+      "heapMB": 18
+    },
+    {
+      "route": "/entrenamiento",
+      "readyMs": 392,
+      "fps": 60.6,
+      "p95FrameMs": 16.7,
+      "longTasks": 0,
+      "longMaxMs": 0,
+      "heapMB": 22
+    },
+    {
+      "route": "cuantico:n=3",
+      "interactionMs": 3610,
+      "longTasks": 18,
+      "longMaxMs": 918
+    },
+    {
+      "route": "cuantico:l=2",
+      "interactionMs": 3402,
+      "longTasks": 17,
+      "longMaxMs": 962
+    },
+    {
+      "route": "cuantico:subnivel",
+      "interactionMs": 3554,
+      "longTasks": 15,
+      "longMaxMs": 957
+    }
+  ]
+}

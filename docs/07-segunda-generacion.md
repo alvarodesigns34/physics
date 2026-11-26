@@ -96,15 +96,15 @@ Gravedad: **C** crítica · **A** alta · **M** media · **B** baja.
 
 | Id | Hallazgo | Verificado | Gravedad | Estado |
 |---|---|---|---|---|
-| T1 | `instruments.ts`: el integrador documentado como «Verlet de velocidad» es Euler semimplícito; la posición en pantalla no se interpola (el último paso sobrepasa x = L + D); el choque con la placa no se localiza; `exitY === 0` se usa como centinela | Sí | A | pendiente |
-| T2 | `massSpec.ts`: suma de abundancias nula → `normalizedValue = NaN`; no se rechazan valores no finitos; `twoIsotopeAbundance` divide por cero si m₁ = m₂ | Sí | M | pendiente |
-| T3 | `prism.ts`: dominio de Sellmeier (370–2500 nm) no validado; intersección con rectas infinitas, no con las caras; los usos con `!` fallan si hay reflexión total | Sí | M | pendiente |
-| T4 | `Quantum.tsx`: `orbitalGrid` + marching cubes síncronos en `useMemo`; sin caché ni cancelación | Sí (medido) | A | pendiente |
-| T5 | `store.ts`: importación sin validación estructural ni semántica; `migrate` es la identidad | Sí | A | pendiente |
-| T6 | `session.ts`: `sort(() => rng() − 0,5)`; en exámenes por bloques entran ejercicios de fuentes cuyo ámbito solo coincide parcialmente | Sí | M | pendiente |
-| T7 | `store.recordAttempt`: un booleano global actualiza todos los nodos de un problema compuesto | Sí | A | pendiente |
-| T8 | E2E fuera de CI, con esperas fijas | Sí | M | pendiente |
-| T9 | Calidad automática: solo degrada, nunca se recupera; sin histéresis | Sí | M | pendiente |
+| T1 | `instruments.ts`: el integrador documentado como «Verlet de velocidad» es Euler semimplícito; la posición en pantalla no se interpola (el último paso sobrepasa x = L + D); el choque con la placa no se localiza; `exitY === 0` se usa como centinela | Sí | A | **resuelto** (Boris, ver §5) |
+| T2 | `massSpec.ts`: suma de abundancias nula → `normalizedValue = NaN`; no se rechazan valores no finitos; `twoIsotopeAbundance` divide por cero si m₁ = m₂ | Sí | M | **resuelto** |
+| T3 | `prism.ts`: dominio de Sellmeier (370–2500 nm) no validado; intersección con rectas infinitas, no con las caras; los usos con `!` fallan si hay reflexión total | Sí | M | **resuelto** |
+| T4 | `Quantum.tsx`: `orbitalGrid` + marching cubes síncronos en `useMemo`; sin caché ni cancelación | Sí (medido) | A | **resuelto** (Worker) |
+| T5 | `store.ts`: importación sin validación estructural ni semántica; `migrate` es la identidad | Sí | A | **resuelto** |
+| T6 | `session.ts`: `sort(() => rng() − 0,5)`; en exámenes por bloques entran ejercicios de fuentes cuyo ámbito solo coincide parcialmente | Sí | M | **resuelto** |
+| T7 | `store.recordAttempt`: un booleano global actualiza todos los nodos de un problema compuesto | Sí | A | **resuelto** |
+| T8 | E2E fuera de CI, con esperas fijas | Sí | M | **resuelto** |
+| T9 | Calidad automática: solo degrada, nunca se recupera; sin histéresis | Sí | M | **resuelto** |
 
 ---
 
@@ -118,4 +118,80 @@ Gravedad: **C** crítica · **A** alta · **M** media · **B** baja.
 
 ## 5. Registro de ciclos
 
-(Se completa a medida que avanza el trabajo.)
+### Ciclo 1 · Línea base
+Auditoría del repositorio, banco de rendimiento (`npm run bench`), medición en navegador
+(`tools/perf.mjs`), reanálisis completo de las fuentes y clasificación de hallazgos (§2–§3).
+
+### Ciclo 2 · Fundamentos
+- **T1** Tubo de rayos catódicos con el método de Boris; pruebas contra soluciones analíticas
+  (deflexión eléctrica exacta < 1e-9, circunferencia magnética < 1e-5, campos compensados < 1e-12 m,
+  convergencia, choque en la placa, haz que se curva hacia atrás, entradas inválidas).
+- **T2/T3** Validación de dominio en masa media y prisma (Sellmeier 370–2500 nm, caras reales, motivo
+  físico cuando un rayo no llega).
+- **T4** Marching cubes propio (probado contra una esfera exacta y contra three.js, triángulo a triángulo),
+  umbral de probabilidad en O(N) y Web Worker con caché LRU, descarte de peticiones y refinado progresivo.
+- **T5** Validación estructural y semántica del progreso, migración tolerante v1→v2, límite de 2 MB y
+  «Deshacer importación».
+- **T6** Fisher–Yates reproducible (χ² de 24 permutaciones), exámenes sin contenido fuera del ámbito,
+  semillas visibles.
+- **T7** Evidencia por paso, competencia y apartado; dominio con intervalo e indicador de evidencia;
+  diagnóstico con grafo de prerrequisitos y recomendaciones explicadas.
+- **T8** Prueba de humo con esperas observables (23 comprobaciones) y trabajo e2e en CI.
+- **T9** Calidad automática con histéresis y recuperación ante pérdida del contexto WebGL.
+
+### Ciclo 3 · Material nuevo y transformación
+- Hoja del tema (HOJ 1–28) y EBAU de La Rioja (2021, 2025) con sus datos: 62 ejercicios nuevos; las 28
+  filas de las tablas AMP 2–5 completas. Soluciones verificadas contra las del enunciado.
+- Problema inverso de Rydberg (n₂ desde λ o ν, y n₁ desde n₂ y λ) en pasos guiados; widget
+  «Despeja n₂ paso a paso»; ejemplos resueltos AMP 9 y HOJ 11.
+- Notas de rigor en tres niveles (apuntes, examen, rigor) para 14 discrepancias.
+- Quantum Space: fracción de probabilidad elegible (50–95 %) con la fracción realmente encerrada.
+- Atomic Forge: comparación neutro ↔ ion con radios reales.
+- Periodic Universe: estado a 25 °C y radiactividad (como el póster).
+- Navegación inferior en móvil; foco visible; ayuda de cada modo del Entrenamiento.
+
+### Discrepancias de la hoja nueva
+| Id | Fuente | Análisis |
+|---|---|---|
+| E27 | HOJ 8 | «Estación de radio» con λ = 200 nm: es ultravioleta. El cálculo se conserva y la región lo revela. |
+| E28 | HOJ 14c | ns² → grupo 2, pero el He (1s²) es del grupo 18. |
+| E29 | HOJ 19 | El Ne en una serie de radios iónicos: su radio no es iónico; la regla «más Z, menor radio» se mantiene. |
+
+---
+
+## 6. Mediciones finales (mismo entorno y procedimiento que la línea base)
+
+| Medida | Línea base | Final |
+|---|---|---|
+| Pruebas | 177 | 213 |
+| Prueba de humo | 20 (esperas fijas) | 23 (esperas observables), también en CI |
+| `orbitalGrid` 3d 72³ | 51,8 ms | 25,9 ms |
+| Superficie 3d 72³ (cálculo total) | 48,8 ms en el hilo principal | ≈ 45–56 ms **en un Worker** (0 ms en el hilo principal) |
+| Fragmento principal `index` | 71,8 kB (24,1 kB gzip) | 55,0 kB (18,0 kB gzip) |
+| Atrio listo | 414 ms | 239 ms |
+| Memoria JS · Quantum / Arquitecto / Periódico / Guía | 56 / 44 / 58 / 47 MB | 24 / 20 / 29 / 18 MB |
+| Interacción en Quantum (SwiftShader) | 3,5–4,2 s | 3,4–3,6 s |
+
+Los tiempos de interacción en 3D están dominados por el renderizado por software de este entorno
+(≈ 170–580 ms por fotograma); **no** se pueden extrapolar a una GPU real. El banco de Node tiene una
+variación de ±20 % entre ejecuciones. Datos completos en `docs/mediciones/`.
+
+---
+
+## 7. Limitaciones y trabajo pendiente (por prioridad)
+
+1. **Rendimiento en GPU real sin medir**: hace falta medir FPS y tareas largas en un portátil y un móvil
+   reales (el entorno solo dispone de SwiftShader).
+2. **Time Machine**: falta reestructurar cada modelo en los 7 pasos (conocimiento previo → hipótesis →
+   experimento → resultado → interpretación → limitaciones → modelo siguiente) y contrastar predicciones
+   de varios modelos en la misma escena.
+3. **Electron Architect**: falta un modo de retos basado en los errores de las hojas (p. ej. Cu, Cr,
+   cationes de transición) con diagnóstico por regla.
+4. **Mass Spectrometry**: faltan los ejercicios inversos dentro del laboratorio (sí existen en el
+   Entrenamiento: HOJ 7, abundancias a partir de M).
+5. **Campaña**: revisar las 35 misiones para que cada una exija interpretar (no solo pulsar) y añadir
+   misiones con el material nuevo (EBAU).
+6. **Regresión visual automatizada**: hay capturas en cada ejecución e2e, pero no comparación con umbral.
+7. **Accesibilidad**: falta una auditoría automática (axe) y una revisión con lector de pantalla.
+8. **Ponderación del examen tipo**: es una propuesta; no hay criterios oficiales del profesor.
+

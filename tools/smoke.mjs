@@ -46,6 +46,8 @@ try {
   await page.waitForURL(/#\/forja/, { timeout: T });
   check(page.url().includes('#/forja'), 'La misión I-1 abre la Forja');
   await page.waitForSelector('canvas', { timeout: T });
+  // Los atajos de teclado se registran al montar el panel: esperar a sus controles antes de pulsar.
+  await page.waitForSelector('[aria-label="Añadir un proton"]', { timeout: 60_000 });
   for (const k of 'ppppppnnnnnneeeeee') await page.keyboard.press(k);
   await page.waitForFunction(() => /Misión completada/.test(document.querySelector('aside')?.textContent ?? ''), null, { timeout: T }).catch(() => {});
   const side = await page.locator('aside').innerText();

@@ -7,9 +7,11 @@ Laboratorio interactivo de **estructura atómica y sistema periódico** para 1.�
 ```bash
 npm install
 npm run dev        # desarrollo en http://localhost:5173
-npm test           # 177 pruebas del núcleo científico y del motor de aprendizaje
+npm test           # 213 pruebas del núcleo científico y del motor de aprendizaje
 npm run build      # comprobación de tipos + compilación en dist/
-npm run e2e        # prueba de humo en navegador (requiere build previo)
+npm run e2e        # prueba de humo en navegador (requiere build previo; también en CI)
+npm run bench      # tiempos de los cálculos científicos más costosos
+node tools/perf.mjs salida.json   # fotogramas, tareas largas y memoria por laboratorio
 ```
 
 ## Qué incluye
@@ -26,6 +28,8 @@ npm run e2e        # prueba de humo en navegador (requiere build previo)
 | **Quantum Space** | Orbitales reales (n ≤ 5) como superficie que encierra el 90 % de la probabilidad (marching cubes) o como nube de puntos, con fase, corte para ver nodos, órbita de Bohr superpuesta, P(r) y paquete de incertidumbre mínima |
 | **Electron Architect** | Torre de energía 3D con cajas interactivas, Pauli, Hund y Aufbau en vivo, excepciones reales y diagrama de Möller editable |
 | **Periodic Universe** | Tabla 3D de 118 elementos con propiedades reales, comparador razonado que detecta excepciones y tamaños de átomos frente a iones |
+| **Ejercicios de clase** | 129 ejercicios de las fuentes con sus datos: teoría, ampliación (31, tablas completas), hoja del tema (1–28) y EBAU de La Rioja, por nivel (básico, examen, avanzado) |
+| **Diagnóstico** | Evidencia por apartado y por competencia (concepto, fórmula, unidades, cálculo, cifras, notación, razonamiento); dominio con intervalo; recomendaciones explicadas y grafo de prerrequisitos |
 | **Campaña** | 7 capítulos y 35 misiones con objetivos experimentales verificables |
 | **Sonido** | Síntesis WebAudio: ambiente propio de cada laboratorio, efectos por acción (partículas, fotones con tono según su frecuencia, contador Geiger, detector, espines, aciertos y errores) y volumen ajustable |
 | **Ajustes** | Calidad gráfica adaptable, movimiento reducido, sonido opcional, escala de texto, orden de configuraciones y exportar o importar el progreso |
@@ -38,6 +42,7 @@ npm run e2e        # prueba de humo en navegador (requiere build previo)
 4. [Simulaciones y fundamentos físicos](docs/04-simulaciones-fundamentos.md)
 5. [Propuesta visual y tecnológica](docs/05-propuesta-visual-tecnologica.md)
 6. [Plan de desarrollo por fases](docs/06-plan-fases.md)
+7. [Segunda generación: auditoría, decisiones, mediciones y pendientes](docs/07-segunda-generacion.md)
 
 ## Estructura
 
