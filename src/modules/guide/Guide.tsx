@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { LESSONS, type Formula, type GuideSection, type Lesson, type WorkedExample } from '../../learning/guide';
+import { LESSONS, RIGOR_NOTES, type Formula, type GuideSection, type Lesson, type WorkedExample } from '../../learning/guide';
 import { COVERED_NODES } from '../../learning/registry';
 import { NODES } from '../../learning/syllabus';
 import { masteryPercent } from '../../learning/mastery';
@@ -92,10 +92,10 @@ function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) {
   const node = NODES.find((n) => n.id === s.node);
   const mastery = useStore((st) => st.mastery[s.node]);
   return (
-    <section id={`sec-${s.node}`} className="guide-sec" aria-labelledby={`h-${s.node}`}>
+    <section id={`sec-${s.id ?? s.node}`} className="guide-sec" aria-labelledby={`h-${s.id ?? s.node}`}>
       <header className="guide-sec__head">
         <span className="mono guide-sec__num">{s.node}</span>
-        <h2 id={`h-${s.node}`} className="h2 guide-sec__title">
+        <h2 id={`h-${s.id ?? s.node}`} className="h2 guide-sec__title">
           {s.title}
         </h2>
         {mastery?.attempts ? (
@@ -139,6 +139,27 @@ function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) {
           )}
         </div>
       )}
+      {RIGOR_NOTES.filter((r) => r.node === s.node && !s.id).map((r) => (
+        <details key={r.id} className="rigor">
+          <summary>
+            <span className="rigor__tag">Nota de rigor</span> {r.title}
+          </summary>
+          <dl className="rigor__levels">
+            <div>
+              <dt>En los apuntes</dt>
+              <dd>{r.clase}</dd>
+            </div>
+            <div>
+              <dt>En el examen</dt>
+              <dd>{r.examen}</dd>
+            </div>
+            <div>
+              <dt>Con rigor</dt>
+              <dd>{r.rigor}</dd>
+            </div>
+          </dl>
+        </details>
+      ))}
       <div className="row row--wrap" style={{ gap: 8 }}>
         {covered.has(s.node) && (
           <a className="btn btn--sm" href={`#${practiceUrl([s.node])}`}>
@@ -210,7 +231,7 @@ export function GuideOverlay() {
       scroller.current?.scrollTo({ top: 0 });
     }
   }, [lesson.block, anchor, sheet]);
-  const lessonNodes = useMemo(() => lesson.sections.map((s) => s.node), [lesson]);
+  const lessonNodes = useMemo(() => [...new Set(lesson.sections.map((s) => s.node))], [lesson]);
 
   return (
     <div className="workspace workspace--full" style={{ minHeight: 0 }}>
@@ -276,11 +297,11 @@ export function GuideOverlay() {
                   <nav className="guide-toc" aria-label="Apartados">
                     {lesson.sections.map((s) => (
                       <a
-                        key={s.node}
-                        href={`#/guia?b=${lesson.block}&n=${s.node}`}
+                        key={s.id ?? s.node}
+                        href={`#/guia?b=${lesson.block}&n=${s.id ?? s.node}`}
                         onClick={(e) => {
                           e.preventDefault();
-                          document.getElementById(`sec-${s.node}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          document.getElementById(`sec-${s.id ?? s.node}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         }}
                       >
                         <span className="mono faint">{s.node}</span> {s.title}
@@ -289,7 +310,7 @@ export function GuideOverlay() {
                   </nav>
                 </header>
                 {lesson.sections.map((s) => (
-                  <Section key={s.node} s={s} labRoute={lesson.lab.route} />
+                  <Section key={s.id ?? s.node} s={s} labRoute={lesson.lab.route} />
                 ))}
                 {lesson.worked.length > 0 && (
                   <section className="stack-16" aria-label="Ejercicios resueltos">

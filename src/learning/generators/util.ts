@@ -1,5 +1,5 @@
 import { mulberry32, formatNumber } from '../../science/numbers';
-import type { ChoiceOption, Difficulty, ExercisePart, NumericMisconception } from '../types';
+import type { ChoiceOption, Difficulty, ExercisePart, NumericMisconception, SkillId } from '../types';
 
 export type Rng = () => number;
 
@@ -42,6 +42,8 @@ export function numericPart(opts: {
   misconceptions?: NumericMisconception[];
   recompute?: { from: string; fn: (v: number) => number };
   placeholder?: string;
+  skills?: SkillId[];
+  nodeIds?: string[];
 }): ExercisePart {
   const sig = opts.sig ?? 3;
   return {
@@ -59,6 +61,8 @@ export function numericPart(opts: {
     canonical: `${formatNumber(opts.value, { sig })}${opts.unit ? ' ' + opts.unit : ''}`,
     explanation: opts.explanation,
     placeholder: opts.placeholder ?? (opts.unit ? `valor y unidad (${opts.unit})` : 'número'),
+    ...(opts.skills ? { skills: opts.skills } : {}),
+    ...(opts.nodeIds ? { nodeIds: opts.nodeIds } : {}),
   };
 }
 

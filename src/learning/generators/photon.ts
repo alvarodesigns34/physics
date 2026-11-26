@@ -311,40 +311,101 @@ export const rydbergGenerator: ExerciseGenerator = {
   },
 };
 
-const ORDINAL = ['primera', 'segunda', 'tercera', 'cuarta', 'quinta'];
+const ORDINAL = ['primera', 'segunda', 'tercera', 'cuarta', 'quinta', 'sexta', 'séptima', 'octava'];
 
-export function buildInverseSeriesExercise(n1: number, n2: number, difficulty: Difficulty, seedId: string, source?: string, nuGiven?: number): Exercise {
-  const t = transition(n2, n1, K);
-  const nu = nuGiven ?? Number(t.frequency.toPrecision(3));
+/**
+ * Problema inverso de Rydberg: dada una línea (por su frecuencia o su longitud de onda) y la serie, hallar
+ * n₂. Resolución guiada: cada transformación algebraica es un paso con su justificación.
+ *   1/λ = R·(1/n₁² − 1/n₂²)  →  1/n₂² = 1/n₁² − 1/(λ·R)  →  n₂ = 1/√(1/n₁² − 1/(λ·R))
+ */
+export function buildInverseSeriesExercise(n1: number, n2: number, difficulty: Difficulty, seedId: string, source?: string, nuGiven?: number, opts: { lambdaNm?: number; k?: ConstantSet } = {}): Exercise {
+  const k = opts.k ?? K;
+  const t = transition(n2, n1, k);
+  const byLambda = opts.lambdaNm !== undefined;
+  const lambda = byLambda ? opts.lambdaNm! * 1e-9 : NaN;
+  const nu = byLambda ? k.c / lambda : nuGiven ?? Number(t.frequency.toPrecision(3));
+  const w = byLambda ? 1 / lambda : nu / k.c;
+  const inv1 = 1 / (n1 * n1);
+  const x = w / k.R;
+  const invN2sq = inv1 - x;
+  const n2sq = 1 / invN2sq;
   const s = t.series!;
   const ord = n2 - n1;
+  const parts: ExercisePart[] = [];
+  if (difficulty <= 2) {
+    parts.push(
+      numericPart({
+        id: 'w',
+        prompt: byLambda ? 'Paso 1 · Número de ondas 1/λ (m⁻¹)' : 'Paso 1 · Número de ondas 1/λ = ν/c (m⁻¹)',
+        value: w,
+        unit: 'm⁻¹',
+        sig: 4,
+        explanation: byLambda ? `λ = ${fmt(opts.lambdaNm!, 4)} nm = ${fmt(lambda, 4)} m → 1/λ = ${fmt(w, 4)} m⁻¹. Es el miembro izquierdo de la ecuación de Rydberg.` : `De c = λ·ν: 1/λ = ν/c = ${fmt(nu, 3)} / ${fmt(k.c, 1)} = ${fmt(w, 4)} m⁻¹. Así la frecuencia se convierte en el miembro izquierdo de Rydberg.`,
+        misconceptions: byLambda ? [{ test: (v) => relClose(v, 1 / opts.lambdaNm!, 0.02), message: 'Pasa λ a metros antes de invertir: 1 nm = 10⁻⁹ m.', skill: 'unidades' }] : [{ test: (v) => relClose(v, k.c / nu, 0.02), message: 'Has calculado λ = c/ν. Aquí se pide su inverso: 1/λ = ν/c.', skill: 'formula' }],
+        skills: ['formula', 'unidades', 'calculo'],
+      }),
+      numericPart({
+        id: 'x',
+        prompt: 'Paso 2 · Divide entre R: (1/λ)/R = 1/n₁² − 1/n₂²',
+        value: x,
+        unit: '',
+        sig: 4,
+        explanation: `Dividimos los dos miembros entre R para dejar solo el paréntesis: ${fmt(w, 4)} / ${fmt(k.R, 5)} = ${fmt(x, 4)}. Es un número sin unidades (m⁻¹/m⁻¹).`,
+        recompute: { from: 'w', fn: (v) => v / k.R },
+        skills: ['formula', 'calculo'],
+      }),
+      numericPart({
+        id: 'inv',
+        prompt: `Paso 3 · Despeja 1/n₂² = 1/${n1}² − ${fmt(x, 4)}`,
+        value: invN2sq,
+        unit: '',
+        sig: 3,
+        explanation: `Pasamos 1/n₂² al otro miembro: 1/n₂² = 1/n₁² − (1/λ)/R = ${fmt(inv1, 4)} − ${fmt(x, 4)} = ${fmt(invN2sq, 4)}. Debe salir positivo y menor que 1/n₁²; si no, la línea no pertenece a esta serie.`,
+        recompute: { from: 'x', fn: (v) => inv1 - v },
+        misconceptions: [{ test: (v) => relClose(v, x - inv1, 0.02), message: 'Has restado al revés: 1/n₂² = 1/n₁² − (1/λ)/R, que debe ser positivo.', skill: 'calculo' }],
+        skills: ['formula', 'calculo'],
+      }),
+      numericPart({
+        id: 'n2sq',
+        prompt: 'Paso 4 · Invierte: n₂²',
+        value: n2sq,
+        unit: '',
+        sig: 3,
+        relTol: 0.03,
+        explanation: `n₂² = 1/${fmt(invN2sq, 4)} = ${fmt(n2sq, 4)}.`,
+        recompute: { from: 'inv', fn: (v) => 1 / v },
+        skills: ['calculo'],
+      }),
+    );
+  }
+  parts.push(
+    integerPart('n2', difficulty <= 2 ? 'Paso 5 · n₂ (raíz cuadrada, redondeada al entero)' : 'Nivel superior n₂ de la transición', n2, `n₂ = √${fmt(n2sq, 4)} = ${fmt(Math.sqrt(n2sq), 3)} ≈ ${n2}. Los niveles son enteros: si sale ${fmt(Math.sqrt(n2sq), 3)} es por el redondeo de los datos.`),
+    choicePart(
+      'ord',
+      '¿Qué línea de la serie es?',
+      ORDINAL.slice(0, Math.max(4, ord)).map((o, i) => ({ id: String(i + 1), text: `La ${o} línea (n₂ = ${n1 + i + 1})`, feedback: `La primera línea de ${s.name} es n₂ = ${n1 + 1}; la línea k-ésima tiene n₂ = ${n1} + k.` })),
+      [String(ord)],
+      `n₂ = ${n2} = ${n1} + ${ord}: es la ${ORDINAL[ord - 1]} línea de la serie de ${s.name}.`,
+    ),
+  );
   return {
     id: seedId,
     generatorId: 'serie-inversa',
     nodeIds: ['3.7', '3.6'],
     difficulty,
-    title: 'Línea misteriosa',
-    statement: `Indica qué línea de la serie de **${s.name}** del hidrógeno tiene una frecuencia de **${fmt(nu, 3)} Hz**.`,
-    data: constantsData(K, 'cm'),
-    parts: [
-      integerPart('n2', 'Nivel superior n₂ de la transición', n2, `1/n₂² = 1/${n1}² − ν/(c·R) = ${fmt(1 / (n1 * n1) - nu / (K.c * K.R), 4)} → n₂² ≈ ${fmt(1 / (1 / (n1 * n1) - nu / (K.c * K.R)), 4)} → n₂ = ${n2}.`),
-      choicePart(
-        'ord',
-        '¿Qué línea de la serie es?',
-        ORDINAL.slice(0, 4).map((o, i) => ({ id: String(i + 1), text: `La ${o} línea (n₂ = ${n1 + i + 1})`, feedback: `La primera línea de ${s.name} es n₂ = ${n1 + 1}; la línea k-ésima tiene n₂ = ${n1} + k.` })),
-        [String(ord)],
-        `n₂ = ${n2} = ${n1} + ${ord}: es la ${ORDINAL[ord - 1]} línea de la serie de ${s.name}.`,
-      ),
-    ],
+    title: difficulty <= 2 ? 'Línea misteriosa (resolución guiada)' : 'Línea misteriosa',
+    statement: byLambda ? `¿Qué valor de n₂ en la ecuación de Rydberg corresponde a la línea de la serie de **${s.name}** de **${fmt(opts.lambdaNm!, 4)} nm**?` : `Indica qué línea de la serie de **${s.name}** del hidrógeno tiene una frecuencia de **${fmt(nu, 3)} Hz**.`,
+    data: constantsData(k, byLambda ? 'm' : 'cm'),
+    parts,
     stepwise: true,
     hints: [
       `En la serie de ${s.name}, el nivel inferior es siempre n₁ = ${n1}. La incógnita es n₂.`,
-      'Pasa la frecuencia a número de ondas (1/λ = ν/c) y despeja n₂ en la ecuación de Rydberg.',
-      `ν/c = ${fmt(nu / K.c, 4)} m⁻¹ = ${fmt(K.R, 5)}·(1/${n1}² − 1/n₂²).`,
+      byLambda ? 'Calcula 1/λ, divide entre R y despeja 1/n₂² = 1/n₁² − 1/(λ·R).' : 'Convierte la frecuencia en número de ondas (1/λ = ν/c), divide entre R y despeja 1/n₂².',
+      `1/n₂² = 1/${n1 * n1} − ${fmt(x, 4)} → invierte y haz la raíz cuadrada.`,
     ],
-    solution: [`1/λ = ν/c = ${fmt(nu, 3)} / ${fmt(K.c, 1)} = ${fmt(nu / K.c, 4)} m⁻¹.`, `1/n₂² = 1/${n1 * n1} − ${fmt(nu / K.c, 4)}/${fmt(K.R, 5)} = ${fmt(1 / (n1 * n1) - nu / (K.c * K.R), 4)}.`, `n₂ = ${n2}: ${ORDINAL[ord - 1]} línea de ${s.name}.`],
+    solution: parts.map((p) => p.explanation),
     source,
-    constants: K,
+    constants: k,
   };
 }
 

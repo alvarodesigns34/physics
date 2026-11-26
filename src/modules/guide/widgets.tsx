@@ -1136,10 +1136,100 @@ export function ParticlesWidget() {
   );
 }
 
+// ── Problema inverso de Rydberg (despeje guiado) ──────────────────────────
+
+const INV_PRESETS = [
+  { label: 'AMP 9 · Paschen 2,34·10¹⁴ Hz', n1: 3, kind: 'nu' as const, value: 2.34e14 },
+  { label: 'HOJ 11 · Balmer 389 nm', n1: 2, kind: 'lambda' as const, value: 389 },
+  { label: 'Hβ · Balmer 486,1 nm', n1: 2, kind: 'lambda' as const, value: 486.1 },
+  { label: 'Lyman 102,6 nm', n1: 1, kind: 'lambda' as const, value: 102.6 },
+];
+
+export function RydbergInverseWidget() {
+  const R = 1.097e7;
+  const c = 3e8;
+  const [n1, setN1] = useState(3);
+  const [kind, setKind] = useState<'lambda' | 'nu'>('nu');
+  const [text, setText] = useState('2,34e14');
+  const value = Number(text.replace(',', '.').replace(/·10\^?/, 'e').replace(/\s/g, ''));
+  const ok = Number.isFinite(value) && value > 0;
+  const w = !ok ? NaN : kind === 'lambda' ? 1 / (value * 1e-9) : value / c;
+  const x = w / R;
+  const inv = 1 / (n1 * n1) - x;
+  const n2sq = 1 / inv;
+  const n2 = Math.sqrt(n2sq);
+  const nearest = Math.round(n2);
+  const integerOk = inv > 0 && Math.abs(n2 - nearest) < 0.06 && nearest > n1;
+  const series = seriesFor(n1);
+  const limitNm = (n1 * n1) / R * 1e9;
+  const step = (op: string, eq: ReactNode, note: string) => (
+    <li className="deriv__step">
+      <span className="deriv__op">{op}</span>
+      <span className="deriv__eq mono">{eq}</span>
+      <span className="deriv__why">{note}</span>
+    </li>
+  );
+  return (
+    <WidgetFrame title="Despeja n₂ paso a paso" kind="calculo" caption="Cada línea es una transformación de la ecuación de Rydberg: lo que se hace a un miembro se hace al otro. R = 1,097·10⁷ m⁻¹ y c = 3·10⁸ m/s.">
+      <div className="row row--wrap" style={{ gap: 6 }}>
+        {INV_PRESETS.map((p) => (
+          <button key={p.label} type="button" className="btn btn--sm" onClick={() => { setN1(p.n1); setKind(p.kind); setText(p.kind === 'nu' ? String(p.value).replace('e+', 'e') : String(p.value).replace('.', ',')); }}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+      <div className="row row--wrap" style={{ gap: 12, alignItems: 'flex-end' }}>
+        <label className="field" style={{ gap: 4 }}>
+          <span className="label">Serie (n₁)</span>
+          <select className="input" value={n1} onChange={(e) => setN1(Number(e.target.value))}>
+            {[1, 2, 3, 4, 5].map((k) => (
+              <option key={k} value={k}>
+                {seriesFor(k)?.name} · n₁ = {k}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="segmented" role="radiogroup" aria-label="Dato">
+          <button type="button" role="radio" aria-checked={kind === 'lambda'} aria-pressed={kind === 'lambda'} onClick={() => setKind('lambda')}>λ (nm)</button>
+          <button type="button" role="radio" aria-checked={kind === 'nu'} aria-pressed={kind === 'nu'} onClick={() => setKind('nu')}>ν (Hz)</button>
+        </div>
+        <label className="field" style={{ gap: 4 }}>
+          <span className="label">{kind === 'lambda' ? 'Longitud de onda (nm)' : 'Frecuencia (Hz), p. ej. 2,34e14'}</span>
+          <input className="input" value={text} onChange={(e) => setText(e.target.value)} inputMode="decimal" />
+        </label>
+      </div>
+      {ok ? (
+        <ol className="deriv">
+          {step('Partimos de', <>1/λ = R·(1/n₁² − 1/n₂²)</>, `Serie de ${series?.name ?? '—'}: n₁ = ${n1}. La incógnita es n₂.`)}
+          {step(kind === 'lambda' ? 'Calculamos 1/λ' : 'ν → 1/λ = ν/c', <>1/λ = {sci(w, 4)} m⁻¹</>, kind === 'lambda' ? `λ = ${fmt(value, 4)} nm = ${sci(value * 1e-9, 4)} m.` : `${sci(value, 3)} Hz / 3·10⁸ m/s.`)}
+          {step('÷ R en los dos miembros', <>(1/λ)/R = 1/{n1 * n1} − 1/n₂² = {fmt(x, 4)}</>, 'Así el paréntesis queda solo. Es un número sin unidades.')}
+          {step('Despejamos 1/n₂²', <>1/n₂² = 1/{n1 * n1} − {fmt(x, 4)} = {fmt(inv, 4)}</>, 'Pasamos 1/n₂² a un lado y el resto al otro (cambia de signo).')}
+          {inv > 0 ? (
+            <>
+              {step('Invertimos', <>n₂² = 1/{fmt(inv, 4)} = {fmt(n2sq, 4)}</>, 'Si a = b, entonces 1/a = 1/b.')}
+              {step('Raíz cuadrada', <>n₂ = √{fmt(n2sq, 4)} = {fmt(n2, 4)}</>, integerOk ? `≈ ${nearest}: la línea ${nearest} → ${n1}, ${['primera', 'segunda', 'tercera', 'cuarta', 'quinta', 'sexta', 'séptima', 'octava'][nearest - n1 - 1] ?? `${nearest - n1}.ª`} línea de ${series?.name}.` : 'No sale un entero: con estos datos no hay ninguna línea del hidrógeno en esta serie.')}
+            </>
+          ) : (
+            <li className="deriv__step deriv__step--bad">
+              <span className="deriv__op">Sin solución</span>
+              <span className="deriv__eq mono">1/n₂² ≤ 0</span>
+              <span className="deriv__why">La λ es menor que el límite de la serie de {series?.name} ({fmt(limitNm, 4)} nm) o la frecuencia es demasiado alta: ningún salto a n₁ = {n1} emite esa radiación.</span>
+            </li>
+          )}
+        </ol>
+      ) : (
+        <Feedback tone="info">Escribe un número positivo (por ejemplo 389 o 2,34e14).</Feedback>
+      )}
+    </WidgetFrame>
+  );
+}
+
 export function GuideWidget({ id }: { id: string }) {
   switch (id) {
     case 'notacion':
       return <NotationWidget />;
+    case 'rydberg-inverso':
+      return <RydbergInverseWidget />;
     case 'onda':
       return <WaveWidget />;
     case 'espectro-em':

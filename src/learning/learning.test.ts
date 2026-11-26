@@ -411,3 +411,46 @@ describe('calidad adaptativa con histéresis', () => {
     expect(c.tier).toBe('alta');
   });
 });
+
+describe('hoja del tema y EBAU: soluciones coinciden con las del enunciado', () => {
+  const get = (ref: string, id: string) => SOURCE_EXERCISES.find((s) => s.ref === ref)!.build().parts.find((p) => p.id === id)!;
+  it('HOJ 6 galio 69,798 u · HOJ 7 cloro 75 %', () => {
+    expect(checkAnswer(get('HOJ 6', 'M').answer, '69,80 u').correct).toBe(true);
+    expect(checkAnswer(get('HOJ 7', 'x').answer, '75 %').correct).toBe(true);
+  });
+  it('HOJ 9 clorofila: 4,68·10⁻¹⁹ J y 7,06·10¹⁴ Hz · HOJ 10 Balmer 3.ª línea 4,341·10⁻⁷ m', () => {
+    expect(checkAnswer(get('HOJ 9', 'E').answer, '4,68e-19 J').correct).toBe(true);
+    expect(checkAnswer(get('HOJ 9', 'nu').answer, '7,06e14 Hz').correct).toBe(true);
+    const h10 = SOURCE_EXERCISES.find((s) => s.ref === 'HOJ 10')!.build();
+    const lam = h10.parts.find((p) => p.answer.kind === 'numeric' && (p.answer as { unit: string }).unit === 'm')!;
+    expect(checkAnswer(lam.answer, '4,341·10^-7 m').correct).toBe(true);
+  });
+  it('HOJ 11: la línea de Balmer de 389 nm tiene n₂ = 8 (resolución guiada)', () => {
+    expect(checkAnswer(get('HOJ 11', 'n2').answer, '8').correct).toBe(true);
+    expect(checkAnswer(get('HOJ 11', 'n2sq').answer, '63,9').correct).toBe(true);
+  });
+  it('AMP 9 (Paschen 2,34·10¹⁴ Hz): n₂ = 5 y pasos intermedios', () => {
+    const ex = SOURCE_EXERCISES.find((s) => s.ref === 'AMP 9')!.build();
+    expect(checkAnswer(ex.parts.find((p) => p.id === 'n2')!.answer, '5').correct).toBe(true);
+  });
+  it('EBAU-3 a: fundamental, excitado, imposible, fundamental, excitado', () => {
+    const ex = SOURCE_EXERCISES.find((s) => s.ref === 'EBAU-3 a')!.build();
+    expect(ex.parts.map((p) => (p.answer as { correct: string[] }).correct[0])).toEqual(['fundamental', 'excitado', 'imposible', 'fundamental', 'excitado']);
+  });
+  it('EBAU-2 2025: permitidas (3,2,1,−½), (2,1,−1,−½), (1,0,0,½)', () => {
+    expect((get('EBAU-2 (2025)', 'val').answer as { correct: string[] }).correct).toEqual(['(3, 2, 1, −½)', '(2, 1, −1, −½)', '(1, 0, 0, ½)']);
+  });
+  it('las 28 filas de AMP 2–5 (4 + 10 + 5 + 9) están todas implementadas', () => {
+    const refs = SOURCE_EXERCISES.map((s) => s.ref).filter((r) => /^AMP [2-5] /.test(r));
+    expect(refs.length).toBe(28);
+  });
+});
+
+describe('guía', () => {
+  it('cada nota de rigor apunta a un apartado con sección en la guía y las anclas son únicas', async () => {
+    const { RIGOR_NOTES, LESSONS, SECTION_BY_NODE } = await import('./guide');
+    for (const r of RIGOR_NOTES) expect(SECTION_BY_NODE.has(r.node), r.id).toBe(true);
+    const ids = LESSONS.flatMap((l) => l.sections.map((s) => s.id ?? s.node));
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});

@@ -26,6 +26,7 @@ export const quantumText = (q: QuantumSet) => `(${q.n}, ${q.l}, ${String(q.ml).r
 
 const VALIDITY_OPTIONS = [
   { id: 'valida', text: 'Es posible' },
+  { id: 'n-invalido', text: 'No: n debe ser un entero positivo (1, 2, 3…)' },
   { id: 'l-fuera-de-rango', text: 'No: l debe valer entre 0 y n − 1' },
   { id: 'ml-fuera-de-rango', text: 'No: m_l debe valer entre −l y +l' },
   { id: 'ms-invalido', text: 'No: m_s solo puede ser +½ o −½' },

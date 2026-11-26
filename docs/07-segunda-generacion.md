@@ -73,7 +73,7 @@ No hay más materiales disponibles en el entorno.
 
 ### Omisiones detectadas en la cobertura de ejercicios originales
 
-- **AMP 2–5 (tablas):** 27 filas en total; solo 8 estaban implementadas con sus datos originales.
+- **AMP 2–5 (tablas):** 28 filas en total (4 + 10 + 5 + 9); solo 8 estaban implementadas con sus datos originales.
   Faltan: AMP 2 U; AMP 3 B, Al, Ar, Be, Ba, U, Sr, P; AMP 4 Cl⁻, Ca²⁺, K⁺; AMP 5 Cl, K, Ar, Cl⁻, Hg, Cs, S²⁻.
 - **TEO (ejercicios de la teoría):** faltan 2b, 2c, 3, 4, 5a–c, 6a–d, 19a, 20a–b.
 - **Póster del sistema periódico:** estado físico a temperatura ambiente y elementos radiactivos/sintéticos
