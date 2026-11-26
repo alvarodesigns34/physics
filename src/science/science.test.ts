@@ -716,3 +716,70 @@ describe('espectroscopio de prisma (SF11)', () => {
     expect(Math.abs(d.exit[1] - d.entry[1])).toBeLessThan(1e-9);
   });
 });
+
+describe('marching cubes propio', () => {
+  it('esfera: radio y área convergen a los exactos (4πR²)', async () => {
+    const { polygonize, meshArea } = await import('./marching');
+    const R = 0.6;
+    const half = 1;
+    for (const size of [24, 48]) {
+      const f = new Float32Array(size ** 3);
+      const hs = size / 2;
+      for (let z = 0; z < size; z++) for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+        const c = (i: number) => ((i - hs) / hs) * half;
+        f[x + y * size + z * size * size] = -Math.hypot(c(x), c(y), c(z)); // f > iso dentro
+      }
+      const m = polygonize(f, size, -R, half);
+      // Todos los vértices sobre la esfera (interpolación lineal de una función lineal en r: exacta salvo por la curvatura)
+      let maxErr = 0;
+      for (let i = 0; i < m.positions.length; i += 3) maxErr = Math.max(maxErr, Math.abs(Math.hypot(m.positions[i]!, m.positions[i + 1]!, m.positions[i + 2]!) - R));
+      expect(maxErr).toBeLessThan(size === 24 ? 0.01 : 0.003);
+      const relA = Math.abs(meshArea(m.positions) - 4 * Math.PI * R * R) / (4 * Math.PI * R * R);
+      expect(relA).toBeLessThan(size === 24 ? 0.03 : 0.01);
+      // Normales unitarias y hacia fuera (−∇f apunta al exterior)
+      for (let i = 0; i < m.normals.length; i += 3) {
+        const dot = m.normals[i]! * m.positions[i]! + m.normals[i + 1]! * m.positions[i + 1]! + m.normals[i + 2]! * m.positions[i + 2]!;
+        expect(dot).toBeGreaterThan(0);
+      }
+    }
+  });
+  it('coincide con el marching cubes de three.js en número de triángulos (orbital 3d)', async () => {
+    const { polygonize } = await import('./marching');
+    const { orbitalGrid } = await import('./isosurface');
+    const THREE = await import('three');
+    const { MarchingCubes } = await import('three/examples/jsm/objects/MarchingCubes.js');
+    const g = orbitalGrid(3, 2, 0, 40, 0.9);
+    const mine = polygonize(g.psi, 40, g.iso, g.half);
+    const mc = new MarchingCubes(40, new THREE.MeshBasicMaterial(), false, false, 200000);
+    mc.isolation = g.iso;
+    mc.field.set(g.psi);
+    mc.update();
+    // three omite la capa exterior de celdas; con el orbital contenido en la rejilla el resultado coincide.
+    expect(mine.triangles).toBe(mc.count / 3);
+  });
+});
+
+describe('umbral de probabilidad en O(N)', () => {
+  it('coincide exactamente con ordenar y acumular', async () => {
+    const { thresholdForFraction } = await import('./isosurface');
+    const { mulberry32 } = await import('./numbers');
+    const rng = mulberry32(9);
+    for (let t = 0; t < 20; t++) {
+      const d = new Float32Array(5000).map(() => Math.exp(-20 * rng()) * rng());
+      const dV = 0.01;
+      const p = 0.5 + 0.49 * rng();
+      const ref = Float64Array.from(d).sort().reverse();
+      const total = ref.reduce((a, b) => a + b, 0) * dV;
+      let acc = 0;
+      let thr = ref[0]!;
+      for (const v of ref) {
+        acc += v * dV;
+        thr = v;
+        if (acc >= p * Math.min(1, total)) break;
+      }
+      const got = thresholdForFraction(d, dV, p);
+      expect(got.threshold).toBe(thr);
+      expect(got.enclosed).toBeCloseTo(acc, 12);
+    }
+  });
+});

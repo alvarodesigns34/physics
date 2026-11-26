@@ -23,6 +23,7 @@ import { atomDensity, sampleOrbital } from './orbitals';
 import { groundState } from './configuration';
 import { mulberry32 } from './numbers';
 import { prismGeometry } from './prism';
+import { polygonize as polygonizeOwn } from './marching';
 import * as THREE from 'three';
 import { MarchingCubes } from 'three/examples/jsm/objects/MarchingCubes.js';
 
@@ -48,6 +49,15 @@ describe('superficie completa (rejilla + marching cubes)', () => {
   bench('subnivel 3d (5 orbitales), 48³', () => {
     for (let m = -2; m <= 2; m++) polygonize(3, 2, m, 48);
   }, { iterations: 3 });
+});
+
+describe('superficie con el marching cubes propio (lo que ejecuta el Web Worker)', () => {
+  bench('3d_z², 72³ (rejilla + poligonización)', () => {
+    const g = orbitalGrid(3, 2, 0, 72, 0.9);
+    polygonizeOwn(g.psi, 72, g.iso, g.half);
+  }, { iterations: 3 });
+  const g72 = orbitalGrid(3, 2, 0, 72, 0.9);
+  bench('solo poligonización 72³', () => void polygonizeOwn(g72.psi, 72, g72.iso, g72.half), { iterations: 5 });
 });
 
 describe('óptica', () => {

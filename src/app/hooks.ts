@@ -44,7 +44,9 @@ export function useReducedMotion(): boolean {
 
 // ── Calidad gráfica ───────────────────────────────────────────────────────
 
-export type Tier = 'alta' | 'media' | 'baja';
+import { initialQualityState, qualityStep, WINDOW_MS, type QualityState, type Tier } from './quality';
+export type { Tier };
+export { WINDOW_MS };
 
 export interface QualityProfile {
   tier: Tier;
@@ -71,13 +73,28 @@ export function detectTier(): Tier {
   return 'alta';
 }
 
-let autoTier: Tier | null = null;
+// Nivel automático gobernado por el controlador con histéresis (src/app/quality.ts).
+let autoState: QualityState | null = null;
 const autoListeners = new Set<() => void>();
+function getAutoState(): QualityState {
+  if (!autoState) autoState = initialQualityState(detectTier(), performance.now());
+  return autoState;
+}
+
+/** Entrega una ventana de medida al controlador; notifica si cambia el nivel. */
+export function reportFrameWindow(fps: number, longestFrameMs: number) {
+  const cur = getAutoState();
+  const next = qualityStep(cur, fps, longestFrameMs, performance.now());
+  autoState = next;
+  if (next.tier !== cur.tier) autoListeners.forEach((l) => l());
+}
+
+/** Compatibilidad: fuerza una bajada de nivel (p. ej. ante una pérdida de contexto WebGL). */
 export function degradeAutoTier() {
-  const cur = autoTier ?? detectTier();
-  const next: Tier = cur === 'alta' ? 'media' : 'baja';
-  if (next !== cur) {
-    autoTier = next;
+  const cur = getAutoState();
+  const idx = (['baja', 'media', 'alta'] as Tier[]).indexOf(cur.tier);
+  if (idx > 0) {
+    autoState = { ...cur, tier: (['baja', 'media', 'alta'] as Tier[])[idx - 1]!, lastChange: performance.now(), lockedUntil: performance.now() + 120_000 };
     autoListeners.forEach((l) => l());
   }
 }
@@ -90,7 +107,7 @@ export function useQuality(): QualityProfile {
     autoListeners.add(l);
     return () => void autoListeners.delete(l);
   }, []);
-  if (q === 'auto') return PROFILES[autoTier ?? detectTier()];
+  if (q === 'auto') return PROFILES[getAutoState().tier];
   return PROFILES[q];
 }
 

@@ -1,11 +1,42 @@
-import { Suspense, useLayoutEffect, type ReactNode } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
-import { PerformanceMonitor, Environment, Lightformer } from '@react-three/drei';
+import { Suspense, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Environment, Lightformer } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, ToneMapping } from '@react-three/postprocessing';
 import { ToneMappingMode } from 'postprocessing';
 import * as THREE from 'three';
-import { degradeAutoTier, useQuality, useReducedMotion } from '../app/hooks';
+import { degradeAutoTier, reportFrameWindow, useQuality, useReducedMotion, WINDOW_MS } from '../app/hooks';
+import { toast } from '../ui/common';
 import { useStore } from '../state/store';
+
+/** Mide los fotogramas por ventanas y los entrega al controlador de calidad (solo en modo automático). */
+function FrameMonitor() {
+  const acc = useRef({ start: -1, frames: 0, longest: 0, last: -1 });
+  useFrame(() => {
+    const now = performance.now();
+    const a = acc.current;
+    if (document.hidden) {
+      a.start = -1;
+      return;
+    }
+    if (a.start < 0) {
+      a.start = now;
+      a.last = now;
+      a.frames = 0;
+      a.longest = 0;
+      return;
+    }
+    a.frames++;
+    a.longest = Math.max(a.longest, now - a.last);
+    a.last = now;
+    if (now - a.start >= WINDOW_MS) {
+      reportFrameWindow((a.frames * 1000) / (now - a.start), a.longest);
+      a.start = now;
+      a.frames = 0;
+      a.longest = 0;
+    }
+  });
+  return null;
+}
 
 /** Entorno de reflejos procedural (sin descargas): lámparas de instrumento cálidas y un contraluz frío. */
 function StudioEnvironment() {
@@ -59,6 +90,14 @@ export function Stage({ children, camera = [0, 2.4, 9] as [number, number, numbe
       camera={{ position: camera, fov, near: 0.05, far: 200 }}
       gl={{ antialias: q.antialias, powerPreference: 'high-performance', alpha: false, stencil: false }}
       onCreated={({ gl }) => {
+        const canvas = gl.domElement;
+        canvas.addEventListener('webglcontextlost', (e) => {
+          // Permite al navegador restaurar el contexto; mientras tanto se reduce la carga gráfica.
+          e.preventDefault();
+          degradeAutoTier();
+          toast('Se ha perdido el contexto gráfico; se recupera con menos calidad.');
+        });
+        canvas.addEventListener('webglcontextrestored', () => toast('Contexto gráfico recuperado.'));
         gl.toneMapping = q.bloom ? THREE.NoToneMapping : THREE.NeutralToneMapping;
         gl.setClearColor('#0b0a09');
       }}
@@ -68,7 +107,7 @@ export function Stage({ children, camera = [0, 2.4, 9] as [number, number, numbe
       <color attach="background" args={['#0b0a09']} />
       <fog attach="fog" args={['#0b0a09', 14, 42]} />
       <ViewOffset panel={panel} fov={fov} />
-      {auto && <PerformanceMonitor onDecline={degradeAutoTier} flipflops={2} />}
+      {auto && !reduced && <FrameMonitor />}
       <Suspense fallback={null}>
         {q.tier !== 'baja' && <StudioEnvironment />}
         {children}

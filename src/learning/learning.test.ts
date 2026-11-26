@@ -379,3 +379,35 @@ describe('importación y migración del progreso', () => {
     expect(t.issues.length).toBeGreaterThan(0);
   });
 });
+
+describe('calidad adaptativa con histéresis', () => {
+  it('baja tras 3 ventanas lentas, sube solo con margen sostenido y se bloquea si oscila', async () => {
+    const { initialQualityState, qualityStep } = await import('../app/quality');
+    let s = initialQualityState('alta', 0);
+    let t = 0;
+    const feed = (fps: number, n: number, long = 30) => {
+      for (let i = 0; i < n; i++) s = qualityStep(s, fps, long, (t += 2000));
+    };
+    feed(40, 2);
+    expect(s.tier).toBe('alta'); // dos ventanas no bastan
+    feed(40, 1);
+    expect(s.tier).toBe('media');
+    feed(60, 6);
+    expect(s.tier).toBe('media'); // aún no han pasado 15 s desde el cambio… (12 s)
+    feed(60, 3);
+    expect(s.tier).toBe('alta'); // sube con margen sostenido
+    feed(40, 3);
+    expect(s.tier).toBe('media'); // vuelve a bajar en < 30 s: oscilación → bloqueo
+    feed(60, 30);
+    expect(s.tier).toBe('media'); // bloqueado 120 s
+    feed(60, 40);
+    expect(s.tier).toBe('alta');
+    // Nunca supera el techo inicial; las pausas largas (cambio de laboratorio) no cuentan
+    let b = initialQualityState('media', 0);
+    for (let i = 0; i < 50; i++) b = qualityStep(b, 60, 30, i * 2000 + 20000);
+    expect(b.tier).toBe('media');
+    let c = initialQualityState('alta', 0);
+    for (let i = 0; i < 10; i++) c = qualityStep(c, 20, 900, i * 2000);
+    expect(c.tier).toBe('alta');
+  });
+});

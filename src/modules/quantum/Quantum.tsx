@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
-import { MarchingCubes } from 'three/examples/jsm/objects/MarchingCubes.js';
-import { orbitalGrid } from '../../science/isosurface';
+import { cachedSurface, requestSurface } from './surfaceClient';
+import type { SurfaceResult } from '../../science/orbitalSurfaces';
 import * as THREE from 'three';
 import { create } from 'zustand';
 import { Stage } from '../../render/Stage';
@@ -29,12 +29,17 @@ interface QState {
   bohr: boolean;
   subshell: boolean;
   view: 'nube' | 'superficie';
+  /** Fracción de probabilidad encerrada por la superficie */
+  fraction: number;
   tab: Tab;
   sigmaNm: number;
   set: (p: Partial<Omit<QState, 'set'>>) => void;
 }
 
-export const useQuantum = create<QState>((set) => ({ n: 2, l: 1, m: 0, slice: false, bohr: false, subshell: false, view: 'superficie', tab: 'orbitales', sigmaNm: 0.1, set: (p) => set(p) }));
+/** Estado del cálculo de la superficie (para informar en la interfaz). */
+export const useSurfaceInfo = create<{ enclosed: number; res: number; computing: boolean; set: (i: { enclosed: number; res: number; computing: boolean }) => void }>((set) => ({ enclosed: NaN, res: 0, computing: false, set: (i) => set(i) }));
+
+export const useQuantum = create<QState>((set) => ({ n: 2, l: 1, m: 0, slice: false, bohr: false, subshell: false, view: 'superficie', fraction: 0.9, tab: 'orbitales', sigmaNm: 0.1, set: (p) => set(p) }));
 
 const fmt = (v: number, sig = 3) => formatNumber(v, { sig });
 
@@ -167,96 +172,112 @@ function OrbitalCloud({ data, scale, slice, reduced, size }: { data: CloudData; 
   );
 }
 
-// ── Superficie de contorno (90 %) ────────────────────────────────────────
+// ── Superficie de contorno (fracción de probabilidad elegible) ───────────
 
-function surfaceMaterial(color: string, emissive: string) {
-  return new THREE.MeshPhysicalMaterial({
-    color,
-    emissive,
-    emissiveIntensity: 0.32,
-    roughness: 0.26,
-    metalness: 0,
-    clearcoat: 1,
-    clearcoatRoughness: 0.18,
-    envMapIntensity: 1.3,
-    sheen: 0.4,
-    sheenColor: new THREE.Color(color),
-    side: THREE.DoubleSide,
-  });
+/** Materiales compartidos: uno por color, creados una sola vez (no se reconstruyen al cambiar de orbital). */
+const SURFACE_MATERIALS = new Map<string, THREE.MeshPhysicalMaterial>();
+function surfaceMaterial(color: string) {
+  let m = SURFACE_MATERIALS.get(color);
+  if (!m) {
+    m = new THREE.MeshPhysicalMaterial({ color, emissive: color, emissiveIntensity: 0.32, roughness: 0.26, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.18, envMapIntensity: 1.3, sheen: 0.4, sheenColor: new THREE.Color(color), side: THREE.DoubleSide });
+    SURFACE_MATERIALS.set(color, m);
+  }
+  return m;
 }
 
-interface SurfaceSpec {
-  color: string;
-  sign: 1 | -1;
-  m: number;
-}
+const PREVIEW_RES = 32;
 
-function OrbitalSurface({ n, l, m, subshell, scale, slice, res }: { n: number; l: number; m: number; subshell: boolean; scale: number; slice: boolean; res: number }) {
+/**
+ * Superficie calculada en un Web Worker. Primero aparece una vista previa rápida (32³) y, cuando los
+ * controles dejan de cambiar durante 220 ms, la versión refinada. Las peticiones obsoletas se descartan.
+ */
+function OrbitalSurface({ n, l, m, subshell, scale, slice, res, p, onInfo }: { n: number; l: number; m: number; subshell: boolean; scale: number; slice: boolean; res: number; p: number; onInfo?: (i: { enclosed: number; res: number; computing: boolean }) => void }) {
   const gl = useThree((s) => s.gl);
   useEffect(() => {
     gl.localClippingEnabled = true;
   }, [gl]);
   const clip = useMemo(() => [new THREE.Plane(new THREE.Vector3(0, -1, 0), 0)], []);
   const group = useRef<THREE.Group>(null);
-  const meshes = useMemo(() => {
-    const ms = subshell ? Array.from({ length: 2 * l + 1 }, (_, i) => i - l) : [m];
-    const size = subshell ? Math.min(res, 48) : res;
-    const out: { mc: MarchingCubes; half: number }[] = [];
-    ms.forEach((mm, k) => {
-      const g = orbitalGrid(n, l, mm, size, 0.9);
-      const specs: SurfaceSpec[] = subshell ? [{ color: `#${M_COLORS[k % M_COLORS.length]!.getHexString()}`, sign: 1, m: mm }] : [
-        { color: '#ffb54d', sign: 1, m: mm },
-        { color: '#86c2f7', sign: -1, m: mm },
-      ];
-      for (const sp of specs) {
-        const mat = surfaceMaterial(sp.color, sp.color);
-        const mc = new MarchingCubes(size, mat, false, false, 90000);
-        mc.isolation = g.iso;
-        const f = mc.field;
-        for (let i = 0; i < g.psi.length; i++) f[i] = subshell ? Math.abs(g.psi[i]!) : sp.sign * g.psi[i]!;
-        mc.update();
-        if (mc.count === 0) {
-          mat.dispose();
-          mc.geometry.dispose();
-          continue;
+  const [result, setResult] = useState<SurfaceResult | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const base = { n, l, m, subshell, p };
+    const target = subshell ? Math.min(res, 48) : res;
+    const cached = cachedSurface({ ...base, res: target });
+    if (cached) {
+      setResult(cached);
+      onInfo?.({ enclosed: cached.enclosed, res: cached.res, computing: false });
+      return;
+    }
+    onInfo?.({ enclosed: NaN, res: PREVIEW_RES, computing: true });
+    requestSurface({ ...base, res: PREVIEW_RES }).then((r) => {
+      if (alive && r) setResult(r);
+    });
+    const t = setTimeout(() => {
+      requestSurface({ ...base, res: target }).then((r) => {
+        if (alive && r) {
+          setResult(r);
+          onInfo?.({ enclosed: r.enclosed, res: r.res, computing: false });
         }
-        out.push({ mc, half: g.half });
-      }
+      });
+    }, 220);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [n, l, m, subshell, res, p]);
+  const meshes = useMemo(() => {
+    if (!result) return [];
+    return result.meshes.map((mesh, k) => {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(mesh.positions, 3));
+      g.setAttribute('normal', new THREE.BufferAttribute(mesh.normals, 3));
+      g.computeBoundingSphere();
+      const color = mesh.sign === 0 ? `#${M_COLORS[k % M_COLORS.length]!.getHexString()}` : mesh.sign === 1 ? '#ffb54d' : '#86c2f7';
+      return { g, color, key: `${result.res}-${k}-${mesh.sign}-${mesh.m}` };
     });
-    return out;
-  }, [n, l, m, subshell, res]);
-  useEffect(
-    () => () =>
-      meshes.forEach(({ mc }) => {
-        mc.geometry.dispose();
-        (mc.material as THREE.Material).dispose();
-      }),
-    [meshes],
-  );
+  }, [result]);
+  useEffect(() => () => meshes.forEach(({ g }) => g.dispose()), [meshes]);
   useEffect(() => {
-    meshes.forEach(({ mc }) => {
-      (mc.material as THREE.Material).clippingPlanes = slice ? clip : [];
-      (mc.material as THREE.Material).needsUpdate = true;
-    });
-  }, [slice, meshes, clip]);
+    for (const mat of SURFACE_MATERIALS.values()) {
+      mat.clippingPlanes = slice ? clip : [];
+      mat.needsUpdate = true;
+    }
+  }, [slice, clip, meshes]);
   const reduced = useReducedMotion();
-  const grow = useRef(0);
-  useEffect(() => {
-    grow.current = 0;
-  }, [meshes]);
   useFrame((_, dt) => {
-    grow.current = Math.min(1, grow.current + dt * 2.2);
-    const e = reduced ? 1 : 1 - Math.pow(1 - grow.current, 3);
-    meshes.forEach(({ mc, half }) => mc.scale.setScalar(half * scale * 0.74 * (0.85 + 0.15 * e)));
-    if (group.current && !reduced && !slice) group.current.rotation.z += dt * 0.08;
-    if (group.current && slice) group.current.rotation.z += (0 - group.current.rotation.z) * Math.min(1, dt * 4);
+    if (!group.current) return;
+    group.current.scale.setScalar(scale * 0.74);
+    if (!reduced && !slice) group.current.rotation.z += dt * 0.08;
+    if (slice) group.current.rotation.z += (0 - group.current.rotation.z) * Math.min(1, dt * 4);
   });
   return (
     <group ref={group}>
-      {meshes.map(({ mc }) => (
-        <primitive key={mc.uuid} object={mc} />
+      {meshes.map(({ g, color, key }) => (
+        <mesh key={key} geometry={g} material={surfaceMaterial(color)} />
       ))}
     </group>
+  );
+}
+
+function FractionControl() {
+  const fraction = useQuantum((s) => s.fraction);
+  const set = useQuantum((s) => s.set);
+  const info = useSurfaceInfo();
+  const [draft, setDraft] = useState(fraction);
+  useEffect(() => setDraft(fraction), [fraction]);
+  return (
+    <div className="field" style={{ gap: 4 }}>
+      <label htmlFor="q-frac" className="row row--between">
+        <span>Probabilidad encerrada</span>
+        <span className="mono">{Math.round(draft * 100)} %</span>
+      </label>
+      <input id="q-frac" type="range" min={0.5} max={0.95} step={0.05} value={draft} onChange={(e) => setDraft(Number(e.target.value))} onPointerUp={() => set({ fraction: draft })} onKeyUp={() => set({ fraction: draft })} onBlur={() => set({ fraction: draft })} />
+      <span className="small faint" aria-live="polite">
+        {info.computing ? 'Calculando la superficie (en segundo plano)…' : Number.isFinite(info.enclosed) ? `Encierra realmente el ${(info.enclosed * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} % (rejilla ${info.res}³). Cuanto mayor la fracción, más grande la superficie.` : ''}
+      </span>
+    </div>
   );
 }
 
@@ -285,7 +306,8 @@ const AXIS_ANCHORS = [
 ];
 
 export function QuantumScene() {
-  const { n, l, m, slice, bohr, subshell, view } = useQuantum();
+  const { n, l, m, slice, bohr, subshell, view, fraction } = useQuantum();
+  const setInfo = useSurfaceInfo((st) => st.set);
   const q = useQuality();
   const reduced = useReducedMotion();
   const data = useMemo(() => buildCloud(n, l, m, subshell, Math.min(60000, q.points * 2.2)), [n, l, m, subshell, q.points]);
@@ -297,7 +319,7 @@ export function QuantumScene() {
         {view === 'nube' ? (
           <OrbitalCloud data={data} scale={scale} slice={slice} reduced={reduced} size={q.tier === 'baja' ? 60 : 42} />
         ) : (
-          <OrbitalSurface n={n} l={l} m={m} subshell={subshell} scale={scale} slice={slice} res={q.tier === 'alta' ? 72 : q.tier === 'media' ? 56 : 40} />
+          <OrbitalSurface n={n} l={l} m={m} subshell={subshell} scale={scale} slice={slice} res={q.tier === 'alta' ? 72 : q.tier === 'media' ? 56 : 40} p={fraction} onInfo={setInfo} />
         )}
         {bohr && (
           <mesh>
@@ -533,7 +555,7 @@ export function QuantumOverlay() {
           {st.view === 'nube' ? (
             <EpiTag kind="calculo">Puntos muestreados de |ψ|² del hidrógeno; color = signo de ψ (fase), no carga</EpiTag>
           ) : (
-            <EpiTag kind="calculo">Superficie que encierra el 90 % de la probabilidad; color = signo de ψ (fase), no carga</EpiTag>
+            <EpiTag kind="calculo">Superficie |ψ| = constante que encierra el {Math.round(st.fraction * 100)} % de la probabilidad; color = signo de ψ (fase), no carga</EpiTag>
           )}
           {st.bohr && <EpiTag kind="historico">Anillo: órbita de Bohr de radio n²·a₀</EpiTag>}
         </div>
@@ -560,14 +582,15 @@ export function QuantumOverlay() {
                   <span className="label" id="q-view">Representación</span>
                   <div className="segmented" role="radiogroup" aria-labelledby="q-view">
                     <button type="button" role="radio" aria-checked={st.view === 'superficie'} aria-pressed={st.view === 'superficie'} onClick={() => st.set({ view: 'superficie' })}>
-                      Superficie del 90 %
+                      Superficie de probabilidad
                     </button>
                     <button type="button" role="radio" aria-checked={st.view === 'nube'} aria-pressed={st.view === 'nube'} onClick={() => st.set({ view: 'nube' })}>
                       Nube de probabilidad
                     </button>
                   </div>
-                  <span className="small faint">{st.view === 'superficie' ? 'La forma que dibujan los libros: dentro de esa superficie hay un 90 % de probabilidad de encontrar al electrón.' : 'Cada punto es una posición posible del electrón: donde hay más puntos, más probabilidad.'}</span>
+                  <span className="small faint">{st.view === 'superficie' ? `La forma que dibujan los libros: dentro de esa superficie hay un ${Math.round(st.fraction * 100)} % de probabilidad de encontrar al electrón. No es un borde: el electrón también puede estar fuera.` : 'Cada punto es una posición posible del electrón: donde hay más puntos, más probabilidad.'}</span>
                 </div>
+                {st.view === 'superficie' && <FractionControl />}
                 <span className="eyebrow">Números cuánticos</span>
                 <Picker label="n · nivel (tamaño y energía)" values={[1, 2, 3, 4, 5]} value={n} onChange={(v) => st.set({ n: v, l: Math.min(l, v - 1), m: Math.max(-Math.min(l, v - 1), Math.min(m, Math.min(l, v - 1))) })} />
                 <Picker label="l · subnivel (forma)" values={Array.from({ length: Math.min(4, n) }, (_, i) => i)} value={l} onChange={(v) => st.set({ l: v, m: Math.max(-v, Math.min(m, v)) })} render={(v) => `${v} · ${lLetter(v)}`} />
