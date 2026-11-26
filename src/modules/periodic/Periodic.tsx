@@ -7,6 +7,7 @@ import { create } from 'zustand';
 import { Stage } from '../../render/Stage';
 import { AnchoredLabel, LabelLayer, LabelProjector, type Anchor } from '../../render/labels';
 import { BLOCK_COLOR, CATEGORY_COLOR, RAMP_GRADIENT, rampColor } from '../../render/palette';
+import { STATE_LABEL, standardState, isRadioactive } from '../../science/data/elementState';
 import { ELEMENTS, CATEGORY_LABEL, elementByZ, familyName, displayWeight, ieKJPerMol, type ElementRecord, type Category } from '../../science/elements';
 import { PROPERTIES, compare, commonIon, type PropertyId } from '../../science/trends';
 import { groundState, formatConfiguration, valenceElectrons, unpairedElectrons } from '../../science/configuration';
@@ -322,6 +323,8 @@ function ElementCard({ el }: { el: ElementRecord }) {
     ['Masa atómica', `${displayWeight(el)} u`],
     ['Periodo · grupo', `${el.period} · ${el.group ?? '—'}`],
     ['Bloque', el.block],
+    ['Estado a 25 °C', STATE_LABEL[standardState(el.z)]],
+    ['Isótopos estables', isRadioactive(el.z) ? 'Ninguno: radiactivo' : el.z === 83 ? 'Bi-209 (casi estable: t½ ≈ 2·10¹⁹ años)' : 'Sí'],
     ['Familia', familyName(el)],
     ['e⁻ de valencia', String(valenceElectrons(conf))],
     ['e⁻ desapareados', String(unpairedElectrons(conf))],

@@ -783,3 +783,15 @@ describe('umbral de probabilidad en O(N)', () => {
     }
   });
 });
+
+describe('estado y radiactividad (póster del sistema periódico)', () => {
+  it('Br y Hg líquidos; 11 gases; Tc, Pm y Z ≥ 84 sin isótopos estables', async () => {
+    const { standardState, isRadioactive } = await import('./data/elementState');
+    expect(standardState(35)).toBe('liquido');
+    expect(standardState(80)).toBe('liquido');
+    expect(Array.from({ length: 118 }, (_, i) => i + 1).filter((z) => standardState(z) === 'gas')).toEqual([1, 2, 7, 8, 9, 10, 17, 18, 36, 54, 86]);
+    expect(standardState(118)).toBe('desconocido');
+    expect([43, 61, 84, 92].every(isRadioactive)).toBe(true);
+    expect([26, 82, 83].some(isRadioactive)).toBe(false);
+  });
+});

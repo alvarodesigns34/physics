@@ -507,6 +507,7 @@ export function PhotonOverlay() {
               <>
                 <EpiTag kind="calculo">Niveles Eₙ = −13,6 eV/n² y líneas con Rydberg (R_H CODATA)</EpiTag>
                 <EpiTag kind="esquema">Trayectoria y momento del fotón: ilustrativos</EpiTag>
+                <EpiTag kind="esquema">Detector: todas las líneas con el mismo brillo; las intensidades reales dependen de la probabilidad de cada salto y de la temperatura, que el modelo de Bohr no predice</EpiTag>
               </>
             )}
             {tab === 'ondas' && <EpiTag kind="esquema">Onda dibujada con λ en escala logarítmica comprimida; la velocidad de la animación no es real. E y B, perpendiculares y en fase</EpiTag>}
