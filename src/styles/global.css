@@ -2460,3 +2460,35 @@ details.chapter + details.chapter {
     transition-duration: 1ms !important;
   }
 }
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.compare-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border-radius: var(--r-inner);
+  border: 1px solid var(--hairline);
+  background: var(--surface-sunken);
+}
+
+.compare-col__sym {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.compare-circle {
+  display: block;
+  margin: 6px 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgb(169 205 245 / 0.55), rgb(169 205 245 / 0.12));
+  border: 1px solid rgb(169 205 245 / 0.45);
+  transition: width var(--dur-slow) var(--ease-out), height var(--dur-slow) var(--ease-out);
+}
