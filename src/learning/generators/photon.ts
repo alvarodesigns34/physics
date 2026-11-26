@@ -82,7 +82,7 @@ export function buildWaveExercise(w: WaveSpec, difficulty: Difficulty, seedId: s
         sig: 3,
         explanation: `E(eV) = E(J) / ${fmt(K.eV, 4)} = ${fmt(p.energyEV, 3)} eV.`,
         recompute: { from: 'E', fn: (e) => e / K.eV },
-        misconceptions: [{ test: (v) => relClose(v, p.energyJ * K.eV, 0.02), message: 'Para pasar de J a eV hay que dividir entre 1,602·10⁻¹⁹, no multiplicar.' }],
+        misconceptions: [{ test: (v) => relClose(v, p.energyJ * K.eV, 0.02), message: 'Para pasar de J a eV hay que dividir entre 1,602·10⁻¹⁹, no multiplicar.', skill: 'unidades' }],
       }),
     );
   }
@@ -205,7 +205,7 @@ export function buildRydbergExercise(o: RydbergOptions): Exercise {
       explanation: `1/λ = R·(1/n₁² − 1/n₂²) = ${fmt(k.R, 5)} m⁻¹ · (1/${n1}² − 1/${n2}²) = ${fmt(t.wavenumber, 4)} m⁻¹.${rUnit === 'cm' ? ` (R = ${fmt(k.R / 100, 6)} cm⁻¹ = ${fmt(k.R, 5)} m⁻¹)` : ''}`,
       misconceptions: [
         { test: (v) => relClose(v, k.R * (1 / n1 - 1 / n2), 0.01), message: 'En la ecuación de Rydberg los niveles van al cuadrado: 1/n₁² − 1/n₂².' },
-        { test: (v) => relClose(v, (k.R / 100) * factor, 0.01), message: 'Has dejado R en cm⁻¹. Para obtener 1/λ en m⁻¹, R = 109 740 cm⁻¹ = 1,0974·10⁷ m⁻¹.' },
+        { test: (v) => relClose(v, (k.R / 100) * factor, 0.01), message: 'Has dejado R en cm⁻¹. Para obtener 1/λ en m⁻¹, R = 109 740 cm⁻¹ = 1,0974·10⁷ m⁻¹.', skill: 'unidades' },
       ],
     }),
     numericPart({

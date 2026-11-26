@@ -123,6 +123,8 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
   const exportProgress = useStore((s) => s.exportProgress);
   const importProgress = useStore((s) => s.importProgress);
   const resetProgress = useStore((s) => s.resetProgress);
+  const undoImport = useStore((s) => s.undoImport);
+  const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const storageOk = useStore((s) => s.storageAvailable);
   const fileRef = useRef<HTMLInputElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -171,6 +173,11 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
         <hr className="divider" />
         <div className="stack-12">
           <span className="h3">Progreso</span>
+          {importMsg && (
+            <p className="small" role="status" style={{ color: importMsg.ok ? 'var(--ok)' : 'var(--bad)' }}>
+              {importMsg.text}
+            </p>
+          )}
           {!storageOk && <p className="small" style={{ color: 'var(--warn)' }}>Este navegador no permite guardar datos: el progreso solo durará mientras la página esté abierta. Exporta un archivo para conservarlo.</p>}
           <div className="row row--wrap">
             <button type="button" className="btn btn--sm" onClick={download}>
@@ -187,10 +194,23 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
               onChange={async (e) => {
                 const f = e.target.files?.[0];
                 if (!f) return;
-                toast(importProgress(await f.text()) ? 'Progreso importado' : 'El archivo no es un progreso de ATOM válido');
+                const res = importProgress(await f.text());
+                setImportMsg(res.ok ? { ok: true, text: 'Progreso importado. Tu progreso anterior se ha guardado por si quieres deshacerlo.' } : { ok: false, text: `No se ha importado nada: ${res.issues.slice(0, 3).join(' ')}${res.issues.length > 3 ? ` (y ${res.issues.length - 3} problema(s) más)` : ''} Tu progreso actual no ha cambiado.` });
                 e.target.value = '';
               }}
             />
+            {importMsg?.ok && (
+              <button
+                type="button"
+                className="btn btn--sm"
+                onClick={() => {
+                  if (undoImport()) toast('Importación deshecha');
+                  setImportMsg(null);
+                }}
+              >
+                Deshacer importación
+              </button>
+            )}
             <button
               type="button"
               className="btn btn--ghost btn--sm"

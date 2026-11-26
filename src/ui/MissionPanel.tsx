@@ -47,7 +47,7 @@ export function MissionPanel({ lab, signal }: { lab: LabId; signal: LabSignal })
   const updateMission = useStore((s) => s.updateMission);
   const setActive = useStore((s) => s.setActiveMission);
   const startMission = useStore((s) => s.startMission);
-  const recordAttempt = useStore((s) => s.recordAttempt);
+  const recordExercise = useStore((s) => s.recordExercise);
   const mission = activeId ? MISSION_BY_ID.get(activeId) : undefined;
   const onThisLab = mission?.lab === lab;
   const stepIdx = progress?.step ?? 0;
@@ -116,9 +116,9 @@ export function MissionPanel({ lab, signal }: { lab: LabId; signal: LabSignal })
     (o: ExerciseOutcome) => {
       if (!exercise) return;
       lastOutcome.current = o;
-      recordAttempt({ exerciseId: exercise.id, nodeIds: exercise.nodeIds, difficulty: exercise.difficulty, correct: o.correct, score: o.score, hintsUsed: o.hintsUsed, mode: 'campana' });
+      recordExercise(exercise, o, 'campana');
     },
-    [exercise, recordAttempt],
+    [exercise, recordExercise],
   );
 
   if (!mission || !onThisLab || !progress) return null;

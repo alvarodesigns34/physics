@@ -17,6 +17,11 @@ import type { ChoiceOption, Difficulty, Exercise, ExerciseGenerator, ExercisePar
 import { choicePart, exId, fmt, integerPart, numericPart, pick, randInt, rngFor, shuffle } from './util';
 
 const K = EXERCISE_DATA;
+
+/** Asigna a cada paso los apartados del temario que evalúa (para la evidencia por apartado). */
+function tagParts(parts: ExercisePart[], map: Record<string, string[]>): ExercisePart[] {
+  return parts.map((p) => (map[p.id] ? { ...p, nodeIds: map[p.id] } : p));
+}
 const O = (id: string, text: string, feedback?: string): ChoiceOption => ({ id, text, feedback });
 const REGION_OPTIONS = EM_REGIONS.map((r) => O(r.id, r.name, 'Compara λ con los límites: visible de 380 a 780 nm; por debajo, UV, X y γ; por encima, IR, microondas y radio.'));
 
@@ -56,7 +61,7 @@ export function buildSpectrumExam(n1: number, n2: number, difficulty: Difficulty
       sig: 4,
       explanation: `1/λ = R·(1/n₁² − 1/n₂²) = 1,0974·10⁷·(1/${n1 * n1} − 1/${n2 * n2}) = 1,0974·10⁷·${fmt(factor, 4)} = ${fmt(t.wavenumber, 4)} m⁻¹${rUnit === 'cm' ? ' (R = 109 740 cm⁻¹ = 1,0974·10⁷ m⁻¹)' : ''}.`,
       misconceptions: [
-        { test: (v) => relClose(v, t.wavenumber / 100, 0.02), message: 'Has usado R en cm⁻¹ sin convertir: 109 740 cm⁻¹ = 1,0974·10⁷ m⁻¹ (multiplica por 100).' },
+        { test: (v) => relClose(v, t.wavenumber / 100, 0.02), message: 'Has usado R en cm⁻¹ sin convertir: 109 740 cm⁻¹ = 1,0974·10⁷ m⁻¹ (multiplica por 100).', skill: 'unidades' },
         { test: (v) => relClose(v, K.R * (1 / n1 - 1 / n2), 0.02), message: 'Los niveles van al cuadrado: 1/n₁² − 1/n₂².' },
       ],
     }),
@@ -78,7 +83,7 @@ export function buildSpectrumExam(n1: number, n2: number, difficulty: Difficulty
       sig: 3,
       explanation: `ν = c/λ = 3·10⁸ / ${fmt(t.wavelength, 4)} = ${fmt(t.frequency, 3)} Hz.`,
       recompute: { from: 'lnm', fn: (l) => K.c / (l * 1e-9) },
-      misconceptions: [{ test: (v) => relClose(v, K.c / nm, 0.02), message: 'Pasa λ a metros antes de dividir: 1 nm = 10⁻⁹ m.' }],
+      misconceptions: [{ test: (v) => relClose(v, K.c / nm, 0.02), message: 'Pasa λ a metros antes de dividir: 1 nm = 10⁻⁹ m.', skill: 'unidades' }],
     }),
     numericPart({
       id: 'E',
@@ -97,7 +102,7 @@ export function buildSpectrumExam(n1: number, n2: number, difficulty: Difficulty
       sig: 3,
       explanation: `E = ${fmt(t.energyJ, 3)} J / 1,602·10⁻¹⁹ J/eV = ${fmt(t.energyEV, 3)} eV.`,
       recompute: { from: 'E', fn: (e) => e / K.eV },
-      misconceptions: [{ test: (v) => relClose(v, t.energyJ * K.eV, 0.05), message: 'Para pasar de J a eV se divide entre 1,602·10⁻¹⁹.' }],
+      misconceptions: [{ test: (v) => relClose(v, t.energyJ * K.eV, 0.05), message: 'Para pasar de J a eV se divide entre 1,602·10⁻¹⁹.', skill: 'unidades' }],
     }),
     choicePart(
       'serie',
@@ -116,7 +121,7 @@ export function buildSpectrumExam(n1: number, n2: number, difficulty: Difficulty
     title: `Problema de examen: la línea ${n2} → ${n1} del hidrógeno`,
     statement: `Los átomos de una muestra de hidrógeno se excitan hasta el nivel **n = ${n2}**. Al desexcitarse, uno de sus electrones salta directamente al nivel **n = ${n1}**.\nResponde a todos los apartados con las unidades adecuadas.`,
     data: constants(rUnit),
-    parts,
+    parts: tagParts(parts, { lineas: ['3.8'], tipo: ['4.1', '3.5'], w: ['3.6'], lnm: ['3.6'], nu: ['3.2'], E: ['3.4'], eV: ['3.4'], serie: ['3.7'], reg: ['3.3'] }),
     stepwise: true,
     hints: [
       'Separa el problema: primero las líneas posibles, después el salto concreto con Rydberg y, al final, ν, E, serie y región.',
@@ -182,12 +187,12 @@ export function buildWaveExam(g: WaveGiven, difficulty: Difficulty, seedId: stri
     const T = g.fs * 1e-15;
     nu = 1 / T;
     given = `${fmt(g.fs, 2)} fs (1 fs = 10⁻¹⁵ s)`;
-    parts.push(numericPart({ id: 'nu', prompt: 'Frecuencia ν (Hz)', value: nu, unit: 'Hz', sig: 3, explanation: `ν = 1/T = 1/(${fmt(T, 2)} s) = ${fmt(nu, 3)} Hz.`, misconceptions: [{ test: (v) => relClose(v, T, 0.02), message: 'La frecuencia es el inverso del periodo: ν = 1/T.' }, { test: (v) => relClose(v, 1 / g.fs, 0.02), message: 'Pasa el periodo a segundos: 1 fs = 10⁻¹⁵ s.' }] }));
+    parts.push(numericPart({ id: 'nu', prompt: 'Frecuencia ν (Hz)', value: nu, unit: 'Hz', sig: 3, explanation: `ν = 1/T = 1/(${fmt(T, 2)} s) = ${fmt(nu, 3)} Hz.`, misconceptions: [{ test: (v) => relClose(v, T, 0.02), message: 'La frecuencia es el inverso del periodo: ν = 1/T.' }, { test: (v) => relClose(v, 1 / g.fs, 0.02), message: 'Pasa el periodo a segundos: 1 fs = 10⁻¹⁵ s.', skill: 'unidades' }] }));
   } else {
     const EJ = g.eV * K.eV;
     nu = EJ / K.h;
     given = `${fmt(g.eV, 2)} eV`;
-    parts.push(numericPart({ id: 'EJ', prompt: 'Energía del fotón en julios', value: EJ, unit: 'J', sig: 3, explanation: `E = ${fmt(g.eV, 2)} eV · 1,602·10⁻¹⁹ J/eV = ${fmt(EJ, 3)} J.`, misconceptions: [{ test: (v) => relClose(v, g.eV / K.eV, 0.02), message: 'De eV a J se multiplica por 1,602·10⁻¹⁹.' }] }));
+    parts.push(numericPart({ id: 'EJ', prompt: 'Energía del fotón en julios', value: EJ, unit: 'J', sig: 3, explanation: `E = ${fmt(g.eV, 2)} eV · 1,602·10⁻¹⁹ J/eV = ${fmt(EJ, 3)} J.`, misconceptions: [{ test: (v) => relClose(v, g.eV / K.eV, 0.02), message: 'De eV a J se multiplica por 1,602·10⁻¹⁹.', skill: 'unidades' }] }));
     parts.push(numericPart({ id: 'nu', prompt: 'Frecuencia ν (Hz)', value: nu, unit: 'Hz', sig: 3, explanation: `E = h·ν → ν = E/h = ${fmt(EJ, 3)} / 6,626·10⁻³⁴ = ${fmt(nu, 3)} Hz.`, recompute: { from: 'EJ', fn: (e) => e / K.h } }));
   }
   const lambda = K.c / nu;
@@ -219,7 +224,7 @@ export function buildWaveExam(g: WaveGiven, difficulty: Difficulty, seedId: stri
         unit: 'kJ/mol',
         sig: 3,
         explanation: `E(mol) = E·N_A = ${fmt(ph.energyJ, 3)} J · 6,022·10²³ mol⁻¹ = ${fmt(ph.energyJ * NA, 3)} J/mol = ${fmt((ph.energyJ * NA) / 1000, 3)} kJ/mol.`,
-        misconceptions: [{ test: (v) => relClose(v, ph.energyJ * NA, 0.02), message: 'El resultado está en J/mol: divide entre 1000 para pasarlo a kJ/mol.' }],
+        misconceptions: [{ test: (v) => relClose(v, ph.energyJ * NA, 0.02), message: 'El resultado está en J/mol: divide entre 1000 para pasarlo a kJ/mol.', skill: 'unidades' }],
       }),
     );
   }
@@ -234,7 +239,7 @@ export function buildWaveExam(g: WaveGiven, difficulty: Difficulty, seedId: stri
     title: 'Problema de examen: caracteriza una radiación',
     statement: `${g.label} **${given}**. Calcula sus magnitudes características y di a qué región del espectro pertenece.`,
     data: constants(null, difficulty === 3 ? [{ label: 'N_A', value: '6,022·10²³ mol⁻¹' }] : []),
-    parts,
+    parts: tagParts(parts, { nu: ['3.2'], T: ['3.2'], EJ: ['3.4'], l: ['3.2'], E: ['3.4'], mol: ['3.4'], reg: ['3.3'] }),
     stepwise: true,
     hints: [
       'Todas las magnitudes de una onda electromagnética están ligadas: T = 1/ν, c = λ·ν y E = h·ν.',
@@ -326,7 +331,7 @@ export function buildElementsExam(triple: [number, number, number], prop: 'radio
     difficulty,
     title: 'Problema de examen: tres elementos',
     statement: `Los elementos ${letters[0]}, ${letters[1]} y ${letters[2]} tienen números atómicos **${A.z}, ${B.z} y ${C.z}**, respectivamente. Puedes usar la tabla periódica.`,
-    parts,
+    parts: tagParts(parts, { confA: ['6.3'], perA: ['7.2'], grA: ['7.2', '6.9'], elB: ['7.1'], desB: ['6.4'], ionC: ['7.5'], orden: [prop === 'radio' ? '7.7' : prop === 'ei1' ? '7.9' : '7.11'], qB: ['5.4'] }),
     stepwise: true,
     hints: [
       'Empieza por las configuraciones: de ellas salen el periodo (n más alto), el grupo (electrones de valencia) y el ion estable.',
@@ -409,7 +414,7 @@ export function buildQuantumExam(z: number, difficulty: Difficulty, seedId: stri
     difficulty,
     title: `Problema de examen: el ${el.name.toLowerCase()} por dentro`,
     statement: `Para el **${el.name.toLowerCase()}** (Z = ${z}) en su estado fundamental, responde a los siguientes apartados.`,
-    parts,
+    parts: tagParts(parts, { conf: ['6.3'], q: ['5.4'], p: ['5.5', '6.3'], n2: ['5.5'], desap: ['6.4'], validos: ['5.4'] }),
     stepwise: true,
     hints: ['Todo sale de la configuración: escríbela primero con el diagrama de Möller.', 'Electrón diferenciador = el último que entra. l = 0, 1, 2, 3 ↔ s, p, d, f.', 'Comprueba cada combinación en este orden: n ≥ 1 → l ≤ n − 1 → |m_l| ≤ l → m_s = ±½.'],
     solution: parts.map((p) => p.explanation),
@@ -481,7 +486,7 @@ export function buildMassIonExam(z: number, difficulty: Difficulty, seedId: stri
     difficulty,
     title: 'Problema de examen: isótopos, iones y masa atómica',
     statement,
-    parts,
+    parts: tagParts(parts, { el: ['1.1'], M: ['3.1'], x: ['3.1'], y: ['3.1'], nh: ['1.3', '1.1'], nl: ['1.3', '1.1'], e: ['1.4'], tipo: ['1.4'] }),
     stepwise: true,
     hints: ['Z identifica el elemento; A − Z da los neutrones; Z − carga da los electrones.', 'La masa atómica es la media ponderada de las masas isotópicas: M = Σ mᵢ·%ᵢ / 100.', difficulty === 3 ? 'Llama x a una abundancia y 100 − x a la otra, y despeja x de la media ponderada.' : 'Multiplica cada masa por su abundancia, suma y divide entre 100.'],
     solution: parts.map((p) => p.explanation),

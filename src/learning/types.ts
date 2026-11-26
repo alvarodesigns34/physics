@@ -13,7 +13,30 @@ export interface ChoiceOption {
 export interface NumericMisconception {
   test: (value: number) => boolean;
   message: string;
+  /** Competencia que revela el error (por defecto, elección o despeje de la fórmula). */
+  skill?: SkillId;
 }
+
+/**
+ * Competencias que se diagnostican por separado. Un apartado puede aportar evidencia sobre varias.
+ */
+export type SkillId = 'concepto' | 'formula' | 'unidades' | 'calculo' | 'cifras' | 'notacion' | 'razonamiento';
+
+/** Tipo de error identificado por el corrector. */
+export type ErrorKind =
+  | 'unidad-falta'
+  | 'unidad-incompatible'
+  | 'orden-de-magnitud'
+  | 'signo'
+  | 'inverso'
+  | 'idea-erronea'
+  | 'redondeo'
+  | 'calculo'
+  | 'cifras'
+  | 'incompleto'
+  | 'regla'
+  | 'concepto'
+  | 'formato';
 
 export type AnswerSpec =
   | {
@@ -52,6 +75,10 @@ export interface ExercisePart {
   explanation: string;
   /** Ayuda de entrada: «en Hz», «escribe el símbolo»… */
   placeholder?: string;
+  /** Apartados del temario que evalúa este paso (por defecto, los del ejercicio). */
+  nodeIds?: string[];
+  /** Competencias que pone en juego (por defecto, se deducen del tipo de respuesta). */
+  skills?: SkillId[];
 }
 
 export interface Exercise {
@@ -95,4 +122,7 @@ export interface CheckResult {
   warnings: string[];
   /** Valor numérico interpretado (en la unidad esperada), para el arrastre de errores */
   numericValue?: number;
+  /** Tipo de error diagnosticado (si lo hay) y competencia afectada */
+  errorKind?: ErrorKind;
+  errorSkill?: SkillId;
 }

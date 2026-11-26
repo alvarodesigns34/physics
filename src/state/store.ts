@@ -5,8 +5,10 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import type { Species } from '../science/nucleus';
-import { initialMastery, updateCard, updateMastery, type NodeMastery, type ReviewCard } from '../learning/mastery';
-import type { Difficulty } from '../learning/types';
+import { initialMastery, updateCard, updateMastery, updateMasteryY, type NodeMastery, type ReviewCard } from '../learning/mastery';
+import type { Difficulty, ErrorKind, Exercise, SkillId } from '../learning/types';
+import { buildEvidence, type PartRecord } from '../learning/evidence';
+import { parseExport, PROGRESS_VERSION, validateProgress } from './validate';
 import type { ConfigOrder } from '../science/configuration';
 
 export type QualitySetting = 'auto' | 'alta' | 'media' | 'baja';
@@ -33,6 +35,10 @@ export interface Attempt {
   hintsUsed: number;
   at: number;
   mode: 'practica' | 'examen' | 'campana';
+  /** Errores clasificados de este intento (para el diagnóstico por competencias) */
+  errors?: { kind: ErrorKind; skill?: SkillId; nodeIds: string[] }[];
+  /** Resultado medio 0–1 por competencia en este intento */
+  skills?: Partial<Record<SkillId, number>>;
 }
 
 export interface MissionProgress {
@@ -56,6 +62,8 @@ export interface ExamRecord {
 interface PersistedState {
   settings: Settings;
   mastery: Record<string, NodeMastery>;
+  /** Dominio por competencia (mismo modelo logístico que los apartados) */
+  skills: Partial<Record<SkillId, NodeMastery>>;
   cards: Record<string, ReviewCard>;
   history: Attempt[];
   campaign: Record<string, MissionProgress>;
@@ -69,12 +77,17 @@ interface Actions {
   setSettings: (patch: Partial<Settings>) => void;
   setForge: (s: Species) => void;
   recordAttempt: (a: Omit<Attempt, 'at'>) => void;
+  /** Registra un ejercicio con evidencia por paso: dominio parcial por apartado y por competencia. */
+  recordExercise: (ex: Exercise, o: { score: number; correct: boolean; hintsUsed: number; parts?: PartRecord[] }, mode: Attempt['mode']) => void;
   recordExam: (r: Omit<ExamRecord, 'at'>) => void;
   startMission: (id: string) => void;
   setActiveMission: (id: string | null) => void;
   updateMission: (id: string, patch: Partial<MissionProgress>) => void;
   resetProgress: () => void;
-  importProgress: (json: string) => boolean;
+  /** Importa un archivo: si no es válido, el progreso actual no cambia. */
+  importProgress: (json: string) => { ok: boolean; issues: string[] };
+  /** Deshace la última importación (restaura la copia previa). */
+  undoImport: () => boolean;
   exportProgress: () => string;
 }
 
@@ -94,6 +107,8 @@ function probeStorage(): boolean {
 }
 
 const memory = new Map<string, string>();
+/** Copia del progreso previa a la última importación (solo en memoria). */
+let importBackup: string | null = null;
 const safeStorage: StateStorage = {
   getItem: (k) => {
     try {
@@ -121,6 +136,7 @@ const safeStorage: StateStorage = {
 const initialPersisted = (): PersistedState => ({
   settings: DEFAULT_SETTINGS,
   mastery: {},
+  skills: {},
   cards: {},
   history: [],
   campaign: {},
@@ -147,6 +163,48 @@ export const useStore = create<AppState>()(
           }
           return { mastery, cards, history: [...s.history, { ...a, at: now }].slice(-300) };
         }),
+      recordExercise: (ex, o, mode) =>
+        set((s) => {
+          if (!o.parts || o.parts.length === 0) {
+            // Sin detalle por paso: comportamiento anterior (un resultado global).
+            const now = Date.now();
+            const mastery = { ...s.mastery };
+            const cards = { ...s.cards };
+            for (const node of ex.nodeIds) {
+              mastery[node] = updateMastery(mastery[node] ?? initialMastery(), ex.difficulty, o.correct, o.hintsUsed, now);
+              if (mode !== 'examen' || !o.correct) cards[node] = updateCard(cards[node], node, o.correct, now);
+            }
+            return { mastery, cards, history: [...s.history, { exerciseId: ex.id, nodeIds: ex.nodeIds, difficulty: ex.difficulty, correct: o.correct, score: o.score, hintsUsed: o.hintsUsed, mode, at: now }].slice(-400) };
+          }
+          const now = Date.now();
+          const ev = buildEvidence(ex, o.parts);
+          const mastery = { ...s.mastery };
+          const cards = { ...s.cards };
+          for (const [node, { y }] of Object.entries(ev.nodes)) {
+            mastery[node] = updateMasteryY(mastery[node] ?? initialMastery(), ex.difficulty, y, o.hintsUsed, now);
+            const ok = y >= 0.75;
+            if (mode !== 'examen' || !ok) cards[node] = updateCard(cards[node], node, ok, now);
+          }
+          const skills = { ...s.skills };
+          const skillY: Partial<Record<SkillId, number>> = {};
+          for (const [k, v] of Object.entries(ev.skills) as [SkillId, { y: number; n: number }][]) {
+            skills[k] = updateMasteryY(skills[k] ?? initialMastery(), 2, v.y, o.hintsUsed, now, Math.min(1, 0.5 + v.n * 0.25));
+            skillY[k] = Math.round(v.y * 100) / 100;
+          }
+          const attempt: Attempt = {
+            exerciseId: ex.id,
+            nodeIds: Object.keys(ev.nodes),
+            difficulty: ex.difficulty,
+            correct: o.correct,
+            score: o.score,
+            hintsUsed: o.hintsUsed,
+            mode,
+            at: now,
+            errors: ev.errors.map(({ kind, skill, nodeIds }) => ({ kind, skill, nodeIds })),
+            skills: skillY,
+          };
+          return { mastery, skills, cards, history: [...s.history, attempt].slice(-400) };
+        }),
       recordExam: (r) => set((s) => ({ exams: [...s.exams, { ...r, at: Date.now() }].slice(-30) })),
       startMission: (id) =>
         set((s) => ({
@@ -155,31 +213,53 @@ export const useStore = create<AppState>()(
         })),
       setActiveMission: (id) => set({ activeMission: id }),
       updateMission: (id, patch) => set((s) => ({ campaign: { ...s.campaign, [id]: { ...(s.campaign[id] ?? { status: 'en-curso', step: 0, collected: [], stars: 0, hintsUsed: 0, firstTry: true }), ...patch } } })),
-      resetProgress: () => set({ mastery: {}, cards: {}, history: [], campaign: {}, exams: [], activeMission: null }),
+      resetProgress: () => set({ mastery: {}, skills: {}, cards: {}, history: [], campaign: {}, exams: [], activeMission: null }),
       exportProgress: () => {
-        const { settings, mastery, cards, history, campaign, exams } = get();
-        return JSON.stringify({ app: 'ATOM', version: 1, exportedAt: new Date().toISOString(), settings, mastery, cards, history, campaign, exams }, null, 2);
+        const { settings, mastery, skills, cards, history, campaign, exams } = get();
+        return JSON.stringify({ app: 'ATOM', version: PROGRESS_VERSION, exportedAt: new Date().toISOString(), settings, mastery, skills, cards, history, campaign, exams }, null, 2);
       },
       importProgress: (json) => {
-        try {
-          const d = JSON.parse(json);
-          if (d.app !== 'ATOM' || d.version !== 1) return false;
-          set({ settings: { ...DEFAULT_SETTINGS, ...d.settings }, mastery: d.mastery ?? {}, cards: d.cards ?? {}, history: d.history ?? [], campaign: d.campaign ?? {}, exams: d.exams ?? [] });
-          return true;
-        } catch {
-          return false;
-        }
+        const res = parseExport(json);
+        if (!res.ok || !res.data) return { ok: false, issues: res.issues };
+        const cur = get();
+        importBackup = JSON.stringify({ settings: cur.settings, mastery: cur.mastery, skills: cur.skills, cards: cur.cards, history: cur.history, campaign: cur.campaign, exams: cur.exams });
+        const d = res.data;
+        set({ settings: { ...DEFAULT_SETTINGS, ...d.settings } as Settings, mastery: d.mastery as AppState['mastery'], skills: d.skills as AppState['skills'], cards: d.cards as AppState['cards'], history: d.history as Attempt[], campaign: d.campaign as AppState['campaign'], exams: d.exams as ExamRecord[], activeMission: null });
+        return { ok: true, issues: res.issues };
+      },
+      undoImport: () => {
+        if (!importBackup) return false;
+        const b = JSON.parse(importBackup) as Partial<PersistedState>;
+        importBackup = null;
+        set({ ...b, activeMission: null });
+        return true;
       },
     }),
     {
       name: 'atom:v1',
-      version: 1,
+      version: PROGRESS_VERSION,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({ settings: s.settings, mastery: s.mastery, cards: s.cards, history: s.history, campaign: s.campaign, exams: s.exams, forge: s.forge, activeMission: s.activeMission }),
+      partialize: (s) => ({ settings: s.settings, mastery: s.mastery, skills: s.skills, cards: s.cards, history: s.history, campaign: s.campaign, exams: s.exams, forge: s.forge, activeMission: s.activeMission }),
+      // v1 → v2: se añade el dominio por competencias (vacío) y se sanean las entradas. Los datos dañados
+      // se descartan entrada a entrada, sin perder el resto del progreso.
       migrate: (persisted) => persisted as PersistedState,
       merge: (persisted, current) => {
-        const p = (persisted ?? {}) as Partial<PersistedState>;
-        return { ...current, ...p, settings: { ...DEFAULT_SETTINGS, ...(p.settings ?? {}) } };
+        const v = validateProgress(persisted ?? {}, 'tolerante');
+        if (!v.ok || !v.data) return current;
+        if (v.issues.length) console.warn('ATOM: progreso guardado parcialmente dañado; se han descartado entradas no válidas.', v.issues.slice(0, 5));
+        const d = v.data;
+        return {
+          ...current,
+          settings: { ...DEFAULT_SETTINGS, ...d.settings } as Settings,
+          mastery: d.mastery as AppState['mastery'],
+          skills: d.skills as AppState['skills'],
+          cards: d.cards as AppState['cards'],
+          history: d.history as Attempt[],
+          campaign: d.campaign as AppState['campaign'],
+          exams: d.exams as ExamRecord[],
+          forge: (d.forge as unknown as Species) ?? current.forge,
+          activeMission: d.activeMission ?? null,
+        };
       },
     },
   ),

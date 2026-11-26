@@ -23,6 +23,7 @@ function assertSelfConsistent(ex: Exercise) {
   expect(ex.hints).toHaveLength(3);
   expect(ex.solution.length).toBeGreaterThan(0);
   for (const node of ex.nodeIds) expect(NODES.some((n) => n.id === node), `nodo ${node}`).toBe(true);
+  for (const p of ex.parts) for (const node of p.nodeIds ?? []) expect(NODES.some((n) => n.id === node), `${ex.id} · ${p.id}: nodo ${node}`).toBe(true);
   for (const p of ex.parts) {
     const r = checkAnswer(p.answer, canonicalInput(p));
     expect(r.correct, `${ex.id} · ${p.id}: «${String(p.canonical)}» → ${r.message}`).toBe(true);
@@ -225,5 +226,156 @@ describe('widget de masa media', () => {
       expect(peaks.reduce((a, p) => a + p.abundance, 0)).toBeCloseTo(100, 9);
       expect(peaks[i]!.abundance).toBe(v);
     }
+  });
+});
+
+describe('corrector: tipos de error', () => {
+  const spec = { kind: 'numeric' as const, value: 6.0e14, unit: 'Hz', sigFigs: 3, relTol: 0.01 };
+  const kind = (input: string) => checkAnswer(spec, input).errorKind;
+  it('distingue unidad ausente, unidad incompatible, potencia de 10, signo, inverso, redondeo y cálculo', () => {
+    expect(kind('6,00·10^14')).toBe('unidad-falta');
+    expect(kind('6,00·10^14 m')).toBe('unidad-incompatible');
+    expect(kind('6,00·10^11 Hz')).toBe('orden-de-magnitud');
+    expect(kind('-6,00·10^14 Hz')).toBe('signo');
+    expect(kind('1,667·10^-15 Hz')).toBe('inverso');
+    expect(kind('6,15·10^14 Hz')).toBe('redondeo');
+    expect(kind('4,2·10^14 Hz')).toBe('calculo');
+    expect(kind('seis')).toBe('formato');
+  });
+  it('acepta notaciones equivalentes en español y en otras unidades compatibles', () => {
+    for (const ok of ['6,00·10^14 Hz', '6,00e14 Hz', '6,00 · 10¹⁴ Hz', '600 THz', '6,00·10^14 s^-1', '6.00E14 Hz']) {
+      const r = checkAnswer(spec, ok);
+      expect(r.correct, ok + ' → ' + r.message).toBe(true);
+    }
+  });
+  it('no acepta por accidente respuestas cercanas fuera de la tolerancia', () => {
+    for (const no of ['6,2·10^14 Hz', '5,8·10^14 Hz', '6·10^13 Hz', '6,00·10^14 m']) expect(checkAnswer(spec, no).correct, no).toBe(false);
+  });
+  it('marca cifras significativas inadecuadas sin invalidar la respuesta', () => {
+    const r = checkAnswer(spec, '6,0000000·10^14 Hz');
+    expect(r.correct).toBe(true);
+    expect(r.errorKind).toBe('cifras');
+  });
+});
+
+describe('evidencia por apartado y competencia', () => {
+  it('un error solo de unidades no hunde el apartado de espectros pero sí la competencia «unidades»', async () => {
+    const { buildSpectrumExam } = await import('./generators/exam');
+    const { buildEvidence } = await import('./evidence');
+    const ex = buildSpectrumExam(1, 3, 3, 't');
+    const records = ex.parts.map((p) => ({ id: p.id, credit: 1, attempts: 1, revealed: false, errors: [] as { kind: never }[], carried: false, sigFigIssue: false })) as import('./evidence').PartRecord[];
+    const w = records.find((r) => r.id === 'w')!;
+    w.credit = 0.5;
+    w.attempts = 2;
+    w.errors = [{ kind: 'idea-erronea', skill: 'unidades' }];
+    const ev = buildEvidence(ex, records);
+    expect(ev.nodes['3.6']!.y).toBeGreaterThanOrEqual(0.75);
+    expect(ev.skills.unidades!.y).toBeLessThan(1);
+    expect(ev.skills.formula!.y).toBeGreaterThan(0.8);
+  });
+  it('arrastre: el paso que usa bien un dato erróneo no se penaliza otra vez', async () => {
+    const { buildWaveExercise } = await import('./generators/photon');
+    const { buildEvidence } = await import('./evidence');
+    const ex = buildWaveExercise({ value: 500, unit: 'nm' }, 2, 't');
+    const recs = ex.parts.map((p, i) => ({ id: p.id, credit: i === 0 ? 0 : 1, attempts: 1, revealed: false, errors: i === 0 ? [{ kind: 'orden-de-magnitud' as const, skill: 'unidades' as const }] : [], carried: i === 1, sigFigIssue: false }));
+    const ev = buildEvidence(ex, recs);
+    expect(ev.errors).toHaveLength(1);
+    expect(ev.skills.calculo!.y).toBe(1);
+  });
+  it('el dominio por apartado admite crédito parcial y expresa su incertidumbre', async () => {
+    const { updateMasteryY, masteryEstimate, initialMastery } = await import('./mastery');
+    let m = initialMastery();
+    const e0 = masteryEstimate(m);
+    expect(e0.evidence).toBe('sin-datos');
+    m = updateMasteryY(m, 2, 0.5, 0, 1);
+    const e1 = masteryEstimate(m);
+    expect(e1.evidence).toBe('escasa');
+    for (let i = 0; i < 20; i++) m = updateMasteryY(m, 2, 1, 0, 1);
+    const e2 = masteryEstimate(m);
+    expect(e2.high - e2.low).toBeLessThan(e1.high - e1.low);
+    expect(e2.demonstrated).toBe(20);
+    expect(e2.evidence).toBe('solida');
+  });
+});
+
+describe('exámenes y selección', () => {
+  it('buildExam es reproducible con la misma semilla y no incluye contenido fuera del ámbito', async () => {
+    const { NODE_BY_ID } = await import('./syllabus');
+    const scope = COVERED_NODES.filter((n) => NODE_BY_ID.get(n)!.block === 6);
+    for (let seed = 1; seed < 30; seed++) {
+      const a = buildExam(scope, 8, seed);
+      const b = buildExam(scope, 8, seed);
+      expect(a.map((e) => e.statement)).toEqual(b.map((e) => e.statement));
+      expect(a.length).toBe(8);
+      for (const e of a) for (const n of e.nodeIds) expect(scope.includes(n), `${e.id}: ${n} fuera del bloque 6`).toBe(true);
+      expect(new Set(a.map((e) => `${e.generatorId}|${e.statement}`)).size).toBe(a.length);
+    }
+  });
+  it('shuffle (Fisher–Yates) es uniforme: χ² de las 24 permutaciones de 4 elementos', async () => {
+    const { shuffle } = await import('./session');
+    const { mulberry32 } = await import('../science/numbers');
+    const rng = mulberry32(12345);
+    const counts = new Map<string, number>();
+    const N = 24000;
+    for (let i = 0; i < N; i++) {
+      const k = shuffle(rng, [1, 2, 3, 4]).join('');
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+    expect(counts.size).toBe(24);
+    const exp = N / 24;
+    const chi2 = [...counts.values()].reduce((a, c) => a + (c - exp) ** 2 / exp, 0);
+    // χ² con 23 grados de libertad: el percentil 99,9 % es 49,7
+    expect(chi2).toBeLessThan(49.7);
+  });
+  it('diagnóstico: tres errores de unidades recientes llevan a practicar conversiones con una explicación', async () => {
+    const { recommend } = await import('./diagnosis');
+    const history = [1, 2, 3, 4].map((i) => ({ at: i, nodeIds: ['3.6'], errors: [{ kind: 'orden-de-magnitud' as const, skill: 'unidades' as const, nodeIds: ['3.6'] }], skills: { unidades: 0, formula: 1, calculo: 1 } }));
+    const rec = recommend(history, {}, {}, null);
+    expect(rec?.reason).toBe('competencia');
+    expect(rec?.nodeIds).toContain('3.9');
+    expect(rec?.message).toMatch(/4 errores de «unidades y conversiones»/);
+    expect(rec?.message).toMatch(/vas bien en/);
+  });
+  it('diagnóstico: un apartado fallado con un prerrequisito sin practicar recomienda el prerrequisito', async () => {
+    const { recommend } = await import('./diagnosis');
+    const mastery = { '7.8': { theta: -1.2, attempts: 4, correct: 1, lastSeen: 1 } };
+    const history = [{ at: 1, nodeIds: ['7.8'], errors: [{ kind: 'concepto' as const, skill: 'razonamiento' as const, nodeIds: ['7.8'] }] }];
+    const rec = recommend(history, mastery, {}, null);
+    expect(rec?.reason).toBe('prerrequisito');
+    expect(rec?.nodeIds[0]).toBe('7.7');
+  });
+  it('cada selección explica su motivo', () => {
+    for (let seed = 1; seed < 20; seed++) {
+      const sel = selectNext({ mastery: {}, cards: {}, recent: [], sessionRetry: {} }, [], Date.now(), seed);
+      expect(sel.explanation.length).toBeGreaterThan(20);
+    }
+  });
+});
+
+describe('importación y migración del progreso', () => {
+  it('rechaza archivos inválidos sin tocar nada y acepta exportaciones válidas (v1 y v2)', async () => {
+    const { parseExport, validateProgress } = await import('../state/validate');
+    expect(parseExport('no es json').ok).toBe(false);
+    expect(parseExport(JSON.stringify({ app: 'OTRA', version: 1 })).ok).toBe(false);
+    expect(parseExport(JSON.stringify({ app: 'ATOM', version: 99 })).ok).toBe(false);
+    expect(parseExport('x'.repeat(2_000_001)).ok).toBe(false);
+    const good = { app: 'ATOM', version: 1, settings: { sound: true, volume: 0.5 }, mastery: { '3.6': { theta: 0.4, attempts: 3, correct: 2, lastSeen: 1 } }, cards: { '3.6': { nodeId: '3.6', box: 2, due: 5 } }, history: [{ exerciseId: 'a', nodeIds: ['3.6'], difficulty: 2, correct: true, score: 1, hintsUsed: 0, at: 1, mode: 'practica' }], campaign: {}, exams: [] };
+    const r = parseExport(JSON.stringify(good));
+    expect(r.ok).toBe(true);
+    expect(r.data!.mastery['3.6']).toBeDefined();
+    // Semántica: θ fuera de rango, nodo inexistente, aciertos > intentos, ajustes fuera de rango
+    for (const bad of [
+      { ...good, mastery: { '3.6': { theta: 99, attempts: 1, correct: 0, lastSeen: 0 } } },
+      { ...good, mastery: { '9.9': { theta: 0, attempts: 1, correct: 0, lastSeen: 0 } } },
+      { ...good, mastery: { '3.6': { theta: 0, attempts: 1, correct: 5, lastSeen: 0 } } },
+      { ...good, settings: { volume: 7 } },
+      { ...good, history: [{ ...good.history[0], score: 2 }] },
+      { ...good, history: 'no' },
+    ]) expect(parseExport(JSON.stringify(bad)).ok).toBe(false);
+    // Modo tolerante (datos del navegador): descarta solo lo dañado
+    const t = validateProgress({ ...good, mastery: { '3.6': good.mastery['3.6'], '9.9': { theta: 0 } } }, 'tolerante');
+    expect(t.ok).toBe(true);
+    expect(Object.keys(t.data!.mastery)).toEqual(['3.6']);
+    expect(t.issues.length).toBeGreaterThan(0);
   });
 });
