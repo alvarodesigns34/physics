@@ -171,3 +171,147 @@ describe('P1.1 — calidad adaptativa ante rendimiento extremo', async () => {
     expect(s.tier).toBe('media');
   });
 });
+
+describe('P1.4 — umbral de probabilidad con densidades repetidas', async () => {
+  const { thresholdForFraction } = await import('../science/isosurface');
+  const enclosedBy = (d: Float32Array, thr: number, dV: number) => d.reduce((a, x) => (x >= thr ? a + x : a), 0) * dV;
+  it('meseta: todos los puntos con la densidad del umbral cuentan', () => {
+    const d = new Float32Array(100).fill(0.01); // total 1 con dV = 1
+    const r = thresholdForFraction(d, 1, 0.5);
+    expect(r.threshold).toBeCloseTo(0.01, 6);
+    expect(r.enclosed).toBeCloseTo(enclosedBy(d, r.threshold, 1), 6);
+    expect(r.enclosed).toBeCloseTo(1, 5); // la meseta entera: el conjunto {ρ ≥ u} no puede partirse
+  });
+  it('distribución simétrica con empates en el umbral', () => {
+    const d = new Float32Array([0.4, 0.2, 0.2, 0.1, 0.1]);
+    const r = thresholdForFraction(d, 1, 0.5);
+    expect(r.threshold).toBeCloseTo(0.2, 6);
+    expect(r.enclosed).toBeCloseTo(0.8, 6);
+    expect(r.enclosed).toBeCloseTo(enclosedBy(d, r.threshold, 1), 6);
+  });
+  it('degenerados: densidad nula y fracción 1', () => {
+    expect(thresholdForFraction(new Float32Array(10), 1, 0.9)).toEqual({ threshold: 0, enclosed: 0 });
+    const d = new Float32Array([0.5, 0.25, 0.25]);
+    const r = thresholdForFraction(d, 1, 1);
+    expect(r.enclosed).toBeCloseTo(1, 6);
+  });
+  it('aleatoria: encerrado = suma exacta sobre {ρ ≥ u} y ≥ p', () => {
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const d = new Float32Array(5000).map(() => Math.round(rnd() * 20) / 20000); // muchos empates
+    const dV = 1 / d.reduce((a, x) => a + x, 0);
+    for (const p of [0.5, 0.9, 0.95]) {
+      const r = thresholdForFraction(d, dV, p);
+      expect(r.enclosed).toBeCloseTo(enclosedBy(d, r.threshold, dV), 4);
+      expect(r.enclosed).toBeGreaterThanOrEqual(p - 1e-6);
+    }
+  });
+});
+
+describe('P1.5 — exámenes completos o limitación explicada', async () => {
+  const { buildExamDetailed } = await import('./session');
+  const { NODES } = await import('./syllabus');
+  const { COVERED_NODES } = await import('./registry');
+  it('cada apartado cubierto, solo, con 5 preguntas: completo o con explicación', () => {
+    for (const n of COVERED_NODES) {
+      let r;
+      try {
+        r = buildExamDetailed([n], 5, 11);
+      } catch {
+        continue; // ámbito sin ejercicios puros: error explícito, no examen vacío
+      }
+      if (r.exercises.length < 5) expect(r.limitation, n).toMatch(/solo admite/);
+      else expect(r.limitation).toBeUndefined();
+      for (const ex of r.exercises) for (const id of ex.nodeIds) expect(id).toBe(n);
+    }
+  });
+  it('bloques completos alcanzan 10 preguntas con varias semillas', () => {
+    for (const b of ['1', '3', '5', '6', '7']) {
+      const scope = NODES.filter((x) => x.id.startsWith(`${b}.`)).map((x) => x.id);
+      for (const seed of [1, 2, 3, 99]) {
+        const r = buildExamDetailed(scope, 10, seed);
+        expect(r.exercises.length, `bloque ${b} semilla ${seed}`).toBe(10);
+        expect(new Set(r.exercises.map((e) => e.statement + e.parts.map((p) => p.prompt).join())).size).toBe(10);
+      }
+    }
+  });
+  it('es reproducible con la misma semilla', () => {
+    const a = buildExamDetailed([], 8, 1234).exercises.map((e) => e.id);
+    const b = buildExamDetailed([], 8, 1234).exercises.map((e) => e.id);
+    expect(a).toEqual(b);
+  });
+});
+
+describe('P1.3 — validación estricta y tolerante de estructuras anidadas', async () => {
+  const { parseExport, validateProgress } = await import('../state/validate');
+  const T = 1.75e12;
+  const base = {
+    app: 'ATOM', version: 2, settings: { sound: true },
+    mastery: { '3.6': { theta: 0.2, attempts: 2, correct: 1, lastSeen: T, info: 1.2, demonstrated: 1 } },
+    skills: { unidades: { theta: 0, attempts: 1, correct: 1, lastSeen: T } },
+    cards: { '3.6': { nodeId: '3.6', box: 2, due: T + 1e8 } },
+    history: [{ exerciseId: 'gen:2:1', nodeIds: ['3.6'], difficulty: 2, correct: false, score: 0.5, hintsUsed: 0, at: T, mode: 'examen', errors: [{ kind: 'calculo', skill: 'calculo', nodeIds: ['3.6'] }], skills: { calculo: 0 } }],
+    campaign: {},
+    exams: [{ at: T, scope: ['3.6'], total: 4, score: 0.5, byNode: { '3.6': { ok: 2, total: 4 } } }],
+  };
+  it('acepta una exportación v2 completa y coherente', () => {
+    expect(parseExport(JSON.stringify(base)).issues).toEqual([]);
+  });
+  const mutations: [string, (b: typeof base) => unknown][] = [
+    ['byNode con ok > total', (b) => ({ ...b, exams: [{ ...b.exams[0], byNode: { '3.6': { ok: 9, total: 4 } } }] })],
+    ['byNode con apartado inexistente', (b) => ({ ...b, exams: [{ ...b.exams[0], byNode: { '9.9': { ok: 1, total: 1 } } }] })],
+    ['byNode con valores no numéricos', (b) => ({ ...b, exams: [{ ...b.exams[0], byNode: { '3.6': { ok: 'x', total: 1 } } }] })],
+    ['examen con ámbito inválido', (b) => ({ ...b, exams: [{ ...b.exams[0], scope: ['zz'] }] })],
+    ['examen sin preguntas', (b) => ({ ...b, exams: [{ ...b.exams[0], total: 0 }] })],
+    ['tipo de error desconocido', (b) => ({ ...b, history: [{ ...b.history[0], errors: [{ kind: 'inventado', nodeIds: ['3.6'] }] }] })],
+    ['competencia desconocida en un error', (b) => ({ ...b, history: [{ ...b.history[0], errors: [{ kind: 'calculo', skill: 'magia', nodeIds: ['3.6'] }] }] })],
+    ['intento correcto con puntuación 0', (b) => ({ ...b, history: [{ ...b.history[0], correct: true, score: 0 }] })],
+    ['marca de tiempo absurda', (b) => ({ ...b, history: [{ ...b.history[0], at: 1e15 }] })],
+    ['identificador vacío', (b) => ({ ...b, history: [{ ...b.history[0], exerciseId: '' }] })],
+    ['demostrados > intentos', (b) => ({ ...b, mastery: { '3.6': { ...b.mastery['3.6'], demonstrated: 9 } } })],
+    ['competencia inexistente', (b) => ({ ...b, skills: { telepatia: b.skills.unidades } })],
+    ['ajuste desconocido', (b) => ({ ...b, settings: { hack: true } })],
+    ['forja corrupta', (b) => ({ ...b, forge: { z: 'seis' } })],
+    ['misión activa inexistente', (b) => ({ ...b, activeMission: 'Z-99' })],
+  ];
+  it.each(mutations)('estricto rechaza: %s', (_n, f) => {
+    expect(parseExport(JSON.stringify(f(base))).ok).toBe(false);
+  });
+  it('tolerante conserva solo lo válido', () => {
+    const r = validateProgress({ ...base, exams: [base.exams[0], { ...base.exams[0], byNode: { '3.6': { ok: 9, total: 1 } } }], forge: { z: 'x' } }, 'tolerante');
+    expect(r.ok).toBe(true);
+    expect(r.data!.exams).toHaveLength(1);
+    expect(r.data!.forge).toBeUndefined();
+    expect(r.data!.mastery['3.6']).toBeDefined();
+    expect(r.issues.length).toBeGreaterThanOrEqual(2);
+  });
+  it('tolerante descarta repasos huérfanos', () => {
+    const r = validateProgress({ ...base, mastery: {}, history: [], cards: { '5.1': { nodeId: '5.1', box: 1, due: T } } }, 'tolerante');
+    expect(r.data!.cards).toEqual({});
+  });
+});
+
+describe('P1.2 — nube cuántica fuera del hilo principal', async () => {
+  const { computeCloud, radius90 } = await import('../science/orbitalCloud');
+  it('la escala analítica (r al 90 %) coincide con la de la nube muestreada', () => {
+    for (const [n, l, m] of [[1, 0, 0], [2, 1, 0], [3, 2, 1]] as const) {
+      const c = computeCloud({ n, l, m, subshell: false, count: 20000 });
+      const r = [];
+      for (let i = 0; i < c.count; i++) r.push(Math.hypot(c.positions[i * 3]!, c.positions[i * 3 + 1]!, c.positions[i * 3 + 2]!));
+      r.sort((a, b) => a - b);
+      expect(r[Math.floor(r.length * 0.9)]! / radius90(n, l)).toBeCloseTo(1, 1);
+    }
+  });
+  it('es determinista y del tamaño pedido (subnivel completo: múltiplo de 2l+1)', () => {
+    const a = computeCloud({ n: 3, l: 2, m: 0, subshell: true, count: 10000 });
+    const b = computeCloud({ n: 3, l: 2, m: 0, subshell: true, count: 10000 });
+    expect(a.count).toBe(2000 * 5);
+    expect(a.positions).toEqual(b.positions);
+    expect(a.tint.length).toBe(a.count * 3);
+  });
+  it('el código de la escena ya no muestrea la nube en el hilo principal', async () => {
+    const src = (await import('../modules/quantum/Quantum.tsx?raw')).default;
+    expect(src).not.toMatch(/sampleOrbital\(/);
+    expect(src).toMatch(/requestCloud/);
+  });
+});

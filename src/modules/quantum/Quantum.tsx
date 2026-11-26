@@ -2,16 +2,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
-import { cachedSurface, requestSurface } from './surfaceClient';
+import { cachedSurface, requestSurface, cachedCloud, requestCloud, cancelCloud } from './surfaceClient';
 import type { SurfaceResult } from '../../science/orbitalSurfaces';
 import * as THREE from 'three';
 import { create } from 'zustand';
 import { Stage } from '../../render/Stage';
 import { AnchoredLabel, LabelLayer, LabelProjector } from '../../render/labels';
-import { sampleOrbital, radialWavefunction, realYlm, radialProbability, radialCutoff, meanRadius, REAL_ORBITAL_NAMES } from '../../science/orbitals';
+import { radialProbability, radialCutoff, meanRadius, REAL_ORBITAL_NAMES } from '../../science/orbitals';
 import { lLetter, validateQuantumSet } from '../../science/quantum';
 import { levelEnergyEV } from '../../science/hydrogen';
-import { mulberry32, formatNumber } from '../../science/numbers';
+import { formatNumber } from '../../science/numbers';
+import { radius90, CLOUD_M_COLORS, CLOUD_PHASE_POS, CLOUD_PHASE_NEG, type CloudRequest, type CloudResult } from '../../science/orbitalCloud';
 import { gaussian, momentumSpread, packetReal, HBAR } from '../../science/uncertainty';
 import { parseQuantumTuple } from '../../learning/checker';
 import { useQuality, useReducedMotion, useMediaQuery, useRoute } from '../../app/hooks';
@@ -64,46 +65,38 @@ export function mostProbableRadius(n: number, l: number): number {
   return arg;
 }
 
-interface CloudData {
-  positions: Float32Array;
-  tint: Float32Array;
-  r90: number;
-}
+type CloudData = CloudResult;
 
-const PHASE_POS = new THREE.Color('#f2a93b');
-const PHASE_NEG = new THREE.Color('#8fc3f2');
-const M_COLORS = ['#f2a93b', '#8fc3f2', '#d9785a', '#9fd3a6', '#b892c2', '#e6c56d', '#7fb0c9'].map((c) => new THREE.Color(c));
-
-function buildCloud(n: number, l: number, m: number, subshell: boolean, count: number): CloudData {
-  const rng = mulberry32(n * 100 + l * 10 + m + (subshell ? 7 : 0));
-  const ms = subshell ? Array.from({ length: 2 * l + 1 }, (_, i) => i - l) : [m];
-  const per = Math.floor(count / ms.length);
-  const positions = new Float32Array(per * ms.length * 3);
-  const tint = new Float32Array(per * ms.length * 3);
-  const radii: number[] = [];
-  ms.forEach((mm, k) => {
-    const pts = sampleOrbital(n, l, mm, 1, per, rng);
-    positions.set(pts, k * per * 3);
-    for (let i = 0; i < per; i++) {
-      const x = pts[i * 3]!;
-      const y = pts[i * 3 + 1]!;
-      const z = pts[i * 3 + 2]!;
-      const r = Math.hypot(x, y, z) || 1e-9;
-      if (i % 8 === 0) radii.push(r);
-      let c: THREE.Color;
-      if (subshell) c = M_COLORS[k % M_COLORS.length]!;
-      else {
-        const psi = radialWavefunction(n, l, 1, r) * realYlm(l, mm, x / r, y / r, z / r);
-        c = psi >= 0 ? PHASE_POS : PHASE_NEG;
-      }
-      const o = (k * per + i) * 3;
-      tint[o] = c.r;
-      tint[o + 1] = c.g;
-      tint[o + 2] = c.b;
+/**
+ * Nube calculada en un Web Worker (P1.2): vista previa de 6 000 puntos inmediata y, después, la nube
+ * completa. Solo se pide cuando la vista activa es «nube»; al desmontar se cancela lo pendiente.
+ */
+function useCloud(n: number, l: number, m: number, subshell: boolean, count: number): CloudData | null {
+  const full: CloudRequest = { n, l, m, subshell, count };
+  const preview: CloudRequest = { ...full, count: Math.min(6000, count) };
+  const [data, setData] = useState<CloudData | null>(() => cachedCloud(full) ?? cachedCloud(preview) ?? null);
+  useEffect(() => {
+    let alive = true;
+    const hit = cachedCloud(full);
+    if (hit) {
+      setData(hit);
+      return;
     }
-  });
-  radii.sort((a, b) => a - b);
-  return { positions, tint, r90: radii[Math.floor(radii.length * 0.9)] ?? 1 };
+    requestCloud(preview)
+      .then((r) => {
+        if (!alive) return;
+        if (r) setData(r);
+        return requestCloud(full);
+      })
+      .then((r) => alive && r && setData(r))
+      .catch(() => {});
+    return () => {
+      alive = false;
+      cancelCloud();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [n, l, m, subshell, count]);
+  return data;
 }
 
 const vertex = /* glsl */ `
@@ -172,6 +165,11 @@ function OrbitalCloud({ data, scale, slice, reduced, size }: { data: CloudData; 
   );
 }
 
+function CloudView({ n, l, m, subshell, count, ...rest }: { n: number; l: number; m: number; subshell: boolean; count: number; scale: number; slice: boolean; reduced: boolean; size: number }) {
+  const data = useCloud(n, l, m, subshell, count);
+  return data ? <OrbitalCloud data={data} {...rest} /> : null;
+}
+
 // ── Superficie de contorno (fracción de probabilidad elegible) ───────────
 
 /** Materiales compartidos: uno por color, creados una sola vez (no se reconstruyen al cambiar de orbital). */
@@ -234,7 +232,7 @@ function OrbitalSurface({ n, l, m, subshell, scale, slice, res, p, onInfo }: { n
       g.setAttribute('position', new THREE.BufferAttribute(mesh.positions, 3));
       g.setAttribute('normal', new THREE.BufferAttribute(mesh.normals, 3));
       g.computeBoundingSphere();
-      const color = mesh.sign === 0 ? `#${M_COLORS[k % M_COLORS.length]!.getHexString()}` : mesh.sign === 1 ? '#ffb54d' : '#86c2f7';
+      const color = mesh.sign === 0 ? CLOUD_M_COLORS[k % CLOUD_M_COLORS.length]! : mesh.sign === 1 ? CLOUD_PHASE_POS : CLOUD_PHASE_NEG;
       return { g, color, key: `${result.res}-${k}-${mesh.sign}-${mesh.m}` };
     });
   }, [result]);
@@ -310,14 +308,14 @@ export function QuantumScene() {
   const setInfo = useSurfaceInfo((st) => st.set);
   const q = useQuality();
   const reduced = useReducedMotion();
-  const data = useMemo(() => buildCloud(n, l, m, subshell, Math.min(60000, q.points * 2.2)), [n, l, m, subshell, q.points]);
-  const scale = 3.2 / data.r90;
+  // Escala a partir del radio que encierra el 90 % de la probabilidad radial (analítico, sin muestrear).
+  const scale = 3.2 / radius90(n, l);
   // Las coordenadas químicas (z hacia arriba) se dibujan con el eje y de la escena hacia arriba.
   return (
     <Stage camera={slice ? [0, 9, 0.01] : [5.2, 3.4, 6.2]} fov={40} key={slice ? 'corte' : 'libre'}>
       <group rotation={[-Math.PI / 2, 0, 0]}>
         {view === 'nube' ? (
-          <OrbitalCloud data={data} scale={scale} slice={slice} reduced={reduced} size={q.tier === 'baja' ? 60 : 42} />
+          <CloudView n={n} l={l} m={m} subshell={subshell} count={Math.min(60000, Math.round(q.points * 2.2))} scale={scale} slice={slice} reduced={reduced} size={q.tier === 'baja' ? 60 : 42} />
         ) : (
           <OrbitalSurface n={n} l={l} m={m} subshell={subshell} scale={scale} slice={slice} res={q.tier === 'alta' ? 72 : q.tier === 'media' ? 56 : 40} p={fraction} onInfo={setInfo} />
         )}

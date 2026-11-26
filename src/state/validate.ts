@@ -15,6 +15,14 @@ const MAX_HISTORY = 400;
 const MAX_EXAMS = 30;
 const NODE_IDS = new Set(NODES.map((n) => n.id));
 const SKILL_IDS = new Set(['concepto', 'formula', 'unidades', 'calculo', 'cifras', 'notacion', 'razonamiento']);
+const ERROR_KINDS = new Set(['unidad-falta', 'unidad-incompatible', 'orden-de-magnitud', 'signo', 'inverso', 'idea-erronea', 'redondeo', 'calculo', 'cifras', 'incompleto', 'regla', 'concepto', 'formato']);
+const MODES = new Set(['practica', 'examen', 'campana']);
+const SETTINGS_KEYS = new Set(['alias', 'quality', 'motion', 'sound', 'ambient', 'volume', 'seenIntro', 'textScale', 'configOrder', 'theme']);
+/** Marcas de tiempo plausibles: desde 2020 hasta un día después de ahora (relojes desajustados). */
+const MIN_TS = Date.UTC(2020, 0, 1);
+const ts = (v: unknown): v is number => finite(v) && v >= MIN_TS && v <= Date.now() + 86_400_000;
+const shortStr = (v: unknown, max = 160): v is string => typeof v === 'string' && v.length > 0 && v.length <= max;
+const nodeList = (v: unknown, max = 40): v is string[] => Array.isArray(v) && v.length <= max && v.every((n) => typeof n === 'string' && NODE_IDS.has(n));
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -40,30 +48,69 @@ export interface ValidationResult {
   issues: string[];
 }
 
-function masteryEntry(v: unknown): boolean {
-  return isObj(v) && finite(v.theta) && v.theta >= -3 && v.theta <= 3 && intIn(v.attempts, 0, 1e6) && intIn(v.correct, 0, 1e6) && (v.correct as number) <= (v.attempts as number) && finite(v.lastSeen) && (v.info === undefined || (finite(v.info) && v.info >= 0)) && (v.demonstrated === undefined || intIn(v.demonstrated, 0, 1e6));
+export function masteryEntry(v: unknown): boolean {
+  if (!isObj(v)) return false;
+  const attempts = v.attempts;
+  return (
+    finite(v.theta) && v.theta >= -3 && v.theta <= 3 &&
+    intIn(attempts, 0, 1e6) && intIn(v.correct, 0, 1e6) && (v.correct as number) <= attempts &&
+    (v.lastSeen === 0 || ts(v.lastSeen)) &&
+    (v.info === undefined || (finite(v.info) && v.info >= 0 && v.info <= 1e6)) &&
+    (v.demonstrated === undefined || (intIn(v.demonstrated, 0, 1e6) && v.demonstrated <= attempts))
+  );
 }
 
 function cardEntry(k: string, v: unknown): boolean {
-  return isObj(v) && v.nodeId === k && intIn(v.box, 1, 5) && finite(v.due);
+  return isObj(v) && v.nodeId === k && intIn(v.box, 1, 5) && finite(v.due) && v.due >= MIN_TS && v.due <= Date.now() + 400 * 86_400_000;
 }
 
-function attemptEntry(v: unknown): boolean {
-  return isObj(v) && typeof v.exerciseId === 'string' && Array.isArray(v.nodeIds) && v.nodeIds.every((n) => typeof n === 'string' && NODE_IDS.has(n)) && intIn(v.difficulty, 1, 3) && typeof v.correct === 'boolean' && finite(v.score) && v.score >= 0 && v.score <= 1 && finite(v.at) && ['practica', 'examen', 'campana'].includes(v.mode as string) && (v.errors === undefined || (Array.isArray(v.errors) && v.errors.length <= 50 && v.errors.every((e) => isObj(e) && typeof e.kind === 'string' && Array.isArray(e.nodeIds) && e.nodeIds.every((n) => typeof n === 'string')))) && (v.skills === undefined || (isObj(v.skills) && Object.entries(v.skills).every(([k, y]) => SKILL_IDS.has(k) && finite(y) && y >= 0 && y <= 1)));
+function errorEntry(e: unknown): boolean {
+  return isObj(e) && ERROR_KINDS.has(e.kind as string) && (e.skill === undefined || SKILL_IDS.has(e.skill as string)) && nodeList(e.nodeIds);
+}
+
+export function attemptEntry(v: unknown): boolean {
+  return (
+    isObj(v) && shortStr(v.exerciseId) && nodeList(v.nodeIds) && (v.nodeIds as string[]).length > 0 &&
+    intIn(v.difficulty, 1, 3) && typeof v.correct === 'boolean' &&
+    finite(v.score) && v.score >= 0 && v.score <= 1 &&
+    // Relación entre campos: un intento «correcto» no puede tener puntuación nula.
+    !(v.correct === true && v.score === 0) &&
+    (v.hintsUsed === undefined || intIn(v.hintsUsed, 0, 100)) &&
+    ts(v.at) && MODES.has(v.mode as string) &&
+    (v.errors === undefined || (Array.isArray(v.errors) && v.errors.length <= 50 && v.errors.every(errorEntry))) &&
+    (v.skills === undefined || (isObj(v.skills) && Object.entries(v.skills).every(([k, y]) => SKILL_IDS.has(k) && finite(y) && y >= 0 && y <= 1)))
+  );
 }
 
 function missionEntry(k: string, v: unknown): boolean {
   const m = MISSION_BY_ID.get(k);
-  return !!m && isObj(v) && (v.status === 'en-curso' || v.status === 'completada') && intIn(v.step, 0, m.steps.length) && Array.isArray(v.collected) && intIn(v.stars, 0, 3) && intIn(v.hintsUsed, 0, 1e4) && typeof v.firstTry === 'boolean';
+  return (
+    !!m && isObj(v) && (v.status === 'en-curso' || v.status === 'completada') &&
+    intIn(v.step, 0, m.steps.length) &&
+    // Una misión completada ha recorrido todos sus pasos.
+    (v.status !== 'completada' || v.step === m.steps.length || v.step === 0) &&
+    Array.isArray(v.collected) && v.collected.length <= 200 && v.collected.every((c) => shortStr(c, 80)) &&
+    intIn(v.stars, 0, 3) && intIn(v.hintsUsed, 0, 1e4) && typeof v.firstTry === 'boolean'
+  );
 }
 
-function examEntry(v: unknown): boolean {
-  return isObj(v) && finite(v.at) && Array.isArray(v.scope) && intIn(v.total, 0, 200) && finite(v.score) && v.score >= 0 && v.score <= 1 && isObj(v.byNode);
+export function examEntry(v: unknown): boolean {
+  if (!isObj(v)) return false;
+  const byNodeOk =
+    isObj(v.byNode) &&
+    Object.keys(v.byNode).length <= 200 &&
+    Object.entries(v.byNode).every(([k, x]) => NODE_IDS.has(k) && isObj(x) && finite(x.ok) && finite(x.total) && x.total > 0 && x.ok >= 0 && x.ok <= x.total + 1e-9 && x.total <= 1e4);
+  return ts(v.at) && nodeList(v.scope, 200) && intIn(v.total, 1, 200) && finite(v.score) && v.score >= 0 && v.score <= 1 && byNodeOk;
 }
 
 function settingsClean(v: unknown, issues: string[]): Obj {
-  if (!isObj(v)) return {};
+  if (v === undefined) return {};
+  if (!isObj(v)) {
+    issues.push('«ajustes» no tiene el formato esperado.');
+    return {};
+  }
   const out: Obj = {};
+  for (const k of Object.keys(v)) if (!SETTINGS_KEYS.has(k)) issues.push(`Ajuste desconocido «${k.slice(0, 40)}»: se descarta.`);
   const pick = <T,>(k: string, ok: (x: unknown) => x is T) => {
     if (v[k] === undefined) return;
     if (ok(v[k])) out[k] = v[k];
@@ -78,6 +125,7 @@ function settingsClean(v: unknown, issues: string[]): Obj {
   pick('seenIntro', (x): x is boolean => typeof x === 'boolean');
   pick('textScale', (x): x is number => finite(x) && x >= 0.8 && x <= 1.5);
   pick('configOrder', (x): x is string => x === 'llenado' || x === 'capas');
+  pick('theme', (x): x is string => x === 'claro' || x === 'oscuro' || x === 'sistema');
   return out;
 }
 
@@ -119,8 +167,22 @@ export function validateProgress(raw: unknown, mode: 'estricto' | 'tolerante'): 
     campaign: recordClean(raw.campaign, missionEntry, 'campaña', issues),
     exams: listClean(raw.exams, examEntry, MAX_EXAMS, 'exámenes', issues),
   };
-  if (isObj(raw.forge) && intIn(raw.forge.z, 0, 118) && intIn(raw.forge.n, 0, 177) && intIn(raw.forge.e, 0, 130)) data.forge = raw.forge;
-  if (raw.activeMission === null || (typeof raw.activeMission === 'string' && MISSION_BY_ID.has(raw.activeMission))) data.activeMission = raw.activeMission as string | null;
+  if (raw.forge !== undefined) {
+    const f = raw.forge;
+    if (isObj(f) && intIn(f.z, 0, 118) && intIn(f.n, 0, 177) && intIn(f.e, 0, 130)) data.forge = { z: f.z, n: f.n, e: f.e };
+    else issues.push('Estado de la Forja no válido: se descarta.');
+  }
+  if (raw.activeMission !== undefined) {
+    if (raw.activeMission === null || (typeof raw.activeMission === 'string' && MISSION_BY_ID.has(raw.activeMission))) data.activeMission = raw.activeMission as string | null;
+    else issues.push('Misión activa desconocida: se descarta.');
+  }
+  // Relación entre estructuras: una tarjeta de repaso requiere que el apartado exista en el dominio o el historial.
+  for (const k of Object.keys(data.cards)) {
+    if (!(k in data.mastery) && !data.history.some((a) => (a as { nodeIds: string[] }).nodeIds.includes(k))) {
+      delete data.cards[k];
+      issues.push(`Repaso huérfano (${k}): no hay práctica asociada.`);
+    }
+  }
   if (mode === 'estricto' && issues.length > 0) return { ok: false, issues };
   return { ok: true, data, issues };
 }

@@ -108,41 +108,69 @@ function within(nodeIds: string[], scope: Set<string>): boolean {
  * ámbito en orden barajado (Fisher–Yates), equilibra los generadores y mezcla ejercicios de los apuntes.
  * Solo incluye ejercicios cuyos apartados pertenecen por completo al ámbito.
  */
-export function buildExam(scope: string[], count: number, seed: number): Exercise[] {
+export interface ExamBuild {
+  exercises: Exercise[];
+  requested: number;
+  /** Explicación cuando no se alcanza el número pedido (ámbito con pocos ejercicios distintos) */
+  limitation?: string;
+}
+
+/**
+ * Examen de un ámbito: solo ejercicios cuyos apartados están TODOS dentro del ámbito. Mezcla ejercicios de
+ * los documentos (≈30 %) y generadores, rota entre generadores y no repite enunciados. Si el ámbito no
+ * permite llegar al número pedido, lo dice en `limitation` en lugar de devolver menos preguntas en silencio.
+ */
+export function buildExamDetailed(scope: string[], count: number, seed: number): ExamBuild {
   const rng = mulberry32(seed);
   const scopeSet = new Set(scope.length ? scope : COVERED_NODES);
-  const nodes = [...scopeSet].filter((n) => generatorsForNode(n).some((g) => within(g.nodeIds, scopeSet)) || generatorsForNode(n).length > 0);
-  if (nodes.length === 0) throw new Error('No hay ejercicios para el ámbito elegido');
+  const gens = [...new Map([...scopeSet].flatMap((n) => generatorsForNode(n)).filter((g) => within(g.nodeIds, scopeSet)).map((g) => [g.id, g])).values()].sort((a, b) => a.id.localeCompare(b.id));
+  const sources = SOURCE_EXERCISES.filter((s) => within(s.nodeIds, scopeSet));
+  if (gens.length === 0 && sources.length === 0) throw new Error('No hay ejercicios para el ámbito elegido');
   const out: Exercise[] = [];
   const seen = new Set<string>();
   const usedGen = new Map<string, number>();
-  const sources = SOURCE_EXERCISES.filter((s) => within(s.nodeIds, scopeSet));
-  const order = shuffle(rng, nodes);
+  const usedSrc = new Set<string>();
   const push = (ex: Exercise) => {
-    const key = `${ex.generatorId}|${ex.statement}`;
+    const key = `${ex.generatorId}|${ex.statement}|${ex.parts.map((p) => p.prompt).join('|')}`;
     if (seen.has(key) || !within(ex.nodeIds, scopeSet)) return false;
     seen.add(key);
     out.push(ex);
     return true;
   };
-  let i = 0;
-  while (out.length < count && i < count * 12) {
-    if (sources.length && rng() < 0.3) {
-      push(sources[Math.floor(rng() * sources.length)]!.build());
-    } else {
-      const node = order[i % order.length]!;
-      const all = generatorsForNode(node);
-      const contained = all.filter((g) => within(g.nodeIds, scopeSet));
-      const gens = (contained.length ? contained : all).slice().sort((a, b) => (usedGen.get(a.id) ?? 0) - (usedGen.get(b.id) ?? 0) || a.id.localeCompare(b.id));
-      const gen = gens[0]!;
-      const diffs = gen.difficulties;
-      const base: Difficulty = diffs.includes(2) ? 2 : diffs[diffs.length - 1]!;
-      const difficulty: Difficulty = rng() < 0.25 && diffs.includes(3) ? 3 : base;
-      if (push(gen.create(randomSeed(rng), difficulty))) usedGen.set(gen.id, (usedGen.get(gen.id) ?? 0) + 1);
+  // Orden de generadores barajado (reproducible) y rotación por uso.
+  const genOrder = shuffle(rng, gens);
+  const srcOrder = shuffle(rng, sources);
+  let attempts = 0;
+  const MAX = Math.max(200, count * 40);
+  while (out.length < count && attempts < MAX) {
+    attempts++;
+    const freeSrc = srcOrder.filter((s) => !usedSrc.has(s.ref));
+    const useSource = freeSrc.length > 0 && (gens.length === 0 || rng() < 0.3);
+    if (useSource) {
+      const s = freeSrc[0]!;
+      usedSrc.add(s.ref);
+      push(s.build());
+      continue;
     }
-    i++;
+    if (!gens.length) break;
+    const gen = genOrder.slice().sort((a, b) => (usedGen.get(a.id) ?? 0) - (usedGen.get(b.id) ?? 0))[0]!;
+    usedGen.set(gen.id, (usedGen.get(gen.id) ?? 0) + 1);
+    const diffs = gen.difficulties;
+    const base: Difficulty = diffs.includes(2) ? 2 : diffs[diffs.length - 1]!;
+    const difficulty: Difficulty = rng() < 0.25 && diffs.includes(3) ? 3 : base;
+    push(gen.create(randomSeed(rng), difficulty));
   }
-  return out.slice(0, count);
+  const exercises = out.slice(0, count);
+  const limitation =
+    exercises.length < count
+      ? `El ámbito elegido solo admite ${exercises.length} ejercicio${exercises.length === 1 ? '' : 's'} distinto${exercises.length === 1 ? '' : 's'} (de ${count} pedidos): amplía los apartados o reduce el número de preguntas.`
+      : undefined;
+  return { exercises, requested: count, limitation };
+}
+
+/** Compatibilidad: solo los ejercicios. Usa buildExamDetailed para conocer limitaciones. */
+export function buildExam(scope: string[], count: number, seed: number): Exercise[] {
+  return buildExamDetailed(scope, count, seed).exercises;
 }
 
 /** Barajado de Fisher–Yates con un generador pseudoaleatorio reproducible (distribución uniforme). */

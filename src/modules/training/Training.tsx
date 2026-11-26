@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../../state/store';
 import { BLOCKS, NODES, nodeTitle, NODE_BY_ID, type ModuleId } from '../../learning/syllabus';
 import { COVERED_NODES, SOURCE_EXERCISES, sourceLevel } from '../../learning/registry';
-import { buildExam, buildMockExam, MOCK_EXAM_PLAN, selectNext, type Selection } from '../../learning/session';
+import { buildExamDetailed, buildMockExam, MOCK_EXAM_PLAN, selectNext, type Selection } from '../../learning/session';
 import { guideAnchor } from '../../learning/guide';
 import { dueCards, EVIDENCE_LABEL, masteryEstimate, masteryLevel } from '../../learning/mastery';
 import { SKILLS, ERROR_LABEL, buildEvidence, aggregateNodeEvidence } from '../../learning/evidence';
@@ -349,6 +349,8 @@ interface ExamRun {
   /** Semilla: la misma semilla reproduce exactamente el mismo examen */
   seed: number;
   kind: 'tipo' | 'medida';
+  /** Limitación declarada al construir el examen (menos preguntas de las pedidas) */
+  limitation?: string;
 }
 
 function parseSeed(t: string): number | null {
@@ -478,7 +480,8 @@ function ExamView() {
           onClick={() => {
             const scope = scopeNodes(blocks);
             const seed = parseSeed(seedText) ?? Math.floor(Math.random() * 1e6);
-            setRun({ exercises: buildExam(scope, count, seed), index: 0, results: [], startedAt: Date.now(), minutes, scope, seed, kind: 'medida' });
+            const built = buildExamDetailed(scope, count, seed);
+            setRun({ exercises: built.exercises, index: 0, results: [], startedAt: Date.now(), minutes, scope, seed, kind: 'medida', limitation: built.limitation });
             setAnswered(false);
             setNow(Date.now());
           }}
@@ -589,6 +592,7 @@ function ExamView() {
   const ex = run.exercises[run.index]!;
   return (
     <div className="stack-16">
+      {run.limitation && run.index === 0 && <Feedback tone="warn">{run.limitation}</Feedback>}
       <div className="row row--between">
         <span className="small muted">
           Pregunta <span className="mono">{run.index + 1}</span> de <span className="mono">{run.exercises.length}</span>

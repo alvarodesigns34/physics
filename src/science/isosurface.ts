@@ -110,11 +110,18 @@ export function thresholdForFraction(dens: Float32Array, dV: number, p: number):
   const inBin: number[] = [];
   for (let i = 0; i < dens.length; i++) if (binOf(dens[i]!) === bin) inBin.push(dens[i]!);
   inBin.sort((a, b) => b - a);
+  // Se elige el umbral y, después, la probabilidad encerrada se calcula sobre el conjunto COMPLETO
+  // {ρ ≥ umbral}: si varios puntos comparten exactamente la densidad del umbral (simetría), todos entran.
+  // Así `enclosed` describe la superficie realmente dibujada y es ≥ p (mínimo conjunto de nivel que lo alcanza).
+  const above = acc;
   let thr = inBin[0]!;
+  let run = above;
   for (const d of inBin) {
-    acc += d;
+    run += d;
     thr = d;
-    if (acc * dV >= target) break;
+    if (run * dV >= target) break;
   }
-  return { threshold: thr, enclosed: acc * dV };
+  let inSet = above;
+  for (const d of inBin) if (d >= thr) inSet += d;
+  return { threshold: thr, enclosed: inSet * dV };
 }

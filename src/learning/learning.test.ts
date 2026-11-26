@@ -359,7 +359,7 @@ describe('importación y migración del progreso', () => {
     expect(parseExport(JSON.stringify({ app: 'OTRA', version: 1 })).ok).toBe(false);
     expect(parseExport(JSON.stringify({ app: 'ATOM', version: 99 })).ok).toBe(false);
     expect(parseExport('x'.repeat(2_000_001)).ok).toBe(false);
-    const good = { app: 'ATOM', version: 1, settings: { sound: true, volume: 0.5 }, mastery: { '3.6': { theta: 0.4, attempts: 3, correct: 2, lastSeen: 1 } }, cards: { '3.6': { nodeId: '3.6', box: 2, due: 5 } }, history: [{ exerciseId: 'a', nodeIds: ['3.6'], difficulty: 2, correct: true, score: 1, hintsUsed: 0, at: 1, mode: 'practica' }], campaign: {}, exams: [] };
+    const good = { app: 'ATOM', version: 1, settings: { sound: true, volume: 0.5 }, mastery: { '3.6': { theta: 0.4, attempts: 3, correct: 2, lastSeen: 1.75e12 } }, cards: { '3.6': { nodeId: '3.6', box: 2, due: 1.76e12 } }, history: [{ exerciseId: 'a', nodeIds: ['3.6'], difficulty: 2, correct: true, score: 1, hintsUsed: 0, at: 1.75e12, mode: 'practica' }], campaign: {}, exams: [] };
     const r = parseExport(JSON.stringify(good));
     expect(r.ok).toBe(true);
     expect(r.data!.mastery['3.6']).toBeDefined();
