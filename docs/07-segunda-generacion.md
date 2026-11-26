@@ -163,7 +163,7 @@ Auditoría del repositorio, banco de rendimiento (`npm run bench`), medición en
 
 | Medida | Línea base | Final |
 |---|---|---|
-| Pruebas | 177 | 213 |
+| Pruebas | 177 | 223 |
 | Prueba de humo | 20 (esperas fijas) | 23 (esperas observables), también en CI |
 | `orbitalGrid` 3d 72³ | 51,8 ms | 25,9 ms |
 | Superficie 3d 72³ (cálculo total) | 48,8 ms en el hilo principal | ≈ 45–56 ms **en un Worker** (0 ms en el hilo principal) |
@@ -195,3 +195,11 @@ variación de ±20 % entre ejecuciones. Datos completos en `docs/mediciones/`.
 7. **Accesibilidad**: falta una auditoría automática (axe) y una revisión con lector de pantalla.
 8. **Ponderación del examen tipo**: es una propuesta; no hay criterios oficiales del profesor.
 
+
+### Ciclo 4 · Estética, trucos y más tipos de examen
+- Capa de diseño 2: fondo con profundidad, color por bloque, relieve y microinteracciones, cabecera de
+  lección con numeral, ruta de estudio en cada lección, marca con átomo.
+- Trucos en 27 apartados y página «Trucos de examen» con una estrategia general.
+- Generadores nuevos: asignar EI (AMP 31), iones probables (AMP 22a), masa de un isótopo desconocido y
+  salto de la 2.ª EI (AMP 30), comprobados con datos reales.
+- Nivel de cada ejercicio con texto (básico, examen, avanzado) en lugar de puntos.

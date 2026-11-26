@@ -267,9 +267,8 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
                 {n} · {nodeTitle(n)}
               </span>
             ))}
-            <span className="chip" aria-label={`Dificultad ${exercise.difficulty} de 3`}>
-              {'●'.repeat(exercise.difficulty)}
-              <span className="faint">{'●'.repeat(3 - exercise.difficulty)}</span>
+            <span className={`level-chip level-chip--${exercise.difficulty}`} style={{ alignSelf: 'center' }}>
+              {exercise.difficulty === 1 ? 'Básico' : exercise.difficulty === 2 ? 'Nivel examen' : 'Avanzado'}
             </span>
           </div>
         )}

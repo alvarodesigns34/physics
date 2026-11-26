@@ -7,7 +7,7 @@ Laboratorio interactivo de **estructura atómica y sistema periódico** para 1.�
 ```bash
 npm install
 npm run dev        # desarrollo en http://localhost:5173
-npm test           # 213 pruebas del núcleo científico y del motor de aprendizaje
+npm test           # 223 pruebas del núcleo científico y del motor de aprendizaje
 npm run build      # comprobación de tipos + compilación en dist/
 npm run e2e        # prueba de humo en navegador (requiere build previo; también en CI)
 npm run bench      # tiempos de los cálculos científicos más costosos
