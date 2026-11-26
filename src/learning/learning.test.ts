@@ -454,3 +454,22 @@ describe('guía', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 });
+
+describe('nuevos tipos de examen', () => {
+  it('EI₂/EI₁: alcalinos > 4 (capa interna) y alcalinotérreos < 2,5', async () => {
+    const { buildSecondIonization } = await import('./generators/exam2');
+    for (const z of [3, 11, 19, 37]) expect((buildSecondIonization(z, 2, 't').parts[1]!.answer as { correct: string[] }).correct).toEqual(['capa']);
+    for (const z of [4, 12, 20, 38]) expect((buildSecondIonization(z, 2, 't').parts[1]!.answer as { correct: string[] }).correct).toEqual(['misma']);
+  });
+  it('asignar EI: los tres valores son distintos y el AMP 31 (Na, Cl, K) da 496, 1251 y 419 kJ/mol', async () => {
+    const { buildIonizationMatch } = await import('./generators/exam2');
+    const ex = buildIonizationMatch([11, 17, 19], 2, 't', () => 0.3);
+    const got = ex.parts.slice(0, 3).map((p) => (p.answer as { correct: string[] }).correct[0]);
+    expect(got).toEqual(['496', '1251', '419']);
+  });
+  it('masa de un isótopo desconocido: recupera la masa tabulada del ³⁷Cl', async () => {
+    const { buildUnknownIsotopeMass } = await import('./generators/exam2');
+    const ex = buildUnknownIsotopeMass(17, 2, 't');
+    expect(checkAnswer(ex.parts[1]!.answer, '36,97 u').correct).toBe(true);
+  });
+});

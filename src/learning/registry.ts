@@ -46,6 +46,7 @@ import {
 import { SOURCE_EXERCISES_2 } from './sources2';
 import { SOURCE_EXERCISES_3 } from './sources3';
 import { EXAM_GENERATORS } from './generators/exam';
+import { EXAM2_GENERATORS } from './generators/exam2';
 
 export const GENERATORS: ExerciseGenerator[] = [
   speciesGenerator,
@@ -76,6 +77,7 @@ export const GENERATORS: ExerciseGenerator[] = [
   valenceGenerator,
   miscGenerator,
   ...EXAM_GENERATORS,
+  ...EXAM2_GENERATORS,
 ];
 
 export const GENERATOR_BY_ID = new Map(GENERATORS.map((g) => [g.id, g]));

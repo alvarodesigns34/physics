@@ -820,7 +820,7 @@ export function TrainingOverlay() {
         <div style={{ maxWidth: 920, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 32 }}>
           <header className="stack-12 enter">
             <span className="eyebrow eyebrow--accent">Centro de entrenamiento</span>
-            <h1 className="display" style={{ fontSize: 'clamp(2.5rem, 5vw, 3.75rem)' }}>
+            <h1 className="display training-title" style={{ fontSize: 'clamp(2.5rem, 5vw, 3.75rem)' }}>
               Practica lo que te falta.
             </h1>
             <div className="segmented" role="tablist" aria-label="Modo" style={{ alignSelf: 'flex-start', flexWrap: 'wrap' }}>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { LESSONS, RIGOR_NOTES, type Formula, type GuideSection, type Lesson, type WorkedExample } from '../../learning/guide';
+import { EXAM_STRATEGY, LESSONS, RIGOR_NOTES, TRICKS, type Formula, type GuideSection, type Lesson, type WorkedExample } from '../../learning/guide';
 import { COVERED_NODES } from '../../learning/registry';
 import { NODES } from '../../learning/syllabus';
 import { masteryPercent } from '../../learning/mastery';
@@ -92,7 +92,7 @@ function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) {
   const node = NODES.find((n) => n.id === s.node);
   const mastery = useStore((st) => st.mastery[s.node]);
   return (
-    <section id={`sec-${s.id ?? s.node}`} className="guide-sec" aria-labelledby={`h-${s.id ?? s.node}`}>
+    <section id={`sec-${s.id ?? s.node}`} className="guide-sec" aria-labelledby={`h-${s.id ?? s.node}`} data-block={s.node.split('.')[0]}>
       <header className="guide-sec__head">
         <span className="mono guide-sec__num">{s.node}</span>
         <h2 id={`h-${s.id ?? s.node}`} className="h2 guide-sec__title">
@@ -119,7 +119,7 @@ function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) {
         </div>
       )}
       {s.widget && <GuideWidget id={s.widget} />}
-      {(s.mistakes || s.tip) && (
+      {(s.mistakes || s.tip || TRICKS[s.id ?? s.node]) && (
         <div className="guide-callouts">
           {s.mistakes && (
             <div className="callout callout--bad">
@@ -127,6 +127,16 @@ function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) {
               <ul>
                 {s.mistakes.map((m) => (
                   <li key={m}>{m}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {TRICKS[s.id ?? s.node] && (
+            <div className="callout callout--trick">
+              <span className="callout__title">Trucos</span>
+              <ul>
+                {TRICKS[s.id ?? s.node]!.map((t) => (
+                  <li key={t}>{t}</li>
                 ))}
               </ul>
             </div>
@@ -183,6 +193,42 @@ function blockMastery(lesson: Lesson, mastery: ReturnType<typeof useStore.getSta
   return Math.round(nodes.reduce((a, n) => a + masteryPercent(mastery[n.id]), 0) / nodes.length);
 }
 
+function TricksPage() {
+  return (
+    <div className="stack-16">
+      <section className="strategy">
+        <span className="callout__title">Estrategia para cualquier problema</span>
+        <ol>
+          {EXAM_STRATEGY.map((t) => (
+            <li key={t}>{t}</li>
+          ))}
+        </ol>
+      </section>
+      {LESSONS.map((l) => {
+        const items = l.sections.filter((s) => TRICKS[s.id ?? s.node]);
+        if (!items.length) return null;
+        return (
+          <section key={l.block} className="stack-8">
+            <span className="h3">
+              <span className="block-num" data-block={l.block}>{l.block}</span> {l.title}
+            </span>
+            <div className="tricks-grid">
+              {items.flatMap((s) =>
+                TRICKS[s.id ?? s.node]!.map((t) => (
+                  <a key={t} className="trick-card" href={`#/guia?b=${l.block}&n=${s.id ?? s.node}`}>
+                    <span className="small faint">{s.title}</span>
+                    <span>{t}</span>
+                  </a>
+                )),
+              )}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
 function FormulaSheet() {
   return (
     <div className="stack-16">
@@ -217,6 +263,7 @@ function FormulaSheet() {
 export function GuideOverlay() {
   const { query } = useRoute();
   const sheet = query.get('v') === 'formulario';
+  const tricks = query.get('v') === 'trucos';
   const anchor = query.get('n');
   const blockParam = Number(query.get('b') ?? (anchor ? anchor.split('.')[0] : 1));
   const lesson = LESSONS.find((l) => l.block === blockParam) ?? LESSONS[0]!;
@@ -230,7 +277,7 @@ export function GuideOverlay() {
     } else {
       scroller.current?.scrollTo({ top: 0 });
     }
-  }, [lesson.block, anchor, sheet]);
+  }, [lesson.block, anchor, sheet, tricks]);
   const lessonNodes = useMemo(() => [...new Set(lesson.sections.map((s) => s.node))], [lesson]);
 
   return (
@@ -242,10 +289,10 @@ export function GuideOverlay() {
             <ol>
               {LESSONS.map((l) => {
                 const pct = blockMastery(l, mastery);
-                const on = !sheet && l.block === lesson.block;
+                const on = !sheet && !tricks && l.block === lesson.block;
                 return (
                   <li key={l.block}>
-                    <a href={`#/guia?b=${l.block}`} aria-current={on ? 'page' : undefined}>
+                    <a href={`#/guia?b=${l.block}`} aria-current={on ? 'page' : undefined} data-block={l.block}>
                       <span className="mono faint">{l.block}</span>
                       <span>{l.title}</span>
                       {pct !== null && <span className="guide-nav__pct mono">{pct} %</span>}
@@ -254,6 +301,12 @@ export function GuideOverlay() {
                 );
               })}
               <li>
+                <a href="#/guia?v=trucos" aria-current={tricks ? 'page' : undefined}>
+                  <span className="mono faint">★</span>
+                  <span>Trucos de examen</span>
+                </a>
+              </li>
+              <li>
                 <a href="#/guia?v=formulario" aria-current={sheet ? 'page' : undefined}>
                   <span className="mono faint">∑</span>
                   <span>Formulario completo</span>
@@ -261,8 +314,17 @@ export function GuideOverlay() {
               </li>
             </ol>
           </nav>
-          <article className="guide-main" key={sheet ? 'sheet' : lesson.block}>
-            {sheet ? (
+          <article className="guide-main" key={tricks ? 'tricks' : sheet ? 'sheet' : lesson.block}>
+            {tricks ? (
+              <>
+                <header className="stack-12 enter">
+                  <span className="eyebrow eyebrow--accent">Trucos de examen</span>
+                  <h1 className="display guide-title">Atajos que ahorran puntos.</h1>
+                  <p className="lead" style={{ margin: 0 }}>Reglas para recordar, comprobaciones rápidas y los despistes que más penalizan. Toca un truco para ver la teoría.</p>
+                </header>
+                <TricksPage />
+              </>
+            ) : sheet ? (
               <>
                 <header className="stack-12 enter">
                   <span className="eyebrow eyebrow--accent">Formulario</span>
@@ -272,12 +334,31 @@ export function GuideOverlay() {
               </>
             ) : (
               <>
-                <header className="stack-16 enter">
-                  <span className="eyebrow eyebrow--accent">Bloque {lesson.block} de {LESSONS.length}</span>
-                  <h1 className="display guide-title">{lesson.title}</h1>
-                  <p className="lead" style={{ margin: 0 }}>
-                    {lesson.summary}
-                  </p>
+                <header className="stack-16 enter" data-block={lesson.block}>
+                  <div className="lesson-hero stack-12">
+                    <span className="lesson-hero__num" aria-hidden="true">{lesson.block}</span>
+                    <span className="eyebrow">Bloque {lesson.block} de {LESSONS.length}</span>
+                    <h1 className="display guide-title" style={{ position: 'relative' }}>{lesson.title}</h1>
+                    <p className="lead" style={{ margin: 0, position: 'relative', maxWidth: '58ch' }}>
+                      {lesson.summary}
+                    </p>
+                  </div>
+                  <ol className="study-path" aria-label="Cómo estudiar este bloque">
+                    {[
+                      ['Lee', 'lo esencial de cada apartado'],
+                      ['Toca', 'los gráficos interactivos'],
+                      ['Repasa', 'los ejemplos resueltos paso a paso'],
+                      ['Practica', 'con ejercicios nuevos y de clase'],
+                      ['Examínate', 'con un examen del bloque'],
+                    ].map(([v, t], i) => (
+                      <li key={v}>
+                        <span className="study-path__n">{i + 1}</span>
+                        <span>
+                          <b>{v}</b> {t}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
                   <div className="exam-focus">
                     <span className="callout__title">Lo que suele caer en el examen</span>
                     <ul>

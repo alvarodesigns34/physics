@@ -596,3 +596,43 @@ export const RIGOR_NOTES: RigorNote[] = [
   { id: 'E28', node: '7.3', title: 'ns² no siempre es el grupo 2', clase: 'Hoja, ej. 14c: configuración externa ns² → grupo 2.', examen: 'Grupo 2 (alcalinotérreos); primer elemento: berilio.', rigor: 'El helio (1s²) también termina en ns², pero es un gas noble (grupo 18): su única capa está completa.' },
   { id: 'E29', node: '7.8', title: 'El Ne en una serie de radios iónicos', clase: 'Hoja, ej. 19: ordenar N³⁻, O²⁻, F⁻, Ne, Na⁺, Mg²⁺ por radio.', examen: 'Ordena por Z: Mg²⁺ < Na⁺ < Ne < F⁻ < O²⁻ < N³⁻.', rigor: 'El Ne es un átomo neutro y su radio (de van der Waals) no se mide igual que los iónicos; la regla «más Z, menor radio» sí se aplica a la serie isoelectrónica.' },
 ];
+
+/** Trucos y reglas mnemotécnicas por sección (clave: id de sección o apartado). */
+export const TRICKS: Record<string, string[]> = {
+  '1.1': ['«Z es el DNI del átomo»: si cambia Z, cambia el elemento. A y la carga no lo cambian.', 'Orden infalible en las tablas: Z → protones; A − Z → neutrones; Z − carga → electrones.'],
+  '1.4': ['Carga negativa = electrones de MÁS: O²⁻ tiene 8 + 2 = 10. Carga positiva = electrones de MENOS: Al³⁺ tiene 13 − 3 = 10.', 'Truco del signo: «e⁻ = Z − q» funciona siempre si escribes q con su signo.'],
+  '1.5': ['Cuenta electrones, no protones: N³⁻, O²⁻, F⁻, Ne, Na⁺, Mg²⁺ y Al³⁺ tienen todos 10.', 'En una serie isoelectrónica, el de MÁS protones es el MÁS pequeño: tira más de los mismos electrones.'],
+  '2.4': ['Resume Rutherford en tres frases: «casi todas pasan → vacío; pocas se desvían → algo positivo; alguna rebota → núcleo pequeño y masivo».'],
+  '3.1': ['Comprobación en 2 segundos: la media debe quedar más cerca del isótopo más abundante (Cl: 35,45, cerca de 35).', 'Problema inverso (abundancias): llama x a una y 100 − x a la otra; la ecuación es de primer grado.'],
+  '3.2': ['λ y ν son como un balancín: λ·ν = c fijo. Si una sube, la otra baja en la misma proporción.', 'Prefijos que caen siempre: nm = 10⁻⁹ m, µm = 10⁻⁶ m, MHz = 10⁶ Hz, GHz = 10⁹ Hz, fs = 10⁻¹⁵ s.', 'Orden de magnitud del visible: λ ≈ 5·10⁻⁷ m, ν ≈ 6·10¹⁴ Hz, E ≈ 4·10⁻¹⁹ J ≈ 2,5 eV. Si te sale muy distinto, revisa las potencias.'],
+  '3.3': ['Regla de memoria (de menor λ a mayor): «Gamma Xilofón Ultra Visible Infla Micro Radios» → γ, X, UV, visible, IR, microondas, radio.', 'En el visible: «el rojo es lento y largo» (λ grande, ν pequeña); el violeta, «corto y rápido».'],
+  '3.4': ['E = h·c/λ: λ va DIVIDIENDO. Si te sale E ≈ 10⁻⁴⁰ J, has multiplicado por λ.', 'J → eV: divide entre 1,602·10⁻¹⁹ (salen números «normales», 1–15 eV). eV → J: multiplica.'],
+  '3.6': ['R en cm⁻¹ (109 740) → multiplica por 100 para tenerla en m⁻¹ (1,0974·10⁷). Si tu λ sale 100 veces grande, es eso.', 'n₁ es SIEMPRE el pequeño (el de abajo) y n₂ el grande: así el paréntesis es positivo.'],
+  '3.7': ['Series de abajo arriba: «Le Bailo Pasodobles Bien Pronto» → Lyman (1), Balmer (2), Paschen (3), Brackett (4), Pfund (5).', 'Lyman = ultravioleta, Balmer = visible (y UV cercano), las demás = infrarrojo.', 'k-ésima línea de una serie: n₂ = n₁ + k. Tercera de Balmer → 5 → 2.'],
+  '3.7-inv': ['Cinco pasos y nunca falla: 1/λ → ÷R → resta de 1/n₁² → invierte → raíz.', 'Si n₂ sale 4,98 o 7,99, el nivel es 5 u 8 (redondeo de datos). Si sale 5,5, hay un error de cálculo.', 'Para n₁ (te dan n₂): el término 1/n₂² pasa SUMANDO.'],
+  '3.8': ['Líneas desde el nivel n: n(n − 1)/2. Desde 4 → 6; desde 5 → 10; desde 6 → 15.'],
+  '4.1': ['Sube = absorbe energía; baja = emite un fotón. El fotón siempre tiene E positiva.'],
+  '4.2': ['Energías del H para memorizar: −13,6 / −3,40 / −1,51 / −0,85 eV (n = 1, 2, 3, 4).'],
+  '5.4': ['Valida en cascada: n ≥ 1 → l de 0 a n − 1 → m de −l a +l → s = ±½. Falla el primero que no cumpla.', 'Letras: s p d f = l 0 1 2 3 («Sin Pena De Falla»).', 'Truco de examen: no existe 1p, 2d ni 3f (l nunca llega a n).'],
+  '5.5': ['Orbitales por subnivel: 1, 3, 5, 7 (impares). Electrones: 2, 6, 10, 14 (el doble).', 'Nivel n: n² orbitales y 2n² electrones (n = 3 → 9 y 18).'],
+  '6.3': ['Möller: escribe la escalera s / p / d / f y lee en diagonal de arriba-derecha a abajo-izquierda.', 'Atajo n + l: menor suma, antes; empate → menor n primero. Por eso 4s (4 + 0) va antes que 3d (3 + 2).', 'Comprueba sumando los exponentes: deben dar el número de electrones.'],
+  '6.4': ['Hund = «autobús»: nadie se sienta con otro mientras haya asientos libres.', 'Desapareados rápidos: p¹ 1, p² 2, p³ 3, p⁴ 2, p⁵ 1, p⁶ 0; d⁵ 5, d⁶ 4.'],
+  '6.5': ['¿Hueco debajo y electrón arriba? → excitado. ¿Subnivel que no existe o con más electrones de los que caben? → imposible.'],
+  '6.7': ['Excepciones del temario: Cr y Mo (d⁵ s¹), Cu, Ag y Au (d¹⁰ s¹). «Medio lleno o lleno» compensa.'],
+  '6.8': ['Cationes de transición: los electrones salen primero del 4s (el de mayor n), no del 3d: Fe²⁺ = [Ar] 3d⁶.'],
+  '7.2': ['Periodo = n más alto. Grupo: s → nº de electrones s; p → 12 + nº de electrones p; d → 2 + nº de electrones d.'],
+  '7.5': ['Gana o pierde lo mínimo para ser gas noble: grupos 1, 2, 13 → +1, +2, +3; 15, 16, 17 → −3, −2, −1.'],
+  '7.7': ['Radio: crece hacia ABAJO y hacia la IZQUIERDA. El más grande de la tabla está abajo a la izquierda (Cs, Fr).'],
+  '7.9': ['EI, afinidad y electronegatividad van JUNTAS: crecen hacia arriba y a la derecha (hacia el F). El radio y el carácter metálico, al revés.', 'Excepciones que caen: Be > B, Mg > Al, N > O y P > S.'],
+  '7.11': ['El más electronegativo es el F (3,98); luego O, N y Cl. Los menos, los alcalinos de abajo (Cs, Fr).'],
+};
+
+/** Estrategia general para cualquier problema numérico de examen. */
+export const EXAM_STRATEGY: string[] = [
+  'Lee el enunciado y subraya datos e incógnita. Escribe los datos con sus unidades.',
+  'Pasa todo al SI ANTES de operar (nm → m, cm⁻¹ → m⁻¹, MHz → Hz).',
+  'Escribe la fórmula general y despeja la incógnita con letras; sustituye al final.',
+  'Opera con al menos 4 cifras en los resultados intermedios; redondea solo el resultado final.',
+  'Comprueba el orden de magnitud y la unidad del resultado (¿tiene sentido?).',
+  'Contesta con una frase si se pide razonar: «… porque …».',
+];

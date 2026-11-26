@@ -446,7 +446,7 @@ export function App() {
             </div>
           )
         )}
-        {(effectiveRoute === '/entrenamiento' || effectiveRoute === '/guia') && <div aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'radial-gradient(120% 80% at 50% -20%, rgb(242 169 59 / 0.07), transparent 60%), var(--surface)' }} />}
+        {(effectiveRoute === '/entrenamiento' || effectiveRoute === '/guia') && <div aria-hidden="true" className="page-bg" />}
       </div>
       <div className="overlay">
         <TopBar route={effectiveRoute} onSettings={() => setSettingsOpen(true)} />
