@@ -9,8 +9,10 @@
  * - Paso correcto tras fallar → 0,5 para sus apartados; 0 para la competencia del error cometido y 0,5 para el resto.
  * - Paso revelado o no resuelto → 0 para sus apartados y para la competencia del error (o la principal si
  *   el error no se pudo clasificar).
- * - Error exclusivamente de unidades o de cifras significativas → el apartado conserva 0,75: no se
- *   penaliza el conocimiento del tema por una conversión (la competencia «unidades» sí recibe 0).
+ * - Error exclusivamente de unidades con el número correcto, o de cifras → el apartado conserva 0,75
+ *   (0,5 si es de potencia de 10); sin valor correcto no hay suelo (véase nodeFloor). Solo aplica si el
+ *   paso acabó resolviéndose: un paso revelado o sin resolver no demuestra comprensión.
+ * - Cifras significativas: evidencia positiva y negativa simétricas, solo si la respuesta permitía evaluarlas.
  * - Arrastre de error: el paso que usa correctamente un resultado previo erróneo cuenta como correcto
  *   (el error solo se penaliza una vez, en su paso de origen).
  */
@@ -70,11 +72,16 @@ export interface PartRecord {
   attempts: number;
   revealed: boolean;
   /** Errores clasificados en los intentos fallidos */
-  errors: { kind: ErrorKind; skill?: SkillId }[];
+  errors: { kind: ErrorKind; skill?: SkillId; valueCorrect?: boolean }[];
   /** Se resolvió aplicando bien un resultado previo erróneo */
   carried: boolean;
   /** La respuesta correcta tenía cifras significativas inadecuadas */
   sigFigIssue: boolean;
+  /**
+   * Las cifras significativas se pudieron evaluar en la respuesta correcta (criterio definido y número no
+   * ambiguo). Solo entonces hay evidencia —positiva o negativa— sobre la competencia «cifras».
+   */
+  sigFigsAssessed?: boolean;
 }
 
 export interface Evidence {
@@ -86,7 +93,27 @@ export interface Evidence {
   errors: { kind: ErrorKind; skill?: SkillId; partId: string; nodeIds: string[] }[];
 }
 
-const UNIT_LIKE = new Set<ErrorKind>(['unidad-falta', 'unidad-incompatible', 'orden-de-magnitud', 'cifras']);
+/**
+ * Suelo de evidencia sobre el apartado cuando TODOS los errores del paso son de este tipo. Solo se concede
+ * cuando el error deja intacta la prueba de comprensión del tema:
+ * - «unidad-falta» con el número correcto en la unidad pedida → 0,75 (sin el valor correcto no hay suelo);
+ * - «orden-de-magnitud»: cifras correctas, potencia de 10 errónea; lo más probable es una conversión,
+ *   pero también podría ser una fórmula equivocada → 0,5;
+ * - «cifras» → 0,75 (el valor es correcto).
+ * «unidad-incompatible» no aporta información sobre el valor → sin suelo.
+ */
+function nodeFloor(e: { kind: ErrorKind; valueCorrect?: boolean }): number {
+  switch (e.kind) {
+    case 'unidad-falta':
+      return e.valueCorrect ? 0.75 : 0;
+    case 'orden-de-magnitud':
+      return 0.5;
+    case 'cifras':
+      return 0.75;
+    default:
+      return 0;
+  }
+}
 
 export function buildEvidence(ex: Exercise, records: PartRecord[]): Evidence {
   const nodes: Evidence['nodes'] = {};
@@ -105,7 +132,7 @@ export function buildEvidence(ex: Exercise, records: PartRecord[]): Evidence {
     for (const e of realErrors) errors.push({ ...e, partId: part.id, nodeIds: partNodes });
     // Apartados
     let yNode = r.revealed ? 0 : r.credit;
-    if (!r.carried && realErrors.length > 0 && realErrors.every((e) => UNIT_LIKE.has(e.kind))) yNode = Math.max(yNode, 0.75);
+    if (!r.carried && !r.revealed && r.credit > 0 && realErrors.length > 0) yNode = Math.max(yNode, Math.min(...realErrors.map(nodeFloor)));
     for (const n of partNodes) {
       const cur = nodes[n] ?? { y: 0, n: 0 };
       nodes[n] = { y: (cur.y * cur.n + yNode) / (cur.n + 1), n: cur.n + 1 };
@@ -123,7 +150,27 @@ export function buildEvidence(ex: Exercise, records: PartRecord[]): Evidence {
       if (failedSkills.size) for (const k of failedSkills) addSkill(k, 0);
       else addSkill(sk[0]!, 0);
     }
+    // Cifras significativas: evidencia simétrica, solo cuando la respuesta permitía evaluarlas.
     if (r.sigFigIssue) addSkill('cifras', 0);
+    else if (r.sigFigsAssessed && r.credit > 0 && !r.revealed) addSkill('cifras', 1);
   });
   return { nodes, skills, errors };
+}
+
+/**
+ * Informe por apartados de un conjunto de ejercicios (examen) a partir de la MISMA evidencia granular que
+ * alimenta el diagnóstico adaptativo: cada paso puntúa solo en sus apartados, de modo que un fallo en el
+ * paso de unidades no rebaja el apartado de configuración del mismo problema. `ok/total` son sumas de
+ * evidencia por paso (no de ejercicios completos).
+ */
+export function aggregateNodeEvidence(results: { exercise: Exercise; parts: PartRecord[] }[]): Record<string, { ok: number; total: number }> {
+  const out: Record<string, { ok: number; total: number }> = {};
+  for (const { exercise, parts } of results) {
+    const ev = buildEvidence(exercise, parts);
+    for (const [n, v] of Object.entries(ev.nodes)) {
+      const cur = out[n] ?? { ok: 0, total: 0 };
+      out[n] = { ok: cur.ok + v.y * v.n, total: cur.total + v.n };
+    }
+  }
+  return out;
 }

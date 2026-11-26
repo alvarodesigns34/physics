@@ -406,8 +406,10 @@ describe('calidad adaptativa con histéresis', () => {
     let b = initialQualityState('media', 0);
     for (let i = 0; i < 50; i++) b = qualityStep(b, 60, 30, i * 2000 + 20000);
     expect(b.tier).toBe('media');
+    // Pausa larga aislada (cambio de laboratorio) con fotogramas típicos fluidos: no cuenta.
+    // (ATOM 3.0: antes se pasaba solo fps y el pico; ahora decide la mediana, véase audit3 P1.1.)
     let c = initialQualityState('alta', 0);
-    for (let i = 0; i < 10; i++) c = qualityStep(c, 20, 900, i * 2000);
+    for (let i = 0; i < 10; i++) c = qualityStep(c, { fps: 20, longestFrameMs: 900, medianFrameMs: 16 }, i * 2000);
     expect(c.tier).toBe('alta');
   });
 });

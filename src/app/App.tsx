@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
-import { navigate, useRoute, useReducedMotion, type Route } from './hooks';
+import { navigate, notifySceneChange, useRoute, useReducedMotion, type Route } from './hooks';
 import { useStore, type QualitySetting, type MotionSetting } from '../state/store';
 import { Announcer, Toaster, toast } from '../ui/common';
 import { installUiSounds, setAmbient, sfx } from './sound';
@@ -418,6 +418,7 @@ export function App() {
   }, [textScale]);
   useEffect(() => {
     document.title = `ATOM · ${CRUMB[effectiveRoute]}`;
+    notifySceneChange();
   }, [effectiveRoute]);
   useEffect(() => installUiSounds(), []);
   const soundOn = useStore((s) => s.settings.sound);

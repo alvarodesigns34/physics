@@ -10,7 +10,7 @@ import { useStore } from '../state/store';
 
 /** Mide los fotogramas por ventanas y los entrega al controlador de calidad (solo en modo automático). */
 function FrameMonitor() {
-  const acc = useRef({ start: -1, frames: 0, longest: 0, last: -1 });
+  const acc = useRef({ start: -1, frames: 0, longest: 0, last: -1, deltas: [] as number[] });
   useFrame(() => {
     const now = performance.now();
     const a = acc.current;
@@ -23,13 +23,17 @@ function FrameMonitor() {
       a.last = now;
       a.frames = 0;
       a.longest = 0;
+      a.deltas = [];
       return;
     }
     a.frames++;
     a.longest = Math.max(a.longest, now - a.last);
+    if (a.deltas.length < 600) a.deltas.push(now - a.last);
     a.last = now;
     if (now - a.start >= WINDOW_MS) {
-      reportFrameWindow((a.frames * 1000) / (now - a.start), a.longest);
+      const sorted = a.deltas.sort((x, y) => x - y);
+      reportFrameWindow((a.frames * 1000) / (now - a.start), a.longest, sorted[sorted.length >> 1]);
+      a.deltas = [];
       a.start = now;
       a.frames = 0;
       a.longest = 0;

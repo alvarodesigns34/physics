@@ -45,7 +45,8 @@ interface PartState {
   done: boolean;
   revealed: boolean;
   credit: number;
-  errors: { kind: ErrorKind; skill?: SkillId }[];
+  errors: { kind: ErrorKind; skill?: SkillId; valueCorrect?: boolean }[];
+  sigFigsAssessed?: boolean;
   carried: boolean;
   sigFigIssue: boolean;
 }
@@ -53,7 +54,7 @@ interface PartState {
 const freshPart = (p: ExercisePart): PartState => ({ value: initialValue(p), attempts: 0, result: null, done: false, revealed: false, credit: 0, errors: [], carried: false, sigFigIssue: false });
 
 function toRecords(ex: Exercise, parts: PartState[]): PartRecord[] {
-  return parts.map((p, i) => ({ id: ex.parts[i]!.id, credit: p.credit, attempts: p.attempts, revealed: p.revealed, errors: p.errors, carried: p.carried, sigFigIssue: p.sigFigIssue }));
+  return parts.map((p, i) => ({ id: ex.parts[i]!.id, credit: p.credit, attempts: p.attempts, revealed: p.revealed, errors: p.errors, carried: p.carried, sigFigIssue: p.sigFigIssue, sigFigsAssessed: p.sigFigsAssessed }));
 }
 
 function initialValue(p: ExercisePart): string | string[] {
@@ -223,10 +224,10 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
     const attempts = st.attempts + 1;
     if (result.correct) {
       sfx.success();
-      update(i, { result, attempts, done: true, credit: attempts === 1 ? 1 : 0.5, carried: result.status === 'correcto-arrastre', sigFigIssue: result.errorKind === 'cifras' });
+      update(i, { result, attempts, done: true, credit: attempts === 1 ? 1 : 0.5, carried: result.status === 'correcto-arrastre', sigFigIssue: result.errorKind === 'cifras', sigFigsAssessed: result.sigFigsAssessed });
     } else {
       sfx.error();
-      update(i, { result, attempts, errors: result.errorKind ? [...st.errors, { kind: result.errorKind, skill: result.errorSkill }] : st.errors });
+      update(i, { result, attempts, errors: result.errorKind ? [...st.errors, { kind: result.errorKind, skill: result.errorSkill, valueCorrect: result.valueCorrect }, ...(result.secondary ?? [])] : st.errors });
     }
   };
 
@@ -244,7 +245,7 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
     const next = parts.map((p, i) => {
       const r = results[i]!;
       const answered = r.status !== 'vacio';
-      return { ...p, result: r, attempts: 1, done: true, credit: r.correct ? 1 : 0, errors: !r.correct && r.errorKind ? [{ kind: r.errorKind, skill: r.errorSkill }] : !answered ? [{ kind: 'incompleto' as const }] : [], carried: r.status === 'correcto-arrastre', sigFigIssue: r.correct && r.errorKind === 'cifras' };
+      return { ...p, result: r, attempts: 1, done: true, credit: r.correct ? 1 : 0, errors: !r.correct && r.errorKind ? [{ kind: r.errorKind, skill: r.errorSkill, valueCorrect: r.valueCorrect }, ...(r.secondary ?? [])] : !answered ? [{ kind: 'incompleto' as const }] : [], carried: r.status === 'correcto-arrastre', sigFigIssue: r.correct && r.errorKind === 'cifras', sigFigsAssessed: r.correct ? r.sigFigsAssessed : undefined };
     });
     setParts(next);
     setSubmittedExam(true);
@@ -390,6 +391,11 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
                 <li key={i}>{s}</li>
               ))}
             </ol>
+          )}
+          {showSolution && exercise.originalSolution && (
+            <p className="small" style={{ margin: 0 }}>
+              <strong>Solución del documento original:</strong> {exercise.originalSolution}
+            </p>
           )}
         </section>
       )}

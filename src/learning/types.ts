@@ -100,6 +100,11 @@ export interface Exercise {
   solution: string[];
   /** Referencia a la fuente (p. ej. «AMP 7», «TEO ej. 1») */
   source?: string;
+  /**
+   * Solución tal como figura en el documento original («Sol.: …»). Se guarda aparte del enunciado y solo
+   * se muestra una vez resuelto el ejercicio y nunca durante un examen.
+   */
+  originalSolution?: string;
   constants?: ConstantSet;
 }
 
@@ -125,4 +130,13 @@ export interface CheckResult {
   /** Tipo de error diagnosticado (si lo hay) y competencia afectada */
   errorKind?: ErrorKind;
   errorSkill?: SkillId;
+  /**
+   * El valor numérico (expresado en la unidad esperada) es correcto aunque la respuesta falle por otra
+   * razón (falta la unidad). Solo entonces un error de unidades preserva evidencia sobre el apartado.
+   */
+  valueCorrect?: boolean;
+  /** La respuesta permitía evaluar las cifras significativas (hay criterio y el número no es ambiguo) */
+  sigFigsAssessed?: boolean;
+  /** Errores secundarios detectados en la misma respuesta (p. ej., valor erróneo y además sin unidad) */
+  secondary?: { kind: ErrorKind; skill?: SkillId }[];
 }

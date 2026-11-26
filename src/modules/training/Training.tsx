@@ -5,7 +5,7 @@ import { COVERED_NODES, SOURCE_EXERCISES, sourceLevel } from '../../learning/reg
 import { buildExam, buildMockExam, MOCK_EXAM_PLAN, selectNext, type Selection } from '../../learning/session';
 import { guideAnchor } from '../../learning/guide';
 import { dueCards, EVIDENCE_LABEL, masteryEstimate, masteryLevel } from '../../learning/mastery';
-import { SKILLS, ERROR_LABEL, buildEvidence } from '../../learning/evidence';
+import { SKILLS, ERROR_LABEL, buildEvidence, aggregateNodeEvidence } from '../../learning/evidence';
 import { weakSkills, explainWeakSkill } from '../../learning/diagnosis';
 import type { ErrorKind, SkillId } from '../../learning/types';
 import type { Exercise } from '../../learning/types';
@@ -95,8 +95,9 @@ function Practice({ initialScope, fixedExercise, onClearFixed }: { initialScope:
       recordExercise(exercise, o, 'practica');
       recent.current = [...recent.current, exercise.generatorId].slice(-4);
       for (const k of Object.keys(retry.current)) retry.current[k] = retry.current[k]! - 1;
-      for (const n of exercise.nodeIds) {
-        if (!o.correct) retry.current[n] = 3;
+      // Reintento por apartado según la evidencia granular de cada paso (no todo el ejercicio a la vez).
+      for (const [n, v] of Object.entries(buildEvidence(exercise, o.parts).nodes)) {
+        if (v.y < 0.7) retry.current[n] = 3;
         else if (retry.current[n] !== undefined && retry.current[n]! <= 0) delete retry.current[n];
       }
       setCount((c) => c + 1);
@@ -385,14 +386,7 @@ function ExamView() {
 
   const finalize = useCallback(
     (r: ExamRun) => {
-      const byNode: Record<string, { ok: number; total: number }> = {};
-      for (const { exercise, outcome } of r.results) {
-        for (const n of exercise.nodeIds) {
-          byNode[n] ??= { ok: 0, total: 0 };
-          byNode[n].total += 1;
-          byNode[n].ok += outcome.score;
-        }
-      }
+      const byNode = aggregateNodeEvidence(r.results.map(({ exercise, outcome }) => ({ exercise, parts: outcome.parts })));
       const score = runScore(r);
       recordExam({ scope: r.scope, total: r.exercises.length, score, byNode });
     },
@@ -511,13 +505,7 @@ function ExamView() {
 
   if (finished) {
     const score = runScore(run);
-    const byNode = new Map<string, { ok: number; total: number }>();
-    run.results.forEach(({ exercise, outcome }) =>
-      exercise.nodeIds.forEach((n) => {
-        const cur = byNode.get(n) ?? { ok: 0, total: 0 };
-        byNode.set(n, { ok: cur.ok + outcome.score, total: cur.total + 1 });
-      }),
-    );
+    const byNode = new Map(Object.entries(aggregateNodeEvidence(run.results.map(({ exercise, outcome }) => ({ exercise, parts: outcome.parts })))));
     return (
       <div className="stack-16 enter">
         <div className="row row--between" style={{ alignItems: 'flex-end' }}>

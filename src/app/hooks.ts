@@ -44,7 +44,7 @@ export function useReducedMotion(): boolean {
 
 // ── Calidad gráfica ───────────────────────────────────────────────────────
 
-import { initialQualityState, qualityStep, WINDOW_MS, type QualityState, type Tier } from './quality';
+import { initialQualityState, qualityStep, noteSceneChange, WINDOW_MS, type QualityState, type Tier } from './quality';
 export type { Tier };
 export { WINDOW_MS };
 
@@ -82,11 +82,16 @@ function getAutoState(): QualityState {
 }
 
 /** Entrega una ventana de medida al controlador; notifica si cambia el nivel. */
-export function reportFrameWindow(fps: number, longestFrameMs: number) {
+export function reportFrameWindow(fps: number, longestFrameMs: number, medianFrameMs?: number) {
   const cur = getAutoState();
-  const next = qualityStep(cur, fps, longestFrameMs, performance.now());
+  const next = qualityStep(cur, { fps, longestFrameMs, medianFrameMs }, performance.now());
   autoState = next;
   if (next.tier !== cur.tier) autoListeners.forEach((l) => l());
+}
+
+/** Avisa al controlador de un cambio de escena (las ventanas de carga no cuentan). */
+export function notifySceneChange() {
+  autoState = noteSceneChange(getAutoState(), performance.now());
 }
 
 /** Compatibilidad: fuerza una bajada de nivel (p. ej. ante una pérdida de contexto WebGL). */
