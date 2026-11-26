@@ -116,7 +116,7 @@ export function buildSpectrumExam(n1: number, n2: number, difficulty: Difficulty
   return {
     id: seedId,
     generatorId: 'examen-espectro',
-    nodeIds: ['3.6', '3.7', '3.8', '3.4', '4.1'],
+    nodeIds: ['3.6', '3.7', '3.8', '3.4', '4.1', '3.5', '3.2', '3.3'],
     difficulty,
     title: `Problema de examen: la línea ${n2} → ${n1} del hidrógeno`,
     statement: `Los átomos de una muestra de hidrógeno se excitan hasta el nivel **n = ${n2}**. Al desexcitarse, uno de sus electrones salta directamente al nivel **n = ${n1}**.\nResponde a todos los apartados con las unidades adecuadas.`,
@@ -144,7 +144,7 @@ function toSubscriptDigit(n: number) {
 export const spectrumExamGenerator: ExerciseGenerator = {
   id: 'examen-espectro',
   title: 'Problema completo de espectro del hidrógeno',
-  nodeIds: ['3.6', '3.7', '3.8', '3.4', '4.1'],
+  nodeIds: ['3.6', '3.7', '3.8', '3.4', '4.1', '3.5', '3.2', '3.3'],
   difficulties: [2, 3],
   create(seed, difficulty) {
     const rng = rngFor(this.id, seed, difficulty);
@@ -327,7 +327,7 @@ export function buildElementsExam(triple: [number, number, number], prop: 'radio
   return {
     id: seedId,
     generatorId: 'examen-elementos',
-    nodeIds: ['6.3', '6.9', '7.1', '7.5', prop === 'radio' ? '7.7' : prop === 'ei1' ? '7.9' : '7.11', ...(difficulty === 3 ? ['5.4'] : [])],
+    nodeIds: ['6.3', '6.4', '6.9', '7.1', '7.2', '7.5', prop === 'radio' ? '7.7' : prop === 'ei1' ? '7.9' : '7.11', ...(difficulty === 3 ? ['5.4'] : [])],
     difficulty,
     title: 'Problema de examen: tres elementos',
     statement: `Los elementos ${letters[0]}, ${letters[1]} y ${letters[2]} tienen números atómicos **${A.z}, ${B.z} y ${C.z}**, respectivamente. Puedes usar la tabla periódica.`,
@@ -345,7 +345,7 @@ export function buildElementsExam(triple: [number, number, number], prop: 'radio
 export const elementsExamGenerator: ExerciseGenerator = {
   id: 'examen-elementos',
   title: 'Problema completo de configuración y propiedades',
-  nodeIds: ['6.3', '6.9', '7.1', '7.5', '7.7', '7.9', '7.11'],
+  nodeIds: ['6.3', '6.4', '6.9', '7.1', '7.2', '7.5', '7.7', '7.9', '7.11', '5.4'],
   difficulties: [2, 3],
   create(seed, difficulty) {
     const rng = rngFor(this.id, seed, difficulty);

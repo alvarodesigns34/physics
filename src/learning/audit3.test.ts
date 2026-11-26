@@ -315,3 +315,39 @@ describe('P1.2 — nube cuántica fuera del hilo principal', async () => {
     expect(src).toMatch(/requestCloud/);
   });
 });
+
+describe('P1.6 — atribución granular en todos los pasos', async () => {
+  const { GENERATORS, SOURCE_EXERCISES } = await import('./registry');
+  const all = [
+    ...GENERATORS.flatMap((g) => g.difficulties.flatMap((d) => [1, 3, 9, 22, 51].map((seed) => [`${g.id}:${d}:${seed}`, g.create(seed, d)] as const))),
+    ...SOURCE_EXERCISES.map((s) => [s.ref, s.build()] as const),
+  ];
+  it('cada paso de un ejercicio multiapartado declara sus apartados, y solo apartados del ejercicio', () => {
+    const missing: string[] = [];
+    for (const [ref, ex] of all) {
+      if (ex.parts.length < 2 || ex.nodeIds.length < 2) continue;
+      for (const p of ex.parts) {
+        if (!p.nodeIds?.length) missing.push(`${ref}/${p.id}`);
+        else for (const n of p.nodeIds) expect(ex.nodeIds, `${ref}/${p.id}`).toContain(n);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+  it('ningún paso hereda todos los apartados de un ejercicio con ≥ 3 apartados (salvo excepción documentada)', () => {
+    const whole: string[] = [];
+    for (const [ref, ex] of all) {
+      if (ex.nodeIds.length < 3 || ex.parts.length < 2) continue;
+      for (const p of ex.parts) if (p.nodeIds && p.nodeIds.length === ex.nodeIds.length) whole.push(`${ref}/${p.id}`);
+    }
+    expect(whole).toEqual([]);
+  });
+});
+
+describe('P1.6 — coherencia de los apartados declarados', async () => {
+  const { GENERATORS } = await import('./registry');
+  it('los apartados estáticos de cada generador cubren los de sus ejercicios (pureza de ámbito en exámenes)', () => {
+    const out: string[] = [];
+    for (const g of GENERATORS) for (const d of g.difficulties) for (const s of [1, 3, 9, 22, 51, 77]) for (const n of g.create(s, d).nodeIds) if (!g.nodeIds.includes(n)) out.push(`${g.id}:${n}`);
+    expect([...new Set(out)]).toEqual([]);
+  });
+});

@@ -483,7 +483,7 @@ export function buildCascadeExercise(n: number, difficulty: Difficulty, seedId: 
 export const cascadeGenerator: ExerciseGenerator = {
   id: 'cascada',
   title: 'Número de líneas de emisión',
-  nodeIds: ['3.8'],
+  nodeIds: ['3.8', '4.3'],
   difficulties: [1, 2],
   create(seed, difficulty) {
     const rng = rngFor(this.id, seed, difficulty);
