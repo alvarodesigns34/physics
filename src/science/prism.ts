@@ -7,8 +7,14 @@
 /** Coeficientes de Sellmeier del SF11 (λ en µm). */
 const SF11 = { B: [1.73759695, 0.313747346, 1.89878101], C: [0.013188707, 0.0623068142, 155.23629] } as const;
 
-/** Índice de refracción del SF11 para λ en nm (válido 370–2500 nm). */
+/** Intervalo de validez de la fórmula de Sellmeier del SF11 según el catálogo (nm). */
+export const SF11_RANGE_NM: readonly [number, number] = [370, 2500];
+
+/** Índice de refracción del SF11 para λ en nm. Fuera de 370–2500 nm la fórmula no es válida y se rechaza. */
 export function refractiveIndexSF11(lambdaNm: number): number {
+  if (!Number.isFinite(lambdaNm) || lambdaNm < SF11_RANGE_NM[0] || lambdaNm > SF11_RANGE_NM[1]) {
+    throw new RangeError(`La fórmula de Sellmeier del SF11 solo es válida entre ${SF11_RANGE_NM[0]} y ${SF11_RANGE_NM[1]} nm (recibido ${lambdaNm})`);
+  }
   const l2 = (lambdaNm / 1000) ** 2;
   let s = 1;
   for (let i = 0; i < 3; i++) s += (SF11.B[i]! * l2) / (l2 - SF11.C[i]!);
@@ -30,14 +36,16 @@ export function refract(d: V2, nrm: V2, eta: number): V2 | null {
   return norm(add(mul(d, eta), mul(nrm, eta * cosi - Math.sqrt(k))));
 }
 
-/** Intersección del rayo p + t·d con la recta que pasa por a y b (devuelve t, o null si es paralelo). */
-function hitLine(p: V2, d: V2, a: V2, b: V2): number | null {
+/** Intersección del rayo p + t·d con la recta que pasa por a y b: t a lo largo del rayo y u ∈ [0, 1] sobre el segmento ab. */
+function hitLine(p: V2, d: V2, a: V2, b: V2): { t: number; u: number } | null {
   const e = sub(b, a);
   const den = d[0] * e[1] - d[1] * e[0];
   if (Math.abs(den) < 1e-12) return null;
   const w = sub(a, p);
-  return (w[0] * e[1] - w[1] * e[0]) / den;
+  return { t: (w[0] * e[1] - w[1] * e[0]) / den, u: (w[0] * d[1] - w[1] * d[0]) / den };
 }
+
+export type PrismFailure = 'fuera-de-dominio' | 'reflexion-total-entrada' | 'no-alcanza-la-cara-de-salida' | 'reflexion-total-salida' | 'no-alcanza-la-pantalla';
 
 export interface PrismSetup {
   /** Lado del prisma */
@@ -74,7 +82,7 @@ export interface PrismGeometry {
   screenNormal: V2;
 }
 
-export function prismGeometry(setup: PrismSetup = DEFAULT_PRISM): PrismGeometry & { trace: (lambdaNm: number) => PrismRay | null } {
+export function prismGeometry(setup: PrismSetup = DEFAULT_PRISM): PrismGeometry & { trace: (lambdaNm: number) => PrismRay | null; traceDetailed: (lambdaNm: number) => PrismRay | PrismFailure } {
   const s = setup.side;
   const h = (s * Math.sqrt(3)) / 2;
   const apex: V2 = [0, (2 * h) / 3];
@@ -92,29 +100,38 @@ export function prismGeometry(setup: PrismSetup = DEFAULT_PRISM): PrismGeometry 
   const outward1: V2 = mul(inward1, -1);
   const outward2: V2 = norm([Math.sqrt(3) / 2, 0.5]);
 
-  const traceRaw = (lambdaNm: number) => {
+  const traceRaw = (lambdaNm: number): { n: number; exit: V2; out: V2 } | PrismFailure => {
+    if (!Number.isFinite(lambdaNm) || lambdaNm < SF11_RANGE_NM[0] || lambdaNm > SF11_RANGE_NM[1]) return 'fuera-de-dominio';
     const n = refractiveIndexSF11(lambdaNm);
     const t1 = refract(incident, outward1, 1 / n);
-    if (!t1) return null;
-    const tt = hitLine(entry, t1, apex, right);
-    if (tt === null || tt <= 0) return null;
-    const exit = add(entry, mul(t1, tt));
+    if (!t1) return 'reflexion-total-entrada';
+    const h = hitLine(entry, t1, apex, right);
+    // El rayo interior debe cortar la cara de salida dentro del segmento físico (si no, saldría por la base).
+    if (h === null || h.t <= 0 || h.u < 0 || h.u > 1) return 'no-alcanza-la-cara-de-salida';
+    const exit = add(entry, mul(t1, h.t));
     const t2 = refract(t1, mul(outward2, -1), n);
-    if (!t2) return null;
+    if (!t2) return 'reflexion-total-salida';
     return { n, exit, out: t2 };
   };
-  const design = traceRaw(setup.designNm)!;
+  const designRaw = traceRaw(setup.designNm);
+  if (typeof designRaw === 'string') throw new RangeError(`La longitud de onda de diseño no atraviesa el prisma (${designRaw})`);
+  const design = designRaw;
   const screenNormal = design.out;
   const screenCenter = add(design.exit, mul(design.out, setup.screenDist));
   const screenDir: V2 = [-screenNormal[1], screenNormal[0]];
-  const trace = (lambdaNm: number): PrismRay | null => {
+  /** Traza un rayo; devuelve el motivo físico si no llega a la pantalla. */
+  const traceDetailed = (lambdaNm: number): PrismRay | PrismFailure => {
     const r = traceRaw(lambdaNm);
-    if (!r) return null;
-    const t = hitLine(r.exit, r.out, screenCenter, add(screenCenter, screenDir));
-    if (t === null) return null;
-    const hit = add(r.exit, mul(r.out, t));
+    if (typeof r === 'string') return r;
+    const h = hitLine(r.exit, r.out, screenCenter, add(screenCenter, screenDir));
+    if (h === null || h.t <= 0) return 'no-alcanza-la-pantalla';
+    const hit = add(r.exit, mul(r.out, h.t));
     const deviation = Math.acos(Math.max(-1, Math.min(1, dot(incident, r.out))));
     return { lambdaNm, n: r.n, source, entry, exit: r.exit, hit, deviation, s: dot(sub(hit, screenCenter), screenDir) };
   };
-  return { vertices: [apex, left, right], incident, screenCenter, screenDir, screenNormal, trace };
+  const trace = (lambdaNm: number): PrismRay | null => {
+    const r = traceDetailed(lambdaNm);
+    return typeof r === 'string' ? null : r;
+  };
+  return { vertices: [apex, left, right], incident, screenCenter, screenDir, screenNormal, trace, traceDetailed };
 }

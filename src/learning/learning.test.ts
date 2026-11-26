@@ -215,3 +215,15 @@ describe('problemas de nivel examen', () => {
     }
   });
 });
+
+describe('widget de masa media', () => {
+  it('rebalance mantiene la suma en 100 % y respeta el valor fijado', async () => {
+    const { rebalance } = await import('../modules/guide/widgets');
+    let peaks = [{ abundance: 78.99 }, { abundance: 10 }, { abundance: 11.01 }];
+    for (const [i, v] of [[0, 50], [1, 100], [2, 0], [0, 0], [1, 33.3]] as const) {
+      peaks = rebalance(peaks, i, v);
+      expect(peaks.reduce((a, p) => a + p.abundance, 0)).toBeCloseTo(100, 9);
+      expect(peaks[i]!.abundance).toBe(v);
+    }
+  });
+});

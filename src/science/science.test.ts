@@ -1,3 +1,4 @@
+import { CODATA as CODATA } from './constants';
 import { describe, expect, it } from 'vitest';
 import { formatNumber, parseNumber, roundSig, sciParts } from './numbers';
 import { convert, parseUnit, splitValueAndUnit } from './units';
@@ -512,6 +513,61 @@ describe('instrumentos', () => {
     expect(Math.abs(r.screenY)).toBeLessThan(1e-4);
     expect(r.balanced).toBe(true);
   });
+  // ── Validación independiente del integrador de Boris (soluciones analíticas) ──
+  const qm = CODATA.e / CODATA.me;
+  const v0 = (s: { accel: number }) => Math.sqrt(2 * qm * s.accel);
+  it('Boris, solo E: deflexión en pantalla = (qEL/mv²)·(L/2 + D) con error relativo < 1e-9', () => {
+    const r = cathodeBeam(setup, 200);
+    const E = setup.plates / setup.gap;
+    const v = v0(setup);
+    const exact = ((qm * E * setup.length) / (v * v)) * (setup.length / 2 + setup.drift);
+    expect(Math.abs(r.screenY - exact) / exact).toBeLessThan(1e-9);
+    expect(Math.abs(r.exitY - cathodeExitDeflection(setup)) / cathodeExitDeflection(setup)).toBeLessThan(1e-9);
+  });
+  it('Boris, solo B: |v| se conserva y la trayectoria es la circunferencia r = mv/(qB)', () => {
+    const s2 = { ...setup, plates: 0, B: 5e-4 };
+    const v = v0(s2);
+    const R = v / (qm * s2.B);
+    const r = cathodeBeam(s2, 2000);
+    // y(L) sobre la circunferencia que parte tangente al eje x: R − √(R² − L²) (el electrón se curva hacia +y con B en −z)
+    // B en −z se opone a la fuerza eléctrica sobre el electrón: la curva va hacia −y.
+    const exact = -(R - Math.sqrt(R * R - setup.length * setup.length));
+    expect(Math.abs(r.exitY - exact) / Math.abs(exact)).toBeLessThan(1e-5);
+    // Conservación de la energía cinética: la pendiente de salida corresponde a una velocidad de módulo v
+    const ang = Math.asin(setup.length / R);
+    const slopeExact = -Math.tan(ang);
+    const slope = (r.screenY - r.exitY) / setup.drift;
+    expect(Math.abs(slope - slopeExact) / Math.abs(slopeExact)).toBeLessThan(1e-5);
+  });
+  it('Boris, campos cruzados compensados (B = E/v): el haz no se desvía (deriva E×B exacta)', () => {
+    const b0 = cathodeBeam(setup).balanceB;
+    const r = cathodeBeam({ ...setup, B: b0 }, 100);
+    expect(Math.abs(r.screenY)).toBeLessThan(1e-12);
+  });
+  it('Boris: con E y B no compensados converge (error relativo < 1e-5 con 400 pasos y ×10 menor con 3200)', () => {
+    const s3 = { ...setup, B: 5e-4 };
+    const ref = cathodeBeam(s3, 256000).screenY;
+    const e400 = Math.abs(cathodeBeam(s3, 400).screenY - ref);
+    const e3200 = Math.abs(cathodeBeam(s3, 3200).screenY - ref);
+    expect(e400 / Math.abs(ref)).toBeLessThan(1e-5);
+    expect(e3200).toBeLessThan(e400 / 10);
+  });
+  it('choque con la placa: el punto de impacto está exactamente en |y| = d/2 y no hay punto en pantalla', () => {
+    const r = cathodeBeam({ ...setup, plates: 3000 }, 400);
+    expect(r.hitsPlate).toBe(true);
+    expect(Number.isNaN(r.screenY)).toBe(true);
+    expect(Math.abs(r.path[r.path.length - 1]!)).toBeCloseTo(setup.gap / 2, 8); // Float32 en el trazado
+  });
+  it('B muy intenso: el haz se curva hacia atrás sin bucles infinitos', () => {
+    const r = cathodeBeam({ ...setup, plates: 0, gap: 1, B: 0.05 }, 400);
+    expect(r.turnsBack || r.hitsPlate).toBe(true);
+    expect(Number.isNaN(r.screenY)).toBe(true);
+  });
+  it('entradas inválidas: errores comprensibles', () => {
+    expect(() => cathodeBeam({ ...setup, accel: 0 })).toThrow(/aceleración/);
+    expect(() => cathodeBeam({ ...setup, gap: NaN })).toThrow(/separación/);
+    expect(() => cathodeBeam({ ...setup, drift: -1 })).toThrow(/pantalla/);
+  });
   it('espectrómetro de sector magnético: r ∝ √m y la inversa es coherente', () => {
     const r35 = sectorRadius(34.968853, 1, 2000, 0.3);
     const r37 = sectorRadius(36.965903, 1, 2000, 0.3);
@@ -603,6 +659,37 @@ describe('superficies de contorno de orbitales', () => {
     expect(tot).toBeLessThan(1.03);
     expect(g.enclosed).toBeGreaterThan(0.89);
     expect(g.enclosed).toBeLessThan(0.92);
+  });
+});
+
+describe('dominio y casos degenerados', () => {
+  it('masa media: abundancias nulas, negativas, no finitas o > 100 % se rechazan con un mensaje claro', async () => {
+    const { averageAtomicMass, twoIsotopeAbundance } = await import('./massSpec');
+    expect(() => averageAtomicMass([{ mass: 35, abundance: 0 }, { mass: 37, abundance: 0 }])).toThrow(/suman 0/);
+    expect(() => averageAtomicMass([{ mass: 35, abundance: -1 }])).toThrow(/no negativo/);
+    expect(() => averageAtomicMass([{ mass: NaN, abundance: 50 }])).toThrow(/positivo/);
+    expect(() => averageAtomicMass([{ mass: 35, abundance: Infinity }])).toThrow(/no negativo/);
+    expect(() => averageAtomicMass([{ mass: 35, abundance: 120 }])).toThrow(/100 %/);
+    expect(() => twoIsotopeAbundance(35, 35, 35)).toThrow(/iguales/);
+    expect(() => twoIsotopeAbundance(35, 37, 38)).toThrow(/entre/);
+    // Propiedad: la media ponderada está siempre entre la masa mínima y la máxima
+    for (let k = 0; k < 200; k++) {
+      const a = Math.random() * 100;
+      const r = averageAtomicMass([{ mass: 10.01, abundance: a }, { mass: 11.01, abundance: 100 - a }]).value;
+      expect(r).toBeGreaterThanOrEqual(10.01 - 1e-12);
+      expect(r).toBeLessThanOrEqual(11.01 + 1e-12);
+    }
+  });
+  it('prisma: Sellmeier fuera de su intervalo de validez y rayos que no atraviesan se informan', async () => {
+    const { refractiveIndexSF11, prismGeometry } = await import('./prism');
+    expect(() => refractiveIndexSF11(300)).toThrow(/370/);
+    expect(() => refractiveIndexSF11(NaN)).toThrow();
+    const g = prismGeometry();
+    expect(g.traceDetailed(250)).toBe('fuera-de-dominio');
+    // Todo el visible que usa la interfaz (370–760 nm) llega a la pantalla
+    for (let l = 370; l <= 760; l += 1) expect(g.trace(l), `λ = ${l}`).not.toBeNull();
+    // Índice monótono decreciente en el visible (dispersión normal)
+    for (let l = 380; l < 760; l += 10) expect(refractiveIndexSF11(l)).toBeGreaterThan(refractiveIndexSF11(l + 10));
   });
 });
 

@@ -281,7 +281,7 @@ function TubeScene() {
   }, [res]);
   useEffect(() => () => line.geometry.dispose(), [line]);
   const screenX = X0 + (TUBE.length + TUBE.drift) * SX;
-  const spotY = res.hitsPlate ? null : res.screenY * SY;
+  const spotY = Number.isFinite(res.screenY) ? res.screenY * SY : null;
   return (
     <Stage camera={[0.8, 1.6, 7.2]} fov={40}>
       <ambientLight intensity={0.35} />
@@ -660,7 +660,7 @@ function TubePanel() {
           </div>
           <div>
             <dt>desviación en pantalla</dt>
-            <dd>{res.hitsPlate ? 'choca con la placa' : `${fmt(res.screenY * 1000, 3)} mm`}</dd>
+            <dd>{res.hitsPlate ? 'choca con la placa' : res.turnsBack ? 'el haz se curva hacia atrás' : `${fmt(res.screenY * 1000, 3)} mm`}</dd>
           </div>
           <div>
             <dt>B para compensar</dt>

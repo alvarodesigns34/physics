@@ -916,6 +916,18 @@ const MASS_PRESETS: { label: string; peaks: { mass: number; abundance: number; l
   { label: 'Magnesio', peaks: [{ label: '²⁴Mg', mass: 23.985, abundance: 78.99 }, { label: '²⁵Mg', mass: 24.986, abundance: 10.0 }, { label: '²⁶Mg', mass: 25.983, abundance: 11.01 }] },
 ];
 
+/**
+ * Fija la abundancia del isótopo i y reparte el resto (100 − v) entre los demás en proporción a sus
+ * valores actuales (a partes iguales si todos valen 0). Así la suma es siempre 100 %.
+ */
+export function rebalance<T extends { abundance: number }>(peaks: T[], i: number, v: number): T[] {
+  const val = Math.min(100, Math.max(0, v));
+  const others = peaks.reduce((a, p, j) => (j === i ? a : a + p.abundance), 0);
+  const rest = 100 - val;
+  const n = peaks.length - 1;
+  return peaks.map((p, j) => (j === i ? { ...p, abundance: val } : { ...p, abundance: others > 0 ? (p.abundance / others) * rest : rest / Math.max(1, n) }));
+}
+
 export function MassAverageWidget() {
   const [preset, setPreset] = useState(0);
   const [peaks, setPeaks] = useState(MASS_PRESETS[0]!.peaks);
@@ -958,7 +970,7 @@ export function MassAverageWidget() {
             min={0}
             max={100}
             step={0.01}
-            onChange={(v) => setPeaks(peaks.map((q, j) => (j === i ? { ...q, abundance: v } : q)))}
+            onChange={(v) => setPeaks(rebalance(peaks, i, v))}
             display={`${fmt(p.abundance, 4)} %`}
           />
         ))}
