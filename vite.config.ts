@@ -1,6 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+// Sin @types/node: lectura mínima del entorno para separar pruebas y banco de rendimiento.
+const BENCH = !!(globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.ATOM_BENCH;
+
 export default defineConfig({
   plugins: [react()],
   base: './',
@@ -21,7 +24,8 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['src/**/*.test.ts'],
+    include: BENCH ? ['src/**/*.bench.ts'] : ['src/**/*.test.ts'],
+    testTimeout: BENCH ? 120_000 : 5_000,
     environment: 'node',
   },
 } as never);

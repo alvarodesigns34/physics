@@ -1,0 +1,8 @@
+BENCH orbitalGrid 3d, rejilla 72³ (calidad alta): mediana 51.8 ms (mín 44.6, máx 59.9, n = 3)
+BENCH orbitalGrid 3p, rejilla 56³ (calidad media): mediana 23.2 ms (mín 22.8, máx 23.2, n = 3)
+BENCH orbitalGrid 4f, rejilla 40³ (calidad baja): mediana 7.3 ms (mín 7.2, máx 8.0, n = 3)
+BENCH sampleOrbital 3d, 52 800 puntos: mediana 35.6 ms (mín 34.5, máx 37.6, n = 5)
+BENCH atomDensity Fe, 20 000 puntos: mediana 5.9 ms (mín 5.4, máx 8.8, n = 5)
+BENCH 3d_z², 72³: mediana 48.8 ms (mín 48.2, máx 82.0, n = 3)
+BENCH subnivel 3d (5 orbitales), 48³: mediana 100.5 ms (mín 94.1, máx 100.8, n = 3)
+BENCH prismGeometry + 400 rayos: mediana 0.6 ms (mín 0.5, máx 1.0, n = 5)
