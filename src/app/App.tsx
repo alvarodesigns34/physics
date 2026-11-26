@@ -281,6 +281,49 @@ function Intro() {
   );
 }
 
+/** Barra de pestañas inferior para pantallas táctiles estrechas (la barra superior se oculta). */
+function MobileNav({ route }: { route: Route }) {
+  const [labsOpen, setLabsOpen] = useState(false);
+  const labActive = LABS.some((l) => l.route === route);
+  useEffect(() => setLabsOpen(false), [route]);
+  return (
+    <>
+      {labsOpen && (
+        <>
+          <div className="drawer-backdrop" onClick={() => setLabsOpen(false)} />
+          <div className="mobile-labs fade" role="dialog" aria-label="Laboratorios">
+            <span className="eyebrow">Laboratorios</span>
+            {LABS.map((l) => (
+              <a key={l.route} href={`#${l.route}`} aria-current={route === l.route ? 'page' : undefined}>
+                <span style={{ fontWeight: 600 }}>{l.label}</span>
+                <span className="small faint">{l.blurb}</span>
+              </a>
+            ))}
+          </div>
+        </>
+      )}
+      <nav className="mobile-nav" aria-label="Secciones">
+        <a href="#/" aria-current={route === '/' ? 'page' : undefined}>
+          <Icon name="target" size={20} />
+          <span>Atrio</span>
+        </a>
+        <a href="#/guia" aria-current={route === '/guia' ? 'page' : undefined}>
+          <Icon name="info" size={20} />
+          <span>Estudiar</span>
+        </a>
+        <button type="button" aria-expanded={labsOpen} aria-current={labActive ? 'page' : undefined} onClick={() => setLabsOpen((o) => !o)}>
+          <Icon name="flask" size={20} />
+          <span>Laboratorios</span>
+        </button>
+        <a href="#/entrenamiento" aria-current={route === '/entrenamiento' ? 'page' : undefined}>
+          <Icon name="star" size={20} />
+          <span>Entrenar</span>
+        </a>
+      </nav>
+    </>
+  );
+}
+
 function TopBar({ route, onSettings }: { route: Route; onSettings: () => void }) {
   const sound = useStore((s) => s.settings.sound);
   const set = useStore((s) => s.setSettings);
@@ -415,6 +458,7 @@ export function App() {
           </ErrorBoundary>
         </main>
       </div>
+      <MobileNav route={effectiveRoute} />
       {!seenIntro && <Intro />}
       {settingsOpen && <SettingsDrawer onClose={() => setSettingsOpen(false)} />}
       <Announcer />

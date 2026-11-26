@@ -79,7 +79,7 @@ function tableRow(ref: string, s: Species, given: string, ask: Field[], level: 1
       ? { id: f, prompt: FIELD_LABEL[f], answer: { kind: 'element', z: s.z }, canonical: el.symbol, explanation: why[f], placeholder: 'p. ej. Na', nodeIds: ['1.1'] }
       : { ...integerPart(f, FIELD_LABEL[f], value[f], why[f], f === 'q' ? 'p. ej. +2, −1 o 0' : 'número entero'), nodeIds: f === 'n' || f === 'a' ? ['1.2'] : f === 'e' || f === 'q' ? ['1.4'] : ['1.1'] },
   );
-  return ex(ref, q === 0 ? ['1.1', '1.2'] : ['1.1', '1.2', '1.4'], level, 'Completa la fila de la tabla', `Datos de la fila: **${given}**. Completa las casillas vacías.${note ? `\n${note}` : ''}`, parts, ['El elemento lo decide Z (protones). A = Z + N.', 'Electrones = Z − carga (un anión tiene carga negativa: suma electrones).', `Fila completa: ${nuclearNotation(s)}.`]);
+  return ex(ref, q === 0 ? ['1.1', '1.2'] : ['1.1', '1.2', '1.4'], level, `Completa la fila: ${given}`, `Datos de la fila: **${given}**. Completa las casillas vacías.${note ? `\n${note}` : ''}`, parts, ['El elemento lo decide Z (protones). A = Z + N.', 'Electrones = Z − carga (un anión tiene carga negativa: suma electrones).', `Fila completa: ${nuclearNotation(s)}.`]);
 }
 
 const AMP_ROWS: SourceExercise3[] = [
