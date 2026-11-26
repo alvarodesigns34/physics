@@ -2492,3 +2492,8 @@ details.chapter + details.chapter {
   border: 1px solid rgb(169 205 245 / 0.45);
   transition: width var(--dur-slow) var(--ease-out), height var(--dur-slow) var(--ease-out);
 }
+
+.mode-help {
+  margin: -16px 0 0;
+  max-width: 70ch;
+}

@@ -409,6 +409,38 @@ export function buildInverseSeriesExercise(n1: number, n2: number, difficulty: D
   };
 }
 
+/** Variante inversa: se conoce el nivel superior n₂ y la longitud de onda; se busca n₁ (la serie). */
+export function buildInverseLowerExercise(n1: number, n2: number, seedId: string, source?: string): Exercise {
+  const t = transition(n2, n1, K);
+  const nm = Number((t.wavelength * 1e9).toPrecision(4));
+  const w = 1e9 / nm;
+  const x = w / K.R;
+  const inv1 = x + 1 / (n2 * n2);
+  const n1sq = 1 / inv1;
+  const parts: ExercisePart[] = [
+    numericPart({ id: 'w', prompt: 'Paso 1 · Número de ondas 1/λ (m⁻¹)', value: w, unit: 'm⁻¹', sig: 4, explanation: `λ = ${fmt(nm, 4)} nm = ${fmt(nm * 1e-9, 4)} m → 1/λ = ${fmt(w, 4)} m⁻¹.`, misconceptions: [{ test: (v) => relClose(v, 1 / nm, 0.02), message: 'Pasa λ a metros antes de invertir: 1 nm = 10⁻⁹ m.', skill: 'unidades' }] }),
+    numericPart({ id: 'x', prompt: 'Paso 2 · (1/λ)/R = 1/n₁² − 1/n₂²', value: x, unit: '', sig: 4, explanation: `${fmt(w, 4)} / ${fmt(K.R, 5)} = ${fmt(x, 4)}.`, recompute: { from: 'w', fn: (v) => v / K.R } }),
+    numericPart({ id: 'inv', prompt: `Paso 3 · Despeja 1/n₁² = ${fmt(x, 4)} + 1/${n2}²`, value: inv1, unit: '', sig: 3, explanation: `Ahora la incógnita es n₁: 1/n₁² = (1/λ)/R + 1/n₂² = ${fmt(x, 4)} + ${fmt(1 / (n2 * n2), 4)} = ${fmt(inv1, 4)}. Fíjate en que ahora se SUMA.`, recompute: { from: 'x', fn: (v) => v + 1 / (n2 * n2) }, misconceptions: [{ test: (v) => relClose(v, x - 1 / (n2 * n2), 0.02), message: 'Al pasar −1/n₂² al otro miembro cambia de signo: se suma.', skill: 'formula' }] }),
+    integerPart('n1', 'Paso 4 · n₁ (invierte y haz la raíz)', n1, `n₁² = 1/${fmt(inv1, 4)} = ${fmt(n1sq, 4)} → n₁ = ${fmt(Math.sqrt(n1sq), 3)} ≈ ${n1}.`),
+    choicePart('serie', 'Serie a la que pertenece', SERIES.filter((s) => s.inSyllabus).map((s) => ({ id: s.id, text: `${s.name} (n₁ = ${s.n1})`, feedback: 'La serie la decide el nivel inferior n₁.' })), [t.series!.id], `n₁ = ${n1}: serie de ${t.series!.name}.`),
+  ];
+  return {
+    id: seedId,
+    generatorId: 'serie-inversa',
+    nodeIds: ['3.7', '3.6'],
+    difficulty: 3,
+    title: '¿A qué nivel cae el electrón?',
+    statement: `Un electrón del hidrógeno cae desde el nivel **n = ${n2}** y emite un fotón de **${fmt(nm, 4)} nm**. ¿A qué nivel llega? ¿A qué serie pertenece la línea?`,
+    data: constantsData(K, 'm'),
+    parts,
+    stepwise: true,
+    hints: ['Ahora la incógnita es el nivel inferior n₁; n₂ es dato.', '1/n₁² = (1/λ)/R + 1/n₂².', `1/n₁² = ${fmt(x, 4)} + 1/${n2 * n2}.`],
+    solution: parts.map((p) => p.explanation),
+    source,
+    constants: K,
+  };
+}
+
 export const inverseSeriesGenerator: ExerciseGenerator = {
   id: 'serie-inversa',
   title: 'Identificar una línea por su frecuencia',
@@ -418,6 +450,8 @@ export const inverseSeriesGenerator: ExerciseGenerator = {
     const rng = rngFor(this.id, seed, difficulty);
     const n1 = difficulty === 2 ? pick(rng, [1, 2]) : pick(rng, [2, 3, 4]);
     const n2 = n1 + randInt(rng, 1, 3);
+    // En dificultad 3, una de cada tres veces la incógnita es el nivel inferior.
+    if (difficulty === 3 && rng() < 0.34) return buildInverseLowerExercise(n1, n2, exId(this.id, difficulty, seed));
     return buildInverseSeriesExercise(n1, n2, difficulty, exId(this.id, difficulty, seed));
   },
 };

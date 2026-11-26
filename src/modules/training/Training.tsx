@@ -709,6 +709,14 @@ function ProgressView() {
   );
 }
 
+const MODE_HELP: Record<View, string> = {
+  practica: 'Ejercicios nuevos elegidos por tu nivel: cada uno te dice por qué te toca. Si fallas, tienes pistas graduadas y un enlace a la teoría.',
+  repaso: 'Lo que ya practicaste vuelve justo antes de que lo olvides (repetición espaciada). Cinco minutos al día bastan.',
+  examen: 'Sin pistas ni correcciones hasta el final. Al terminar, verás la nota y exactamente qué estudiar para mejorarla.',
+  progreso: 'Tu dominio por apartado y por competencia, con su margen de incertidumbre.',
+  fuentes: 'Los ejercicios de tus hojas, con los mismos datos que en clase. Empieza por los básicos y sube a los de examen.',
+};
+
 const LEVEL_LABEL = { 1: 'Básico', 2: 'Examen', 3: 'Avanzado' } as const;
 const DOCS: { id: string; title: string; blurb: string; test: (ref: string) => boolean }[] = [
   { id: 'ebau', title: 'EBAU (La Rioja)', blurb: 'Cuestiones reales de selectividad: el nivel de examen más alto.', test: (r) => r.startsWith('EBAU') },
@@ -824,6 +832,7 @@ export function TrainingOverlay() {
               ))}
             </div>
           </header>
+          <p className="small muted mode-help">{MODE_HELP[view]}</p>
           {view === 'practica' && practiceScope.length > 0 && !fixed && (
             <div className="card row row--between row--wrap" style={{ gap: 12, padding: '12px 16px' }}>
               <span className="small">
