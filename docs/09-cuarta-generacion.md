@@ -148,3 +148,15 @@ Medido con la misma herramienta (`tools/perf.mjs`) y el mismo renderizador por s
 - **Estilos.** `global.css` (4 550 líneas) pasa a 12 módulos por área en `src/styles/global/`: base, estructura, componentes, guía, widgets, páginas, profundidad, visor, páginas claras, navegación, pedagogía y ATOM 4.0. Se importan en el orden original, y el CSS compilado es idéntico byte a byte (mismo MD5). Las capturas de referencia muestran un 0 % de píxeles distintos.
 - **Entrenamiento.** `Training.tsx` (786 líneas) pasa a 283 líneas y se separan `Scope.tsx` (selector de bloques compartido), `ExamView.tsx`, `Progress.tsx`, `Review.tsx` y `Sources.tsx`. Los imports no usados se eliminaron con ayuda del compilador.
 - **Verificación.** Compilación estricta, 955 pruebas unitarias, e2e, accesibilidad (axe) y diferencia visual, todo sin cambios.
+
+## 11. Validación científica independiente
+`src/science/reference.test.ts` (42 comprobaciones) contrasta la aplicación con valores escritos a mano desde fuentes externas al código, no con fórmulas de la propia aplicación:
+- **Líneas del hidrógeno.** Lyman α y β, Hα–Hδ y Paschen α, frente a NIST ASD (longitudes de onda en el vacío). Error relativo < 10⁻⁴: el modelo de Bohr con masa reducida ignora la estructura fina.
+- **Constantes derivadas.** Energía de ionización del H (13,598 eV) y radio de Bohr (52,92 pm).
+- **Datos de los elementos.**
+  - Primera energía de ionización de 17 elementos (NIST), con una diferencia menor de 0,01 eV.
+  - Afinidad electrónica de 6 elementos.
+  - Masa atómica de 8 elementos (IUPAC).
+- **Excepciones del temario.** Se comprueban con los datos: Be > B, Mg > Al, N > O y P > S en energía de ionización; Cl > F en afinidad electrónica; y N y los gases nobles sin anión estable.
+
+Todas pasaron a la primera: no fue necesario corregir ningún dato.
