@@ -19,6 +19,7 @@ import { EpiTag, announce } from '../../ui/common';
 import { Icon } from '../../ui/Icon';
 import { RealScale } from './RealScale';
 import { NeutralIonCompare, SpeciesCompare } from './Compare';
+import { Flights, Pedestal, ProbabilityShell, Reservoirs } from './ForgeChamber';
 
 /** Unidades de escena por radio de Bohr para la nube (la escala del núcleo NO es real). */
 const CLOUD_SCALE = 1.15;
@@ -59,35 +60,6 @@ function NucleusScaled({ scale, reduced, children }: { scale: number; reduced: b
   return <group ref={g}>{children}</group>;
 }
 
-/** Plataforma del crisol: anillo de luz bajo el átomo que se adapta a su tamaño (zona para soltar partículas). */
-function Crucible({ radius, reduced }: { radius: number; reduced: boolean }) {
-  const g = useRef<THREE.Group>(null);
-  const r = useRef(radius);
-  useFrame((_, dt) => {
-    r.current += (radius - r.current) * (reduced ? 1 : Math.min(1, dt * 2.2));
-    if (g.current) {
-      g.current.scale.setScalar(Math.max(0.5, r.current * 0.95));
-      g.current.position.y = -Math.max(0.5, r.current) * 1.3;
-    }
-  });
-  return (
-    <group ref={g}>
-      <mesh rotation-x={-Math.PI / 2}>
-        <ringGeometry args={[0.98, 1, 128]} />
-        <meshBasicMaterial color={new THREE.Color('#f2a93b').multiplyScalar(1.4)} transparent opacity={0.4} toneMapped={false} />
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.002}>
-        <circleGeometry args={[0.98, 96]} />
-        <meshBasicMaterial color="#f2a93b" transparent opacity={0.035} />
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.004}>
-        <ringGeometry args={[1.12, 1.125, 128]} />
-        <meshBasicMaterial color="#ece6dc" transparent opacity={0.12} />
-      </mesh>
-    </group>
-  );
-}
-
 function CameraRig({ radius, reduced }: { radius: number; reduced: boolean }) {
   const { camera, controls } = useThree() as unknown as { camera: THREE.PerspectiveCamera; controls: OrbitControlsImpl | null };
   const target = Math.min(90, Math.max(2.6, radius * 6.2));
@@ -118,20 +90,24 @@ export function ForgeScene() {
     }
   }, [sp.z]);
   const r50 = density ? rq(density.positions, CLOUD_SCALE, 0.5) : 0;
+  const counts = useMemo(() => ({ p: sp.z, n: sp.n, e: sp.e }), [sp.z, sp.n, sp.e]);
   // El núcleo es un esquema: se dibuja como mucho con un 25 % del radio mediano de la nube.
   const nScale = density ? Math.min(1, (0.25 * r50) / nucleusRadius(Math.max(1, sp.z + sp.n))) : 1;
   const radius = density ? Math.max(nucleusRadius(sp.z + sp.n) * nScale * 2, rq(density.positions, CLOUD_SCALE, 0.9)) : nucleusRadius(Math.max(1, sp.z + sp.n)) * 4;
   return (
     <Stage camera={[0, 0.8, 6]} fov={36}>
-      <ambientLight intensity={0.25} />
-      <directionalLight position={[3, 4, 5]} intensity={2.2} color="#ffe4c4" />
+      <ambientLight intensity={0.2} />
+      <directionalLight position={[3, 5, 5]} intensity={2.3} color="#ffe4c4" castShadow />
       <directionalLight position={[-4, -1, -3]} intensity={1.1} color="#9fc2ee" />
       <pointLight position={[0, 0, 0]} intensity={0.6} color="#ffd2a0" distance={4} />
       <NucleusScaled scale={nScale} reduced={reduced}>
         <Nucleus z={sp.z} n={sp.n} reduced={reduced} flash={flash} />
       </NucleusScaled>
       {density && <ElectronCloud density={density} scale={CLOUD_SCALE} size={(q.tier === 'baja' ? 110 : 80) * Math.max(1, Math.sqrt(radius / 2.5))} opacity={(q.tier === 'baja' ? 0.32 : 0.2) * Math.min(1, Math.max(0.5, 1.2 - 0.25 * Math.log10(sp.e)))} animate={!reduced} />}
-      <Crucible radius={radius} reduced={reduced} />
+      {density && <ProbabilityShell r90={rq(density.positions, CLOUD_SCALE, 0.9)} charge={sp.z - sp.e} reduced={reduced} />}
+      <Pedestal radius={radius} pulse={flash} reduced={reduced} />
+      <Reservoirs radius={radius} reduced={reduced} />
+      <Flights radius={radius} counts={counts} reduced={reduced} />
       <CameraRig radius={radius} reduced={reduced} />
       <CalmOrbitControls makeDefault enablePan={false} enableDamping autoRotate={!reduced} autoRotateSpeed={0.35} />
     </Stage>

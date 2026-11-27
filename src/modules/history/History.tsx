@@ -1,5 +1,7 @@
 import { CalmOrbitControls } from '../../render/CalmControls';
 import { AnchoredLabel, LabelLayer, LabelProjector } from '../../render/labels';
+import { DRIFT, PLATE_GAP, PLATE_LEN, ThomsonTubeScene, type TubeView } from './ThomsonTube';
+import { Prediction } from '../../ui/Prediction';
 import { flashPosition, SCREEN_H, SCREEN_R, SCREEN_TICKS, tickPosition } from './geigerGeometry';
 import { useContinuousRender } from '../../render/demand';
 import { ModelStoryView, ModelMatrix } from './Story';
@@ -41,6 +43,7 @@ interface HState {
   plates: number;
   B: number;
   gas: 'aire' | 'neon' | 'hidrogeno';
+  tubeView: TubeView;
   scModel: 'rutherford' | 'thomson';
   energy: number;
   thicknessUm: number;
@@ -62,6 +65,7 @@ export const useHistory = create<HState>((set) => ({
   plates: 150,
   B: 0,
   gas: 'aire',
+  tubeView: 'perspectiva',
   scModel: 'thomson',
   energy: 4.8,
   thicknessUm: 0.4,
@@ -265,81 +269,18 @@ function ModelScene() {
 
 // ── Tubo de rayos catódicos ───────────────────────────────────────────────
 
-const TUBE: Omit<CathodeSetup, 'accel' | 'plates' | 'B'> = { gap: 0.02, length: 0.05, drift: 0.15 };
-const SX = 24; // unidades de escena por metro (x)
-const SY = 24;
-const X0 = -0.8; // inicio de las placas
+// Una sola fuente de las dimensiones: la escena dibuja exactamente el tubo que se calcula.
+const TUBE: Omit<CathodeSetup, 'accel' | 'plates' | 'B'> = { gap: PLATE_GAP, length: PLATE_LEN, drift: DRIFT };
 
 function setupFrom(s: Pick<HState, 'accel' | 'plates' | 'B'>): CathodeSetup {
   return { ...TUBE, accel: s.accel, plates: s.plates, B: s.B / 1000 };
 }
 
-const GAS_GLOW: Record<HState['gas'], string> = { aire: '#b9a7d6', neon: '#ff8a4c', hidrogeno: '#d9a0ff' };
 
 function TubeScene() {
-  const { accel, plates, B, gas } = useHistory();
+  const { accel, plates, B, gas, tubeView } = useHistory();
   const res = useMemo(() => cathodeBeam(setupFrom({ accel, plates, B })), [accel, plates, B]);
-  const line = useMemo(() => {
-    const pts: THREE.Vector3[] = [new THREE.Vector3(-2.3, 0, 0)];
-    for (let i = 0; i < res.path.length / 2; i += 4) pts.push(new THREE.Vector3(X0 + res.path[i * 2]! * SX, res.path[i * 2 + 1]! * SY, 0));
-    const g = new THREE.BufferGeometry().setFromPoints(pts);
-    return new THREE.Line(g, new THREE.LineBasicMaterial({ color: new THREE.Color('#9ff0c4').multiplyScalar(2.2), toneMapped: false }));
-  }, [res]);
-  useEffect(
-    () => () => {
-      line.geometry.dispose();
-      (line.material as THREE.Material).dispose();
-    },
-    [line],
-  );
-  const screenX = X0 + (TUBE.length + TUBE.drift) * SX;
-  const spotY = Number.isFinite(res.screenY) ? res.screenY * SY : null;
-  return (
-    <Stage camera={[0.8, 1.6, 7.2]} fov={40}>
-      <ambientLight intensity={0.35} />
-      <directionalLight position={[2, 5, 6]} intensity={1.8} color="#ffe6c8" />
-      <mesh rotation-z={Math.PI / 2} position={[(screenX - 2.6) / 2 + 0.2, 0, 0]}>
-        <cylinderGeometry args={[0.62, 0.62, screenX + 2.9, 48, 1, true]} />
-        <meshPhysicalMaterial color="#e6eef5" roughness={0.05} transparent opacity={0.13} side={THREE.DoubleSide} depthWrite={false} />
-      </mesh>
-      <mesh rotation-z={Math.PI / 2} position={[(screenX - 2.6) / 2 + 0.2, 0, 0]}>
-        <cylinderGeometry args={[0.6, 0.6, screenX + 2.8, 48, 1, true]} />
-        <meshBasicMaterial color={GAS_GLOW[gas]} transparent opacity={0.04} side={THREE.BackSide} depthWrite={false} />
-      </mesh>
-      <mesh position={[-2.4, 0, 0]} rotation-z={Math.PI / 2}>
-        <cylinderGeometry args={[0.32, 0.32, 0.08, 32]} />
-        <meshStandardMaterial color="#5c564e" metalness={0.8} roughness={0.3} />
-      </mesh>
-      <mesh position={[-1.5, 0, 0]} rotation-y={Math.PI / 2}>
-        <ringGeometry args={[0.06, 0.45, 32]} />
-        <meshStandardMaterial color="#8d857a" metalness={0.8} roughness={0.3} side={THREE.DoubleSide} />
-      </mesh>
-      {[1, -1].map((s) => (
-        <mesh key={s} position={[X0 + (TUBE.length * SX) / 2, (s * TUBE.gap * SY) / 2 + s * 0.03, 0]}>
-          <boxGeometry args={[TUBE.length * SX, 0.04, 0.6]} />
-          <meshStandardMaterial color={s > 0 ? '#c0782c' : '#4a5a70'} metalness={0.7} roughness={0.35} />
-        </mesh>
-      ))}
-      {B > 0 && (
-        <mesh position={[X0 + (TUBE.length * SX) / 2, 0, 0]}>
-          <boxGeometry args={[TUBE.length * SX, TUBE.gap * SY, 0.62]} />
-          <meshBasicMaterial color="#8fc3f2" transparent opacity={0.06 + Math.min(0.12, B * 0.08)} depthWrite={false} />
-        </mesh>
-      )}
-      <primitive object={line} />
-      <mesh position={[screenX, 0, 0]} rotation-y={-Math.PI / 2}>
-        <circleGeometry args={[0.6, 48]} />
-        <meshStandardMaterial color="#1d2a22" roughness={0.8} side={THREE.DoubleSide} />
-      </mesh>
-      {spotY !== null && Math.abs(spotY) < 0.6 && (
-        <mesh position={[screenX - 0.01, spotY, 0]}>
-          <sphereGeometry args={[0.06, 16, 12]} />
-          <meshBasicMaterial color={new THREE.Color('#9ff0c4').multiplyScalar(3)} toneMapped={false} />
-        </mesh>
-      )}
-      <OrbitControls enablePan={false} enableDamping minDistance={3} maxDistance={12} target={[0.8, 0, 0]} />
-    </Stage>
-  );
+  return <ThomsonTubeScene res={res} plates={plates} B={B} accel={accel} gas={gas} view={tubeView} />;
 }
 
 // ── Geiger–Marsden ────────────────────────────────────────────────────────
@@ -654,6 +595,35 @@ function TubePanel() {
   return (
     <>
       <section className="section">
+        <span className="eyebrow">Vista del instrumento</span>
+        <div className="segmented" role="radiogroup" aria-label="Vista del tubo">
+          {([
+            ['perspectiva', 'Perspectiva'],
+            ['lateral', 'Lateral (2D)'],
+            ['pantalla', 'Pantalla'],
+          ] as const).map(([v, l]) => (
+            <button key={v} type="button" role="radio" aria-checked={st.tubeView === v} onClick={() => st.set({ tubeView: v })}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </section>
+      <section className="section">
+        <Prediction
+          resetKey="tubo-placas"
+          question="La placa de arriba es positiva. Al subir la tensión entre placas, ¿hacia dónde se desviará el haz?"
+          options={[
+            { id: 'arriba', label: 'Hacia arriba' },
+            { id: 'abajo', label: 'Hacia abajo' },
+            { id: 'recto', label: 'Sigue recto' },
+          ]}
+          correct="arriba"
+          explanation="Los rayos catódicos son atraídos por la placa positiva: su carga es negativa. Ese fue el primer argumento de Thomson para decir que están hechos de partículas con carga, no de luz (la luz no se desvía en un campo eléctrico)."
+          onRun={() => st.set({ plates: 250, B: 0, tubeView: 'lateral' })}
+          runLabel="Aplicar 250 V y mirar de lado"
+        />
+      </section>
+      <section className="section">
         <span className="eyebrow">Tubo de rayos catódicos</span>
         <div className="field">
           <label htmlFor="va">Tensión de aceleración: {st.accel} V</label>
@@ -809,6 +779,21 @@ export function HistoryOverlay() {
   const info = MODELS.find((m) => m.id === st.model)!;
   return (
     <div className="workspace">
+      {st.tab === 'tubo' && (
+        <LabelLayer>
+          {[
+            ['tb-catodo', 'Cátodo caliente (−)'],
+            ['tb-anodo', 'Ánodo y colimadores'],
+            ['tb-placas', 'Placas: campo E'],
+            ['tb-bobinas', 'Bobinas: campo B'],
+            ['tb-pantalla', 'Pantalla fluorescente (mm)'],
+          ].map(([id, text]) => (
+            <AnchoredLabel key={id} id={id!}>
+              <span className="scene-label scene-label--part">{text}</span>
+            </AnchoredLabel>
+          ))}
+        </LabelLayer>
+      )}
       {st.tab === 'geiger' && (
         <LabelLayer>
           {SCREEN_TICKS.map((d) => (

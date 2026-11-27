@@ -20,3 +20,6 @@
 .offline__bar > span { display: block; height: 100%; background: var(--accent); transform-origin: left; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .update-banner { position: fixed; z-index: 60; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 12px; align-items: center; padding: 8px 8px 8px 16px; border-radius: 999px; background: var(--surface, #fff); border: 1px solid var(--line, rgb(127 127 127 / 0.2)); box-shadow: 0 12px 40px rgb(0 0 0 / 0.18); animation: update-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.15) both; }
 @keyframes update-in { from { opacity: 0; transform: translate(-50%, 16px) scale(0.96); } }
+
+/* ATOM 5.1 · Ejes de la tabla periódica 3D */
+.axis-label { display: block; font-family: var(--font-mono); font-size: 11px; font-variant-numeric: tabular-nums; color: rgb(236 230 220 / 0.55); text-shadow: 0 1px 4px rgb(0 0 0 / 0.8); pointer-events: none; letter-spacing: 0.02em; }

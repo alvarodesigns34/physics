@@ -13,7 +13,11 @@ const label = process.argv[2] ?? 'actual';
 const which = process.argv[3] ?? 'all';
 const OUT = `docs/capturas/${label}`;
 mkdirSync(OUT, { recursive: true });
-const PORT = 4181;
+const PORT = Number(process.env.PORT ?? 4181);
+const DIST = process.env.DIST ?? 'dist';
+const ONLY = process.env.SHOTS ? process.env.SHOTS.split(',') : null;
+const THEME = process.env.THEME ?? 'claro';
+const QUALITY = process.env.QUALITY ?? 'auto';
 
 const VIEWS = [
   ['inicio', '#/'],
@@ -29,14 +33,21 @@ const VIEWS = [
   ['arquitecto', '#/arquitecto'],
   ['periodico', '#/periodico'],
   ['tendencias', '#/periodico?tab=tendencias'],
-];
+  ['tubo', '#/historia?tab=tubo'],
+  ['geiger', '#/historia?tab=geiger'],
+  ['hidrogeno', '#/fotones?tab=hidrogeno'],
+  ['espectroscopio', '#/fotones?tab=espectroscopio'],
+  ['campana', '#/campana'],
+  ['progreso', '#/entrenamiento?v=progreso'],
+  ['cuaderno', '#/entrenamiento?v=cuaderno'],
+].filter(([n]) => !ONLY || ONLY.includes(n));
 const DEVICES = {
   desktop: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },
   ipad: { viewport: { width: 1180, height: 820 }, deviceScaleFactor: 1, hasTouch: true, isMobile: false },
   ipadv: { viewport: { width: 820, height: 1180 }, deviceScaleFactor: 1, hasTouch: true, isMobile: false },
 };
 
-const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'pipe' });
+const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', String(PORT), '--strictPort', '--outDir', DIST], { stdio: 'pipe' });
 await new Promise((resolve, reject) => {
   const t = setTimeout(() => reject(new Error('vite preview no arrancó')), 20000);
   server.stdout.on('data', (d) => String(d).includes(String(PORT)) && (clearTimeout(t), resolve()));
@@ -48,20 +59,25 @@ try {
     if (which !== 'all' && which !== dev) continue;
     const ctx = await browser.newContext(opts);
     // Saltar la bienvenida: marca de visita previa.
-    await ctx.addInitScript(() => {
-      try { localStorage.setItem('atom:intro-seen', '1'); } catch {}
-    });
+    await ctx.addInitScript(([theme, quality, forge]) => {
+      const state = { settings: { seenIntro: true, theme, quality } };
+      if (forge) {
+        const [z, n, e] = forge.split(',').map(Number);
+        state.forge = { z, n, e };
+      }
+      try { localStorage.setItem('atom:v1', JSON.stringify({ state, version: 2 })); } catch {}
+    }, [THEME, QUALITY, process.env.FORGE ?? '']);
     const page = await ctx.newPage();
     page.on('pageerror', (e) => errors.push(`${dev}: ${e.message}`));
     for (const [name, hash] of VIEWS) {
       await page.goto(`http://localhost:${PORT}/${hash}`);
-      await page.waitForTimeout(name === 'cuantico' || name === 'periodico' ? 3500 : 2200);
+      await page.waitForTimeout(['cuantico', 'periodico', 'campana', 'tubo'].includes(name) ? 4500 : 2600);
       await page.evaluate(() => {
         const b = [...document.querySelectorAll('.intro button')].find((x) => /Cerrar/.test(x.textContent ?? ''));
         b?.click();
       });
       await page.waitForTimeout(300);
-      await page.screenshot({ path: `${OUT}/${name}-${dev}.png` });
+      await page.screenshot({ path: `${OUT}/${name}-${dev}${THEME === 'oscuro' ? '-oscuro' : ''}.png` });
       console.log(`✓ ${name}-${dev}`);
     }
     await ctx.close();
