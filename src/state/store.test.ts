@@ -41,3 +41,44 @@ describe('store.recordExercise', () => {
     expect(t2 - t1).toBeLessThan(firstGain * 0.5);
   });
 });
+
+describe('ATOM 5.1 · repetición y cuaderno: una sola regla', () => {
+  beforeEach(() => useStore.getState().resetProgress());
+  it('un ejercicio de los documentos fallado se supera repitiéndolo limpio pasados 2 días (antes era inalcanzable)', async () => {
+    const { SOURCE_EXERCISES } = await import('../learning/registry');
+    const src = SOURCE_EXERCISES.find((s) => s.build().parts.length >= 1)!;
+    const ex = src.build();
+    const real = Date.now;
+    const t0 = real();
+    try {
+      Date.now = () => t0;
+      const fail = { correct: false, score: 0, hintsUsed: 0, parts: ex.parts.map((p) => ({ id: p.id, credit: 0, attempts: 2, revealed: false, errors: [{ kind: 'calculo' as const }], carried: false, sigFigIssue: false })) };
+      useStore.getState().recordExercise(ex, fail, 'practica');
+      expect(useStore.getState().notebook.filter((e) => !e.resolvedAt)).toHaveLength(1);
+      // Al día siguiente: repetición inmediata, no cierra la entrada
+      Date.now = () => t0 + 86_400_000;
+      useStore.getState().recordExercise(ex, clean(ex as never), 'practica');
+      expect(useStore.getState().notebook.filter((e) => !e.resolvedAt)).toHaveLength(1);
+      // Tres días después de la última vez: recuperación espaciada, la cierra
+      Date.now = () => t0 + 4 * 86_400_000;
+      useStore.getState().recordExercise(ex, clean(ex as never), 'practica');
+      const nb = useStore.getState().notebook;
+      expect(nb.filter((e) => !e.resolvedAt)).toHaveLength(0);
+      expect(nb[0]!.resolvedBy).toBe('mismo-dias-despues');
+      // y aun así la evidencia de esa repetición no es «demostrada»
+      expect(useStore.getState().history.at(-1)!.evidence).toBe('asistida');
+    } finally {
+      Date.now = real;
+    }
+  });
+  it('con ayuda del analizador de procedimientos no se cierra el cuaderno', () => {
+    const ex = buildWaveExercise({ value: 500, unit: 'nm' }, 2, 'onda-lambda:2:1');
+    const fail = { correct: false, score: 0, hintsUsed: 0, parts: ex.parts.map((p) => ({ id: p.id, credit: 0, attempts: 2, revealed: false, errors: [{ kind: 'calculo' as const }], carried: false, sigFigIssue: false })) };
+    useStore.getState().recordExercise(ex, fail, 'practica');
+    const variant = buildWaveExercise({ value: 600, unit: 'nm' }, 2, 'onda-lambda:2:2');
+    useStore.getState().recordExercise(variant, clean(variant, { procedureAssisted: true }), 'practica');
+    expect(useStore.getState().notebook.filter((e) => !e.resolvedAt)).toHaveLength(1);
+    useStore.getState().recordExercise(buildWaveExercise({ value: 700, unit: 'nm' }, 2, 'onda-lambda:2:3'), clean(buildWaveExercise({ value: 700, unit: 'nm' }, 2, 'onda-lambda:2:3')), 'practica');
+    expect(useStore.getState().notebook.filter((e) => !e.resolvedAt)).toHaveLength(0);
+  });
+});

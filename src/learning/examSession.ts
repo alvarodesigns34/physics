@@ -39,6 +39,8 @@ export interface ExamSession {
   procedures?: Record<number, string>;
   current: number;
   finishedAt?: number;
+  /** ATOM 5.1: cómo terminó: entregado por el alumno o cerrado al agotarse el tiempo */
+  endedBy?: 'entrega' | 'tiempo';
 }
 
 let sourceById: Map<string, () => Exercise> | null = null;
@@ -153,18 +155,41 @@ export interface ExamReport {
   byNode: Record<string, { ok: number; total: number; unanswered: number }>;
   /**
    * Causa probable de cada pregunta sin responder (ATOM 5.0), según su posición:
-   * - 'tiempo': está después de la última pregunta con respuesta, el patrón de quedarse sin tiempo;
+   * - 'tiempo': está después de la última pregunta con respuesta Y el tiempo se agotó (o se entregó en el
+   *   último minuto de un simulacro cronometrado), el patrón de quedarse sin tiempo;
+   * - 'sin-terminar': está al final, pero el simulacro no tenía límite o se entregó con tiempo de sobra
+   *   (ATOM 5.1: antes se atribuía a la falta de tiempo, sin ninguna prueba de ello);
    * - 'omitida': hay preguntas respondidas después, así que se saltó (posible desconocimiento o bloqueo).
    * Es una inferencia por posición, no una certeza, y así se presenta.
    */
-  unansweredCause: Record<number, 'tiempo' | 'omitida'>;
+  unansweredCause: Record<number, UnansweredCause>;
+  /** Minutos que sobraban al entregar (null si no había límite) */
+  minutesLeft: number | null;
 }
 
-export function unansweredCauses(states: QuestionState[]): Record<number, 'tiempo' | 'omitida'> {
+export type UnansweredCause = 'tiempo' | 'sin-terminar' | 'omitida';
+
+export interface SessionTiming {
+  minutes: number | null;
+  startedAt: number;
+  finishedAt?: number;
+  endedBy?: 'entrega' | 'tiempo';
+}
+
+/** ¿Hay pruebas de que el tiempo se agotó? Solo en simulacros cronometrados. */
+export function timeExhausted(t: SessionTiming | undefined): boolean {
+  if (!t || t.minutes === null) return false;
+  if (t.endedBy === 'tiempo') return true;
+  if (t.finishedAt === undefined) return false;
+  return t.finishedAt - t.startedAt >= t.minutes * 60_000 - 60_000;
+}
+
+export function unansweredCauses(states: QuestionState[], timing?: SessionTiming): Record<number, UnansweredCause> {
   const lastAnswered = states.reduce((a, st, i) => (st !== 'sin-responder' ? i : a), -1);
-  const out: Record<number, 'tiempo' | 'omitida'> = {};
+  const trailing: UnansweredCause = timeExhausted(timing) ? 'tiempo' : 'sin-terminar';
+  const out: Record<number, UnansweredCause> = {};
   states.forEach((st, i) => {
-    if (st === 'sin-responder') out[i] = i > lastAnswered ? 'tiempo' : 'omitida';
+    if (st === 'sin-responder') out[i] = i > lastAnswered ? trailing : 'omitida';
   });
   return out;
 }
@@ -202,7 +227,8 @@ export function gradeSession(session: ExamSession, exercises: Exercise[]): ExamR
     partial: questions.filter((q) => q.state === 'parcial').length,
     unanswered: questions.filter((q) => q.state === 'sin-responder').length,
     byNode,
-    unansweredCause: unansweredCauses(questions.map((q) => q.state)),
+    unansweredCause: unansweredCauses(questions.map((q) => q.state), session),
+    minutesLeft: session.minutes === null || session.finishedAt === undefined ? null : Math.max(0, Math.round(session.minutes - (session.finishedAt - session.startedAt) / 60_000)),
   };
 }
 
@@ -222,6 +248,11 @@ export function isValidSession(v: unknown): v is ExamSession {
     Array.isArray(s.flagged) &&
     (s.procedures === undefined || (typeof s.procedures === 'object' && s.procedures !== null && !Array.isArray(s.procedures) && Object.values(s.procedures).every((x) => typeof x === 'string' && x.length <= 5000))) &&
     (s.confirmed === undefined || (typeof s.confirmed === 'object' && s.confirmed !== null && !Array.isArray(s.confirmed) && Object.values(s.confirmed).every((x) => Array.isArray(x) && x.every((y) => typeof y === 'string')))) &&
-    Number.isInteger(s.current)
+    Number.isInteger(s.current) && s.current! >= 0 && s.current! < s.exerciseIds.length &&
+    (s.finishedAt === undefined || Number.isFinite(s.finishedAt)) &&
+    (s.endedBy === undefined || s.endedBy === 'entrega' || s.endedBy === 'tiempo') &&
+    s.flagged.every((x) => Number.isInteger(x) && x >= 0 && x < s.exerciseIds!.length) &&
+    s.label.length <= 200 &&
+    Object.entries(s.answers).every(([k, v]) => /^\d+$/.test(k) && Number(k) < s.exerciseIds!.length && typeof v === 'object' && v !== null && !Array.isArray(v) && Object.values(v).every((x) => (typeof x === 'string' && x.length <= 5000) || (Array.isArray(x) && x.length <= 40 && x.every((y) => typeof y === 'string' && y.length <= 5000))))
   );
 }

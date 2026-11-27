@@ -11,3 +11,12 @@
 .procedure__mark { font-weight: 700; min-width: 1ch; text-align: center; }
 .procedure__note { flex-basis: 100%; padding-left: calc(1ch + 10px); color: var(--ink-2, inherit); }
 .procedure__unsupported { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+
+/* ATOM 5.1 · Sin conexión */
+.offline__head { display: flex; align-items: center; gap: 10px; }
+.offline__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: none; }
+.offline__dot.is-ok { background: var(--ok); box-shadow: 0 0 0 4px var(--ok-quiet); }
+.offline__bar { height: 4px; border-radius: 4px; background: var(--line, rgb(127 127 127 / 0.2)); overflow: hidden; }
+.offline__bar > span { display: block; height: 100%; background: var(--accent); transform-origin: left; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.update-banner { position: fixed; z-index: 60; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 12px; align-items: center; padding: 8px 8px 8px 16px; border-radius: 999px; background: var(--surface, #fff); border: 1px solid var(--line, rgb(127 127 127 / 0.2)); box-shadow: 0 12px 40px rgb(0 0 0 / 0.18); animation: update-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.15) both; }
+@keyframes update-in { from { opacity: 0; transform: translate(-50%, 16px) scale(0.96); } }

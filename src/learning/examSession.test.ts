@@ -87,10 +87,47 @@ describe('Crédito por procedimiento en el simulacro (ATOM 5.0)', async () => {
 
 describe('Causa probable de las preguntas sin responder (ATOM 5.0)', async () => {
   const { unansweredCauses } = await import('./examSession');
-  it('al final → tiempo; intercaladas → omitida', () => {
-    expect(unansweredCauses(['respondida', 'sin-responder', 'parcial', 'sin-responder', 'sin-responder'])).toEqual({ 1: 'omitida', 3: 'tiempo', 4: 'tiempo' });
+  const st = ['respondida', 'sin-responder', 'parcial', 'sin-responder', 'sin-responder'] as const;
+  const t0 = 1_000_000;
+  it('cronometrado y agotado: al final → tiempo; intercaladas → omitida', () => {
+    expect(unansweredCauses([...st], { minutes: 30, startedAt: t0, endedBy: 'tiempo' })).toEqual({ 1: 'omitida', 3: 'tiempo', 4: 'tiempo' });
+    expect(unansweredCauses([...st], { minutes: 30, startedAt: t0, finishedAt: t0 + 29.5 * 60_000 })).toEqual({ 1: 'omitida', 3: 'tiempo', 4: 'tiempo' });
   });
-  it('nada respondido → todo «tiempo» (no hay evidencia de que se saltara nada)', () => {
-    expect(unansweredCauses(['sin-responder', 'sin-responder'])).toEqual({ 0: 'tiempo', 1: 'tiempo' });
+  it('ATOM 5.1: sin límite de tiempo nunca se atribuye a la falta de tiempo', () => {
+    expect(unansweredCauses([...st], { minutes: null, startedAt: t0, finishedAt: t0 + 3 * 3_600_000 })).toEqual({ 1: 'omitida', 3: 'sin-terminar', 4: 'sin-terminar' });
+  });
+  it('ATOM 5.1: entregado con tiempo de sobra tampoco', () => {
+    expect(unansweredCauses([...st], { minutes: 30, startedAt: t0, finishedAt: t0 + 10 * 60_000, endedBy: 'entrega' })).toEqual({ 1: 'omitida', 3: 'sin-terminar', 4: 'sin-terminar' });
+  });
+  it('sin datos del reloj: no se presume nada', () => {
+    expect(unansweredCauses(['sin-responder', 'sin-responder'])).toEqual({ 0: 'sin-terminar', 1: 'sin-terminar' });
+  });
+});
+
+describe('ATOM 5.1 · integración: gradeSession usa el reloj de la sesión', async () => {
+  const { gradeSession, newSession, isValidSession } = await import('./examSession');
+  const { GENERATORS } = await import('./registry');
+  const exs = GENERATORS.slice(0, 3).map((g) => g.create(1, g.difficulties[0]!));
+  it('simulacro sin límite entregado: lo final es «sin terminar» y no hay margen', () => {
+    const s = { ...newSession('x', exs, [1, 1, 1], null, 1, 0), finishedAt: 600_000 };
+    const r = gradeSession(s, exs);
+    expect(Object.values(r.unansweredCause)).toEqual(['sin-terminar', 'sin-terminar', 'sin-terminar']);
+    expect(r.minutesLeft).toBeNull();
+  });
+  it('cronometrado y cerrado por el reloj: «tiempo»', () => {
+    const s = { ...newSession('x', exs, [1, 1, 1], 20, 1, 0), finishedAt: 20 * 60_000, endedBy: 'tiempo' as const };
+    expect(Object.values(gradeSession(s, exs).unansweredCause)).toEqual(['tiempo', 'tiempo', 'tiempo']);
+  });
+  it('validación: índices, longitudes y campos nuevos', () => {
+    const base = newSession('x', exs, [1, 1, 1], 20, 1, 0);
+    expect(isValidSession(base)).toBe(true);
+    expect(isValidSession({ ...base, current: 7 })).toBe(false);
+    expect(isValidSession({ ...base, current: -1 })).toBe(false);
+    expect(isValidSession({ ...base, flagged: [9] })).toBe(false);
+    expect(isValidSession({ ...base, endedBy: 'otro' })).toBe(false);
+    expect(isValidSession({ ...base, answers: { 5: {} } })).toBe(false);
+    expect(isValidSession({ ...base, answers: { 0: { a: 'x'.repeat(6000) } } })).toBe(false);
+    expect(isValidSession({ ...base, answers: { 0: { a: ['1', '2'] } } })).toBe(true);
+    expect(isValidSession({ ...base, finishedAt: Infinity })).toBe(false);
   });
 });

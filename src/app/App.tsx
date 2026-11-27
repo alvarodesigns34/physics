@@ -11,6 +11,7 @@ import { Icon } from '../ui/Icon';
 import { HubScene, HubOverlay } from '../modules/hub/Hub';
 import { HomeOverlay } from '../modules/hub/Home';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
+import { OfflinePanel, UpdateBanner } from '../ui/OfflinePanel';
 
 const ForgeScene = lazy(() => import('../modules/forge/Forge').then((m) => ({ default: m.ForgeScene })));
 const ForgeOverlay = lazy(() => import('../modules/forge/Forge').then((m) => ({ default: m.ForgeOverlay })));
@@ -187,6 +188,11 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
               Borrar progreso
             </button>
           </div>
+        </div>
+        <hr className="divider" />
+        <div className="stack-12">
+          <span className="h3">Estudiar sin conexión</span>
+          <OfflinePanel />
         </div>
         <p className="small faint" style={{ marginTop: 'auto' }}>
           ATOM. Datos: CODATA 2018, NIST, IUPAC/CIAAW y NUBASE (vía mendeleev). Sin cuentas ni seguimiento: todo se guarda en este navegador.
@@ -464,6 +470,7 @@ export function App() {
       {searchOpen && <SearchPalette onClose={() => setSearchOpen(false)} />}
       {!seenIntro && <Intro />}
       {settingsOpen && <SettingsDrawer onClose={() => setSettingsOpen(false)} />}
+      <UpdateBanner />
       <Announcer />
       <Toaster />
     </div>

@@ -55,12 +55,27 @@ export interface Attempt {
  * (0,15 a partir de la tercera); 0,6 si la vez anterior fue hace ≥ 2 días (recuperación espaciada, que sí
  * es aprendizaje, aunque no demuestra transferencia a datos nuevos).
  */
-export function repetitionFactor(history: { exerciseId: string; at: number }[], id: string, now: number): number {
+/** Días que deben pasar para que repetir el mismo enunciado sea recuperación espaciada (no memoria inmediata). */
+export const SPACED_RETRIEVAL_MS = 2 * 86_400_000;
+
+/**
+ * Repetición del mismo enunciado (ATOM 5.1). Una sola fuente de verdad para el peso de la evidencia y para
+ * el cuaderno de errores: antes, el cuaderno exigía `factor === 1` y su propia regla «el mismo enunciado
+ * pasados 2 días» era inalcanzable, porque ese caso siempre es una repetición (factor 0,6).
+ * - primera vez: factor 1;
+ * - repetición tras ≥ 2 días: factor 0,6 y `spaced` (recuperación espaciada: puede cerrar el cuaderno);
+ * - repetición inmediata: 0,35 la segunda vez y 0,15 después (memoria de la respuesta, no dominio).
+ */
+export function repetitionInfo(history: { exerciseId: string; at: number }[], id: string, now: number): { factor: number; spaced: boolean } {
   const prev = history.filter((h) => h.exerciseId === id);
-  if (!prev.length) return 1;
+  if (!prev.length) return { factor: 1, spaced: false };
   const last = Math.max(...prev.map((h) => h.at));
-  if (now - last >= 2 * 86_400_000) return 0.6;
-  return prev.length === 1 ? 0.35 : 0.15;
+  if (now - last >= SPACED_RETRIEVAL_MS) return { factor: 0.6, spaced: true };
+  return { factor: prev.length === 1 ? 0.35 : 0.15, spaced: false };
+}
+
+export function repetitionFactor(history: { exerciseId: string; at: number }[], id: string, now: number): number {
+  return repetitionInfo(history, id, now).factor;
 }
 
 const KIND_RANK: Record<EvidenceKind, number> = { demostrada: 0, 'posible-azar': 1, asistida: 2, autoevaluada: 3 };
@@ -210,7 +225,8 @@ export const useStore = create<AppState>()(
           const ev = buildEvidence(ex, o.parts);
           // Repetir el MISMO enunciado (mismo id) puede ser memoria, no comprensión (auditoría de ATOM 4.0:
           // inflación por repetición). Pesa mucho menos y nunca cuenta como evidencia «demostrada».
-          const rep = repetitionFactor(s.history, ex.id, now);
+          const repInfo = repetitionInfo(s.history, ex.id, now);
+          const rep = repInfo.factor;
           if (rep < 1) {
             for (const v of Object.values(ev.nodes)) if (v.kind === 'demostrada' || v.kind === 'posible-azar') v.kind = 'asistida';
             for (const v of Object.values(ev.skills)) if (v && (v.kind === 'demostrada' || v.kind === 'posible-azar')) v.kind = 'asistida';
@@ -255,7 +271,7 @@ export const useStore = create<AppState>()(
               return { prompt: part.prompt, partId: part.id, kind: diag?.kind ?? (r.revealed ? ('revelado' as const) : 'incompleto'), skill: diag?.skill ?? r.errors[0]?.skill };
             });
           if (misses.length) notebook = addMiss(notebook, { exerciseId: ex.id, generatorId: ex.generatorId, title: ex.title, nodeIds: Object.keys(ev.nodes), at: now, mode, misses });
-          else if (o.hintsUsed === 0 && rep === 1 && o.parts.every((r) => r.attempts <= 1 && !r.revealed && !r.hinted && !r.procedureAssisted && r.credit >= 1))
+          else if (o.hintsUsed === 0 && (rep === 1 || repInfo.spaced) && o.parts.every((r) => r.attempts <= 1 && !r.revealed && !r.hinted && !r.procedureAssisted && r.credit >= 1))
             notebook = registerClean(notebook, { id: ex.id, generatorId: ex.generatorId, difficulty: ex.difficulty, steps: o.parts.map((r, k) => ({ id: r.id, prompt: ex.parts.find((p) => p.id === r.id)?.prompt ?? ex.parts[k]!.prompt })) }, now).list;
           return { mastery, skills, cards, notebook, history: [...s.history, attempt].slice(-400) };
         }),

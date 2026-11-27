@@ -56,7 +56,7 @@ export function ExamRunner({ session, onChange, onFinish }: { session: ExamSessi
   useEffect(() => saveSession(session), [session]);
   const timeLeft = session.minutes ? session.minutes * 60_000 - (now - session.startedAt) : null;
   useEffect(() => {
-    if (timeLeft !== null && timeLeft <= 0) onFinish(session, exercises);
+    if (timeLeft !== null && timeLeft <= 0) onFinish({ ...session, endedBy: 'tiempo' }, exercises);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft !== null && timeLeft <= 0]);
   if (exercises.length !== session.exerciseIds.length) {
@@ -353,8 +353,10 @@ export function ExamReportView({ report, session, onNew }: { report: ExamReport;
                 {(() => {
                   const causes = Object.values(report.unansweredCause);
                   const t = causes.filter((c) => c === 'tiempo').length;
-                  const o = causes.length - t;
-                  return `${t ? `${t} quedaron al final, después de tu última respuesta: lo más probable es que faltara tiempo, así que entrena el ritmo con un simulacro cronometrado. ` : ''}${o ? `${o} las saltaste y respondiste otras después: suele indicar que no sabías cómo empezar, así que abre la guía de ese apartado. ` : ''}Es una deducción por la posición de las preguntas, no una certeza.`;
+                  const st = causes.filter((c) => c === 'sin-terminar').length;
+                  const o = causes.filter((c) => c === 'omitida').length;
+                  const left = report.minutesLeft;
+                  return `${t ? `${t} quedaron al final y el tiempo se agotó: entrena el ritmo con un simulacro cronometrado. ` : ''}${st ? `${st} quedaron al final${left !== null ? `, pero entregaste con ${left} min de margen` : ' en un simulacro sin límite de tiempo'}: no fue por falta de tiempo. Si no sabías cómo seguir, la guía de ese apartado es el siguiente paso. ` : ''}${o ? `${o} las saltaste y respondiste otras después: suele indicar que no sabías cómo empezar, así que abre la guía de ese apartado. ` : ''}Es una deducción por la posición de las preguntas y por el reloj, no una certeza.`;
                 })()}
               </span>
               <a className="btn btn--ghost btn--sm" href={`#/guia?n=${guideAnchor(unansweredNodes[0]!)}`}>

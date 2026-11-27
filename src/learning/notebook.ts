@@ -76,6 +76,15 @@ function coversMisses(e: NotebookEntry, ex: CleanExercise): boolean {
  *   examen respondido a medias no puede cerrar los pasos que no se respondieron);
  * - para los ejercicios de los documentos, el mismo enunciado completo pasados ≥ 2 días.
  */
+/**
+ * Ejercicio de los documentos de clase (enunciado fijo, sin variantes). ATOM 5.1: se reconocen por su id
+ * («src:…»); muchos se construyen con un generador y conservan su `generatorId`, así que comprobar solo
+ * `generatorId === 'fuentes'` dejaba fuera a la mayoría.
+ */
+export function isSourceExercise(x: { exerciseId: string; generatorId: string }): boolean {
+  return x.generatorId === 'fuentes' || x.exerciseId.startsWith('src:');
+}
+
 export function registerClean(list: NotebookEntry[], ex: CleanExercise, now: number): { list: NotebookEntry[]; resolved: number } {
   let resolved = 0;
   const out = list.map((x) => {
@@ -86,7 +95,7 @@ export function registerClean(list: NotebookEntry[], ex: CleanExercise, now: num
       resolved++;
       return { ...x, resolvedAt: now, resolvedBy: 'variante' as const };
     }
-    if (x.exerciseId === ex.id && x.generatorId === 'fuentes' && now - x.at >= 2 * DAY) {
+    if (x.exerciseId === ex.id && isSourceExercise(x) && now - x.at >= 2 * DAY) {
       resolved++;
       return { ...x, resolvedAt: now, resolvedBy: 'mismo-dias-despues' as const };
     }
