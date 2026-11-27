@@ -16,6 +16,7 @@ import { OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { RoundedBoxGeometry } from 'three-stdlib';
 import { Stage } from '../../render/Stage';
+import { useMergedGeometry } from '../../render/merged';
 import { GlassMaterial } from '../../render/Glass';
 import { LabelProjector, type Anchor } from '../../render/labels';
 import { requestFrames, useContinuousRender } from '../../render/demand';
@@ -335,8 +336,14 @@ function Plates({ plates, hit }: { plates: number; hit: boolean }) {
   );
 }
 
+const COLLIMATORS = [-2.55, -2.05, -1.55];
 function ElectronGun({ accel }: { accel: number }) {
   const heat = 0.6 + Math.min(0.4, accel / 12000);
+  // ATOM 5.2 · Piezas estáticas fusionadas por material (antes, 16 mallas y 16 llamadas de dibujo).
+  const pins = useMergedGeometry(() => [0, 1, 2, 3, 4].map((k) => ({ geo: new THREE.CylinderGeometry(0.018, 0.018, 0.14, 8), position: [-3.78, Math.cos((k / 5) * Math.PI * 2) * 0.18, Math.sin((k / 5) * Math.PI * 2) * 0.18] as [number, number, number], rotation: [0, 0, Math.PI / 2] as [number, number, number] })));
+  const discs = useMergedGeometry(() => COLLIMATORS.map((x, i) => ({ geo: new THREE.RingGeometry(0.035, i === 0 ? 0.3 : 0.34, 48), position: [x, 0, 0] as [number, number, number], rotation: [0, Math.PI / 2, 0] as [number, number, number] })));
+  const bands = useMergedGeometry(() => COLLIMATORS.map((x, i) => ({ geo: new THREE.CylinderGeometry(i === 0 ? 0.3 : 0.34, i === 0 ? 0.3 : 0.34, 0.03, 48, 1, true), position: [x, 0, 0] as [number, number, number], rotation: [0, 0, Math.PI / 2] as [number, number, number] })));
+  const rods = useMergedGeometry(() => [1, -1].map((sg) => ({ geo: new THREE.CylinderGeometry(0.01, 0.01, 1.5, 6), position: [-2.3, sg * 0.28, 0] as [number, number, number], rotation: [0, 0, Math.PI / 2] as [number, number, number] })));
   return (
     <group>
       {/* Casquillo de baquelita con patillas */}
@@ -344,12 +351,9 @@ function ElectronGun({ accel }: { accel: number }) {
         <cylinderGeometry args={[0.34, 0.36, 0.22, 40]} />
         <meshStandardMaterial color="#17130f" roughness={0.55} />
       </mesh>
-      {[0, 1, 2, 3, 4].map((k) => (
-        <mesh key={k} position={[-3.78, Math.cos((k / 5) * Math.PI * 2) * 0.18, Math.sin((k / 5) * Math.PI * 2) * 0.18]} rotation-z={Math.PI / 2}>
-          <cylinderGeometry args={[0.018, 0.018, 0.14, 8]} />
-          <meshStandardMaterial color="#d9c49a" metalness={1} roughness={0.25} />
-        </mesh>
-      ))}
+      <mesh geometry={pins}>
+        <meshStandardMaterial color="#d9c49a" metalness={1} roughness={0.25} />
+      </mesh>
       {/* Cátodo caliente */}
       <mesh position={[CATHODE_X, 0, 0]} rotation-z={Math.PI / 2}>
         <cylinderGeometry args={[0.07, 0.07, 0.24, 24]} />
@@ -360,25 +364,16 @@ function ElectronGun({ accel }: { accel: number }) {
         <meshBasicMaterial color={new THREE.Color('#ff8f3a').multiplyScalar(1.6 * heat)} toneMapped={false} />
       </mesh>
       {/* Ánodo y colimadores (rendijas que dejan pasar un haz fino) */}
-      {[-2.55, -2.05, -1.55].map((x, i) => (
-        <group key={x} position={[x, 0, 0]} rotation-y={Math.PI / 2}>
-          <mesh>
-            <ringGeometry args={[0.035, i === 0 ? 0.3 : 0.34, 48]} />
-            <meshPhysicalMaterial color="#a39a8d" metalness={1} roughness={0.28} side={THREE.DoubleSide} />
-          </mesh>
-          <mesh rotation-x={Math.PI / 2}>
-            <cylinderGeometry args={[i === 0 ? 0.3 : 0.34, i === 0 ? 0.3 : 0.34, 0.03, 48, 1, true]} />
-            <meshPhysicalMaterial color="#8d857a" metalness={1} roughness={0.3} side={THREE.DoubleSide} />
-          </mesh>
-        </group>
-      ))}
+      <mesh geometry={discs}>
+        <meshPhysicalMaterial color="#a39a8d" metalness={1} roughness={0.28} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh geometry={bands}>
+        <meshPhysicalMaterial color="#8d857a" metalness={1} roughness={0.3} side={THREE.DoubleSide} />
+      </mesh>
       {/* Varillas de soporte del cañón */}
-      {[1, -1].map((s) => (
-        <mesh key={s} position={[-2.3, s * 0.28, 0]} rotation-z={Math.PI / 2}>
-          <cylinderGeometry args={[0.01, 0.01, 1.5, 6]} />
-          <meshStandardMaterial color="#c9b993" metalness={0.9} roughness={0.35} />
-        </mesh>
-      ))}
+      <mesh geometry={rods}>
+        <meshStandardMaterial color="#c9b993" metalness={0.9} roughness={0.35} />
+      </mesh>
     </group>
   );
 }
@@ -407,7 +402,17 @@ function Screen({ spotY, glow, halo }: { spotY: number | null; glow: THREE.Color
   );
 }
 
+const TRIM: [number, number, number, number][] = [[0, 1.6, 9.62, 0.03], [0, -1.6, 9.62, 0.03], [4.8, 0, 0.03, 3.22], [-4.8, 0, 0.03, 3.22]];
+const CRADLES: [number, number][] = [[-2.6, 0.43], [2.3, 0.97]];
 function Bench() {
+  const trim = useMergedGeometry(() => TRIM.map(([x, z, w, d]) => ({ geo: new THREE.BoxGeometry(w, 0.012, d), position: [x, 0.062, z] as [number, number, number] })));
+  // Medio anillo: el toro de arco π (plano xy), girado π en z (cuna inferior) y π/2 en y (eje del tubo).
+  const cradles = useMergedGeometry(() =>
+    CRADLES.flatMap(([x, r]) => [
+      { geo: new THREE.BoxGeometry(0.1, 1.6 - r, 0.14), position: [x, (1.6 - r) / 2 + 0.06, 0] as [number, number, number] },
+      { geo: new THREE.TorusGeometry(r + 0.03, 0.025, 8, 40, Math.PI).rotateZ(Math.PI).rotateY(Math.PI / 2), position: [x, 1.66, 0] as [number, number, number] },
+    ]),
+  );
   return (
     <group position={[0.3, -1.66, 0]}>
       <mesh receiveShadow>
@@ -415,27 +420,13 @@ function Bench() {
         <meshStandardMaterial color="#120c08" roughness={0.62} metalness={0.1} envMapIntensity={0.25} />
       </mesh>
       {/* Filete de latón solo en el perímetro del banco */}
-      {([[0, 1.6, 9.62, 0.03], [0, -1.6, 9.62, 0.03], [4.8, 0, 0.03, 3.22], [-4.8, 0, 0.03, 3.22]] as const).map(([x, z, w, d]) => (
-        <mesh key={`${x}-${z}`} position={[x, 0.062, z]}>
-          <boxGeometry args={[w, 0.012, d]} />
-          <meshStandardMaterial color="#b38a4a" metalness={1} roughness={0.35} />
-        </mesh>
-      ))}
+      <mesh geometry={trim}>
+        <meshStandardMaterial color="#b38a4a" metalness={1} roughness={0.35} />
+      </mesh>
       {/* Cunas que sujetan el tubo: poste desde el banco y medio anillo bajo el vidrio */}
-      {([[-2.6, 0.43], [2.3, 0.97]] as const).map(([x, r]) => (
-        <group key={x} position={[x, 0, 0]}>
-          <mesh position={[0, (1.6 - r) / 2 + 0.06, 0]}>
-            <boxGeometry args={[0.1, 1.6 - r, 0.14]} />
-            <meshStandardMaterial color="#2c2e33" metalness={0.7} roughness={0.35} />
-          </mesh>
-          <group position={[0, 1.66, 0]} rotation-y={Math.PI / 2}>
-            <mesh rotation-z={Math.PI}>
-              <torusGeometry args={[r + 0.03, 0.025, 8, 40, Math.PI]} />
-              <meshStandardMaterial color="#2c2e33" metalness={0.7} roughness={0.35} />
-            </mesh>
-          </group>
-        </group>
-      ))}
+      <mesh geometry={cradles}>
+        <meshStandardMaterial color="#2c2e33" metalness={0.7} roughness={0.35} />
+      </mesh>
     </group>
   );
 }

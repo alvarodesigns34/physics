@@ -306,7 +306,7 @@ export const PROGRESSION: Record<string, Progression> = {
     intuition: 'Los números cuánticos son la «dirección postal» de un electrón: nivel, subnivel, orientación y espín.',
     connections: [
       { to: '5.5', why: 'Contar combinaciones da la capacidad de cada nivel.' },
-      { to: '6.2', why: 'Pauli: no hay dos electrones con la misma dirección completa.' },
+      { to: '6.2', why: 'Pauli: no hay dos electrones con los mismos cuatro números cuánticos.' },
     ],
   },
   '5.5': {

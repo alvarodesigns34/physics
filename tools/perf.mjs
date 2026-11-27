@@ -120,7 +120,7 @@ try {
     }
     await page.evaluate(() => (location.hash = '#/forja'));
     await page.waitForTimeout(1500);
-    const s = { ciclo: c + 1, heapMB: await gcHeap(page), gpu: await gpu(page), canvases: await page.evaluate(() => document.querySelectorAll('canvas').length) };
+    const s = { ciclo: c + 1, heapMB: await gcHeap(page), gpu: await gpu(page), canvases: await page.evaluate(() => document.querySelectorAll('canvas').length), domNodes: await page.evaluate(() => document.getElementsByTagName('*').length) };
     stability.push(s);
     console.log('estabilidad', JSON.stringify(s));
   }
