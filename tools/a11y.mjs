@@ -54,7 +54,7 @@ try {
             .filter((a) => Number.isFinite(a.effect?.getComputedTiming().endTime ?? Infinity))
             .map((a) => a.finished.catch(() => {})),
         ),
-        new Promise((r) => setTimeout(r, 4000)),
+        new Promise((r) => setTimeout(r, 12000)),
       ]),
     );
     await page.addScriptTag({ content: axeSource });
