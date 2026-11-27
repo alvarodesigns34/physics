@@ -14,6 +14,16 @@ const surfaces = createComputeClient<SurfaceRequest, SurfaceResult>({
   maxBytes: 48 * 1024 * 1024,
 });
 
+/** Segundo cliente (con su propio Worker) para el orbital de comparación: así las dos superficies no se descartan entre sí. */
+const surfacesB = createComputeClient<SurfaceRequest, SurfaceResult>({
+  makeWorker: () => new Worker(new URL('../../workers/orbitalSurface.worker.ts', import.meta.url), { type: 'module' }),
+  compute: computeOrbitalSurfaces,
+  key: surfaceKey,
+  bytes: (r) => r.meshes.reduce((a, m) => a + m.positions.byteLength + m.normals.byteLength, 0),
+  transfer: (r) => r.meshes.flatMap((m) => [m.positions.buffer, m.normals.buffer]),
+  maxBytes: 24 * 1024 * 1024,
+});
+
 const clouds = createComputeClient<CloudRequest, CloudResult>({
   makeWorker: () => new Worker(new URL('../../workers/orbitalCloud.worker.ts', import.meta.url), { type: 'module' }),
   compute: computeCloud,
@@ -25,6 +35,8 @@ const clouds = createComputeClient<CloudRequest, CloudResult>({
 
 export const requestSurface = surfaces.request;
 export const cachedSurface = surfaces.cached;
+export const requestSurfaceB = surfacesB.request;
+export const cachedSurfaceB = surfacesB.cached;
 export const requestCloud = clouds.request;
 export const cachedCloud = clouds.cached;
 export const cancelCloud = clouds.cancel;

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
-import { cachedSurface, requestSurface, cachedCloud, requestCloud, cancelCloud } from './surfaceClient';
+import { cachedSurface as cachedSurfaceA, requestSurface as requestSurfaceA, cachedSurfaceB, requestSurfaceB, cachedCloud, requestCloud, cancelCloud } from './surfaceClient';
 import type { SurfaceResult } from '../../science/orbitalSurfaces';
 import * as THREE from 'three';
 import { create } from 'zustand';
@@ -34,13 +34,15 @@ interface QState {
   fraction: number;
   tab: Tab;
   sigmaNm: number;
+  /** Orbital de comparación (se dibuja a la derecha con la MISMA escala) */
+  compare: { n: number; l: number; m: number } | null;
   set: (p: Partial<Omit<QState, 'set'>>) => void;
 }
 
 /** Estado del cálculo de la superficie (para informar en la interfaz). */
 export const useSurfaceInfo = create<{ enclosed: number; res: number; computing: boolean; set: (i: { enclosed: number; res: number; computing: boolean }) => void }>((set) => ({ enclosed: NaN, res: 0, computing: false, set: (i) => set(i) }));
 
-export const useQuantum = create<QState>((set) => ({ n: 2, l: 1, m: 0, slice: false, bohr: false, subshell: false, view: 'superficie', fraction: 0.9, tab: 'orbitales', sigmaNm: 0.1, set: (p) => set(p) }));
+export const useQuantum = create<QState>((set) => ({ n: 2, l: 1, m: 0, slice: false, bohr: false, subshell: false, view: 'superficie', fraction: 0.9, tab: 'orbitales', sigmaNm: 0.1, compare: null, set: (p) => set(p) }));
 
 const fmt = (v: number, sig = 3) => formatNumber(v, { sig });
 
@@ -189,7 +191,9 @@ const PREVIEW_RES = 32;
  * Superficie calculada en un Web Worker. Primero aparece una vista previa rápida (32³) y, cuando los
  * controles dejan de cambiar durante 220 ms, la versión refinada. Las peticiones obsoletas se descartan.
  */
-function OrbitalSurface({ n, l, m, subshell, scale, slice, res, p, onInfo }: { n: number; l: number; m: number; subshell: boolean; scale: number; slice: boolean; res: number; p: number; onInfo?: (i: { enclosed: number; res: number; computing: boolean }) => void }) {
+function OrbitalSurface({ n, l, m, subshell, scale, slice, res, p, onInfo, slot = 'a' }: { n: number; l: number; m: number; subshell: boolean; scale: number; slice: boolean; res: number; p: number; onInfo?: (i: { enclosed: number; res: number; computing: boolean }) => void; slot?: 'a' | 'b' }) {
+  const requestSurface = slot === 'a' ? requestSurfaceA : requestSurfaceB;
+  const cachedSurface = slot === 'a' ? cachedSurfaceA : cachedSurfaceB;
   const gl = useThree((s) => s.gl);
   useEffect(() => {
     gl.localClippingEnabled = true;
@@ -304,10 +308,26 @@ const AXIS_ANCHORS = [
 ];
 
 export function QuantumScene() {
-  const { n, l, m, slice, bohr, subshell, view, fraction } = useQuantum();
+  const { n, l, m, slice, bohr, subshell, view, fraction, compare } = useQuantum();
   const setInfo = useSurfaceInfo((st) => st.set);
   const q = useQuality();
   const reduced = useReducedMotion();
+  const res = q.tier === 'alta' ? 72 : q.tier === 'media' ? 56 : 40;
+  if (compare) {
+    // Comparación: la MISMA escala para los dos (la del mayor), para que los tamaños relativos sean reales.
+    const common = 2.0 / Math.max(radius90(n, l), radius90(compare.n, compare.l));
+    return (
+      <Stage camera={slice ? [0, 11, 0.01] : [0, 3.2, 10.5]} fov={40} key={slice ? 'corte-c' : 'libre-c'}>
+        <group position={[-2.35, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <OrbitalSurface n={n} l={l} m={m} subshell={false} scale={common} slice={slice} res={Math.min(res, 56)} p={fraction} onInfo={setInfo} />
+        </group>
+        <group position={[2.35, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <OrbitalSurface n={compare.n} l={compare.l} m={compare.m} subshell={false} scale={common} slice={slice} res={Math.min(res, 56)} p={fraction} slot="b" />
+        </group>
+        <OrbitControls enablePan={false} enableDamping minDistance={5} maxDistance={20} />
+      </Stage>
+    );
+  }
   // Escala a partir del radio que encierra el 90 % de la probabilidad radial (analítico, sin muestrear).
   const scale = 3.2 / radius90(n, l);
   // Las coordenadas químicas (z hacia arriba) se dibujan con el eje y de la escena hacia arriba.
@@ -317,7 +337,7 @@ export function QuantumScene() {
         {view === 'nube' ? (
           <CloudView n={n} l={l} m={m} subshell={subshell} count={Math.min(60000, Math.round(q.points * 2.2))} scale={scale} slice={slice} reduced={reduced} size={q.tier === 'baja' ? 60 : 42} />
         ) : (
-          <OrbitalSurface n={n} l={l} m={m} subshell={subshell} scale={scale} slice={slice} res={q.tier === 'alta' ? 72 : q.tier === 'media' ? 56 : 40} p={fraction} onInfo={setInfo} />
+          <OrbitalSurface n={n} l={l} m={m} subshell={subshell} scale={scale} slice={slice} res={res} p={fraction} onInfo={setInfo} />
         )}
         {bohr && (
           <mesh>
@@ -339,10 +359,83 @@ export function QuantumScene() {
 
 // ── Interfaz ─────────────────────────────────────────────────────────────
 
-function RadialPlot({ n, l, scaleBohr }: { n: number; l: number; scaleBohr: boolean }) {
+const COMPARE_PRESETS: { label: string; a: [number, number, number]; b: [number, number, number]; why: string }[] = [
+  { label: '1s ↔ 2s', a: [1, 0, 0], b: [2, 0, 0], why: 'Mismo l, distinto n: el 2s es mayor y tiene un nodo radial.' },
+  { label: '2p ↔ 3p', a: [2, 1, 0], b: [3, 1, 0], why: 'Misma forma (l = 1); al subir n crece el tamaño y aparece un nodo radial más.' },
+  { label: '2s ↔ 2p', a: [2, 0, 0], b: [2, 1, 0], why: 'Mismo n, distinto l: cambia la forma y el número de nodos angulares.' },
+  { label: '3d_z² ↔ 3d_xy', a: [3, 2, 0], b: [3, 2, -2], why: 'Mismo subnivel, distinta orientación (m): misma energía en el átomo de hidrógeno.' },
+];
+
+/** Comparar dos orbitales con la misma escala (tamaños relativos reales) y sus P(r) superpuestas. */
+function CompareSection() {
+  const st = useQuantum();
+  const c = st.compare;
+  const set = (a: [number, number, number], b: [number, number, number]) => st.set({ n: a[0], l: a[1], m: a[2], subshell: false, view: 'superficie', compare: { n: b[0], l: b[1], m: b[2] } });
+  return (
+    <section className="section">
+      <div className="row row--between">
+        <span className="eyebrow">Comparar orbitales</span>
+        {c && (
+          <button type="button" className="btn btn--ghost btn--sm" onClick={() => st.set({ compare: null })}>
+            Quitar
+          </button>
+        )}
+      </div>
+      <div className="row row--wrap" style={{ gap: 6 }}>
+        {COMPARE_PRESETS.map((p) => (
+          <button key={p.label} type="button" className="btn btn--sm mono" aria-pressed={!!c && st.n === p.a[0] && st.l === p.a[1] && st.m === p.a[2] && c.n === p.b[0] && c.l === p.b[1] && c.m === p.b[2]} onClick={() => set(p.a, p.b)}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+      {c ? (
+        <>
+          <p className="small muted" style={{ margin: 0 }}>
+            Izquierda: <b>{orbitalName(st.n, st.l, st.m).replace('_', '')}</b> · derecha: <b>{orbitalName(c.n, c.l, c.m).replace('_', '')}</b>. Misma escala: los tamaños relativos son reales.
+            {' '}
+            {COMPARE_PRESETS.find((p) => st.n === p.a[0] && st.l === p.a[1] && st.m === p.a[2] && c.n === p.b[0] && c.l === p.b[1] && c.m === p.b[2])?.why ?? ''}
+          </p>
+          <div className="row row--wrap" style={{ gap: 6 }}>
+            <span className="small faint">Derecha: n</span>
+            {[1, 2, 3, 4, 5].map((v) => (
+              <button key={v} type="button" className="btn btn--sm mono" aria-pressed={c.n === v} onClick={() => st.set({ compare: { n: v, l: Math.min(c.l, v - 1), m: Math.max(-Math.min(c.l, v - 1), Math.min(c.m, Math.min(c.l, v - 1))) } })}>
+                {v}
+              </button>
+            ))}
+            <span className="small faint">l</span>
+            {Array.from({ length: c.n }, (_, v) => v).map((v) => (
+              <button key={v} type="button" className="btn btn--sm mono" aria-pressed={c.l === v} onClick={() => st.set({ compare: { ...c, l: v, m: Math.max(-v, Math.min(c.m, v)) } })}>
+                {lLetter(v)}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="small faint" style={{ margin: 0 }}>
+          Elige una pareja para ver los dos orbitales a la vez, con la misma escala y sus distribuciones radiales superpuestas.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function RadialPlot({ n, l, scaleBohr, other }: { n: number; l: number; scaleBohr: boolean; other?: { n: number; l: number } | null }) {
   const W = 340;
   const H = 120;
-  const rmax = radialCutoff(n, 1) * 0.75;
+  const rmax = Math.max(radialCutoff(n, 1), other ? radialCutoff(other.n, 1) : 0) * 0.75;
+  // Curva del orbital de comparación (misma escala de r; cada curva normalizada a su máximo).
+  let dOther = '';
+  if (other) {
+    const po: [number, number][] = [];
+    let mo = 0;
+    for (let i = 0; i <= 240; i++) {
+      const r = (rmax * i) / 240;
+      const p = radialProbability(other.n, other.l, 1, r);
+      mo = Math.max(mo, p);
+      po.push([r, p]);
+    }
+    dOther = 'M' + po.map(([r, p]) => `${((r / rmax) * W).toFixed(1)},${(H - (p / mo) * (H - 10)).toFixed(1)}`).join(' L');
+  }
   const pts: [number, number][] = [];
   let max = 0;
   for (let i = 0; i <= 240; i++) {
@@ -359,7 +452,8 @@ function RadialPlot({ n, l, scaleBohr }: { n: number; l: number; scaleBohr: bool
   return (
     <figure style={{ margin: 0 }}>
       <svg viewBox={`0 0 ${W} ${H + 18}`} style={{ width: '100%', display: 'block' }} role="img" aria-label={`Distribución radial P(r) del orbital ${n}${lLetter(l)}: radio más probable ${fmt(mp, 3)} a₀, radio medio ${fmt(mean, 3)} a₀`}>
-        <path d={d} fill="rgb(242 169 59 / 0.18)" stroke="var(--accent)" strokeWidth="1.5" />
+        <path d={d} fill="color-mix(in srgb, var(--b4) 16%, transparent)" stroke="var(--b4)" strokeWidth="1.5" />
+        {other && <path d={dOther} fill="none" stroke="var(--b5)" strokeWidth="1.8" strokeDasharray="5 3" />}
         <line x1={x(mp)} x2={x(mp)} y1={0} y2={H} stroke="var(--ink)" strokeDasharray="3 3" strokeWidth="1" />
         <line x1={x(mean)} x2={x(mean)} y1={0} y2={H} stroke="var(--electron)" strokeDasharray="2 4" strokeWidth="1" />
         {scaleBohr && n * n < rmax && <line x1={x(n * n)} x2={x(n * n)} y1={0} y2={H} stroke="var(--proton)" strokeWidth="1.5" />}
@@ -371,6 +465,13 @@ function RadialPlot({ n, l, scaleBohr }: { n: number; l: number; scaleBohr: bool
         ))}
       </svg>
       <figcaption className="row row--wrap small" style={{ gap: 12, marginTop: 6 }}>
+        {other && (
+          <span className="muted">
+            <span style={{ color: 'var(--b4)' }}>━</span> {n}
+            {lLetter(l)} · <span style={{ color: 'var(--b5)' }}>╍</span> {other.n}
+            {lLetter(other.l)} (cada curva escalada a su máximo)
+          </span>
+        )}
         <span className="muted">
           <span style={{ color: 'var(--ink)' }}>┆</span> más probable {fmt(mp, 3)} a₀
         </span>
@@ -534,7 +635,7 @@ export function QuantumOverlay() {
   return (
     <div className="workspace">
       <LabelLayer>
-        {(['x', 'y', 'z'] as const).map((a) => (
+        {!st.compare && (['x', 'y', 'z'] as const).map((a) => (
           <AnchoredLabel key={a} id={`ax-${a}`}>
             <span className="scene-label">{a}</span>
           </AnchoredLabel>
@@ -544,6 +645,7 @@ export function QuantumOverlay() {
         <div className="desktop-only" style={{ position: 'absolute', left: 'var(--gutter)', top: 8 }}>
           <span style={{ fontFamily: 'var(--font-display)', fontSize: '3.5rem', lineHeight: 1 }}>
             {st.subshell ? `${n}${lLetter(l)}` : orbitalName(n, l, m).replace('_', '')}
+            {st.compare && <span style={{ color: 'var(--ink-faint)' }}> ↔ {orbitalName(st.compare.n, st.compare.l, st.compare.m).replace('_', '')}</span>}
           </span>
           <p className="small muted" style={{ marginTop: 6 }}>
             n = {n} · l = {l} · {st.subshell ? `m = −${l}…+${l}` : `m = ${m}`} · E = {fmt(levelEnergyEV(n), 3)} eV
@@ -605,6 +707,7 @@ export function QuantumOverlay() {
                   </button>
                 </div>
               </section>
+              <CompareSection />
               <section className="section">
                 <dl className="kv" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
                   <div>
@@ -621,7 +724,7 @@ export function QuantumOverlay() {
                   </div>
                 </dl>
                 <span className="small muted">Distribución radial de probabilidad P(r) = r²·R²(r)</span>
-                <RadialPlot n={n} l={l} scaleBohr={st.bohr} />
+                <RadialPlot n={n} l={l} scaleBohr={st.bohr} other={st.compare} />
                 {n === 1 && st.bohr && <Feedback tone="info">En el 1s el radio más probable coincide con el radio de Bohr (a₀ = 52,9 pm), pero el electrón no está «en» la órbita: puede encontrarse más cerca o más lejos.</Feedback>}
                 {st.subshell && <Feedback tone="info">Cada color es un orbital del subnivel {n}{lLetter(l)}. Juntos forman una distribución con simetría esférica (teorema de Unsöld): por eso un subnivel lleno no tiene dirección preferente.</Feedback>}
                 {st.slice && <Feedback tone="info">{st.view === 'nube' ? 'Corte por el plano xy: las zonas vacías son nodos, superficies donde ψ = 0 y la probabilidad es nula. Al cruzar un nodo, ψ cambia de signo (de color).' : 'Corte por el plano xy: se ve el interior de las superficies. Los nodos radiales aparecen como capas concéntricas separadas por huecos.'}</Feedback>}
