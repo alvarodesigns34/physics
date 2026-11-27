@@ -143,3 +143,8 @@ Medido con la misma herramienta (`tools/perf.mjs`) y el mismo renderizador por s
 - **Memoria.** Sube en Forja, Quantum e Historia. Es una lectura puntual del heap, que depende del momento de la recolección de basura, así que no concluyo que haya una fuga. Los recursos de GPU sí se midieron de forma determinista (§1.5) y permanecen estables tras interacciones repetidas.
 - **Interacción en Quantum.** Tarea larga máxima en torno a 1 s, como en 3.0: es la rasterización síncrona de SwiftShader, no código propio.
 - **Sin medir en GPU real ni en iPad.** El entorno no dispone de ellos.
+
+## 10. Mantenibilidad y modularidad
+- **Estilos.** `global.css` (4 550 líneas) pasa a 12 módulos por área en `src/styles/global/`: base, estructura, componentes, guía, widgets, páginas, profundidad, visor, páginas claras, navegación, pedagogía y ATOM 4.0. Se importan en el orden original, y el CSS compilado es idéntico byte a byte (mismo MD5). Las capturas de referencia muestran un 0 % de píxeles distintos.
+- **Entrenamiento.** `Training.tsx` (786 líneas) pasa a 283 líneas y se separan `Scope.tsx` (selector de bloques compartido), `ExamView.tsx`, `Progress.tsx`, `Review.tsx` y `Sources.tsx`. Los imports no usados se eliminaron con ayuda del compilador.
+- **Verificación.** Compilación estricta, 955 pruebas unitarias, e2e, accesibilidad (axe) y diferencia visual, todo sin cambios.
