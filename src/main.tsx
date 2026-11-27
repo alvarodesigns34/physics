@@ -11,3 +11,12 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+
+// Funcionamiento sin conexión (solo en producción: en desarrollo la caché estorbaría a la recarga en caliente).
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {
+      /* sin service worker la aplicación funciona igual, solo que no sin conexión */
+    });
+  });
+}

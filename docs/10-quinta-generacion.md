@@ -165,3 +165,14 @@ Seguí el método de criterio de diseño: primero fijar el sujeto y el gesto, de
 - **Antipatrón eliminado.** La cuadrícula de ocho tarjetas idénticas, típica de un panel genérico, pasa a ser un índice editorial en dos columnas, con filas separadas por líneas finas: glifo, nombre, descripción y temas en monoespaciada, y al pasar el cursor el glifo crece y aparece una flecha del color del laboratorio.
 - **Título.** Equilibrado con `text-wrap: balance`.
 - **Revisión.** Comprobado en escritorio (1440), iPad vertical (834) e iPad horizontal (1194). Las referencias visuales del inicio se han actualizado a propósito. Axe sigue sin encontrar infracciones.
+
+## 7. Sin conexión e instalación en el iPad
+- **`public/sw.js`.** Service worker sin dependencias:
+  - el documento se pide primero a la red y, si no hay conexión, se sirve la copia guardada;
+  - los recursos con huella en el nombre se sirven desde la caché;
+  - solo actúa sobre peticiones GET del mismo origen y no envía nada a terceros;
+  - al cambiar la versión se descartan las cachés anteriores;
+  - solo se registra en producción.
+- **Instalación.** `manifest.webmanifest`, iconos (192, 512, enmascarable y `apple-touch-icon`) y las metaetiquetas de Apple permiten añadir ATOM a la pantalla de inicio del iPad y abrirlo a pantalla completa.
+- **Prueba en CI.** `tools/resilience.mjs` visita varias vistas con red, la corta y comprueba que el inicio, la guía, el entrenamiento y un laboratorio cargan sin errores.
+- **Límite.** Lo que nunca se ha visitado con conexión no está guardado; por ejemplo, un laboratorio que no se haya abierto antes no funcionará sin red. Probado en Chromium; Safari/iPadOS sin probar.

@@ -34,6 +34,31 @@ for (const [name, ls] of Object.entries(cases)) {
   console.log(errs.length ? '✗' : '✓', name, errs.length ? errs.join(' | ').slice(0, 300) : '');
   await ctx.close();
 }
+// Sin conexión: tras una visita con red, las vistas visitadas deben cargar con la red cortada (service worker).
+{
+  const ctx = await browser.newContext();
+  await ctx.addInitScript(() => localStorage.setItem('atom:v1', JSON.stringify({ state: { settings: { seenIntro: true } }, version: 2 })));
+  const page = await ctx.newPage();
+  const errs = [];
+  page.on('pageerror', (e) => errs.push(e.message));
+  await page.goto(`http://localhost:${PORT}/`);
+  await page.waitForFunction(() => navigator.serviceWorker.ready.then(() => true), null, { timeout: 15000 });
+  await page.reload();
+  for (const r of ['#/guia?b=3', '#/entrenamiento', '#/fotones?tab=hidrogeno']) {
+    await page.goto(`http://localhost:${PORT}/${r}`);
+    await page.waitForTimeout(2000);
+  }
+  await ctx.setOffline(true);
+  for (const r of ['#/', '#/guia?b=3', '#/entrenamiento', '#/fotones?tab=hidrogeno']) {
+    await page.goto(`http://localhost:${PORT}/${r}`).catch((e) => errs.push(`${r}: ${e.message.slice(0, 80)}`));
+    await page.waitForTimeout(1500);
+    const t = await page.locator('body').innerText().catch(() => '');
+    if (!t.includes('ATOM')) errs.push(`${r}: vacía sin conexión`);
+  }
+  if (errs.length) failed++;
+  console.log(errs.length ? '✗' : '✓', 'sin conexión: inicio, guía, entrenamiento y laboratorio', errs.join(' | ').slice(0, 300));
+  await ctx.close();
+}
 await browser.close();
 server.kill();
 if (failed) {

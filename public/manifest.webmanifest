@@ -1,0 +1,16 @@
+{
+  "name": "ATOM · Estructura atómica",
+  "short_name": "ATOM",
+  "description": "Laboratorio interactivo de estructura atómica y sistema periódico para 1.º de Bachillerato.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f4f1",
+  "theme_color": "#f5f4f1",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
