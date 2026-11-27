@@ -178,11 +178,19 @@ function CloudView({ n, l, m, subshell, count, ...rest }: { n: number; l: number
 
 /** Materiales compartidos: uno por color, creados una sola vez (no se reconstruyen al cambiar de orbital). */
 const SURFACE_MATERIALS = new Map<string, THREE.MeshPhysicalMaterial>();
-function surfaceMaterial(color: string) {
-  let m = SURFACE_MATERIALS.get(color);
+/**
+ * ATOM 5.1: el barniz y el brillo aterciopelado (sheen) evalúan BRDF adicionales en cada píxel de una
+ * superficie que ocupa media pantalla; eran la causa principal de la latencia al cambiar de orbital
+ * (regresión de 5.0). Solo se usan en calidad alta.
+ */
+function surfaceMaterial(color: string, rich: boolean) {
+  const key = `${color}|${rich ? 1 : 0}`;
+  let m = SURFACE_MATERIALS.get(key);
   if (!m) {
-    m = new THREE.MeshPhysicalMaterial({ color, emissive: color, emissiveIntensity: 0.32, roughness: 0.26, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.18, envMapIntensity: 1.3, sheen: 0.4, sheenColor: new THREE.Color(color), side: THREE.DoubleSide });
-    SURFACE_MATERIALS.set(color, m);
+    m = rich
+      ? new THREE.MeshPhysicalMaterial({ color, emissive: color, emissiveIntensity: 0.32, roughness: 0.26, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.18, envMapIntensity: 1.3, sheen: 0.4, sheenColor: new THREE.Color(color), side: THREE.DoubleSide })
+      : new THREE.MeshPhysicalMaterial({ color, emissive: color, emissiveIntensity: 0.34, roughness: 0.3, metalness: 0, envMapIntensity: 1.4, side: THREE.DoubleSide });
+    SURFACE_MATERIALS.set(key, m);
   }
   return m;
 }
@@ -248,8 +256,17 @@ function OrbitalSurface({ n, l, m, subshell, scale, slice, res, p, onInfo, slot 
       mat.clippingPlanes = slice ? clip : [];
       mat.needsUpdate = true;
     }
-  }, [slice, clip, meshes]);
+  }, [slice, clip]);
   const reduced = useReducedMotion();
+  const rich = useQuality().tier === 'alta';
+  useEffect(() => {
+    for (const mat of SURFACE_MATERIALS.values()) {
+      if (mat.clippingPlanes?.length !== (slice ? 1 : 0)) {
+        mat.clippingPlanes = slice ? clip : [];
+        mat.needsUpdate = true;
+      }
+    }
+  }, [meshes, slice, clip, rich]);
   useFrame((_, dt) => {
     if (!group.current) return;
     group.current.scale.setScalar(scale * 0.74);
@@ -259,7 +276,7 @@ function OrbitalSurface({ n, l, m, subshell, scale, slice, res, p, onInfo, slot 
   return (
     <group ref={group}>
       {meshes.map(({ g, color, key }) => (
-        <mesh key={key} geometry={g} material={surfaceMaterial(color)} />
+        <mesh key={key} geometry={g} material={surfaceMaterial(color, rich)} />
       ))}
     </group>
   );

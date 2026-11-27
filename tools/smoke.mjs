@@ -52,8 +52,8 @@ try {
   await page.keyboard.press('Escape');
   await page.screenshot({ path: `${OUT}/01-inicio.png` });
   await page.goto(base + '#/campana');
-  await page.waitForFunction(() => document.querySelectorAll('.station-label').length >= 9, null, { timeout: T });
-  check((await page.locator('.station-label').count()) === 9, 'Campaña: atrio con nueve estaciones etiquetadas');
+  await page.waitForFunction(() => document.querySelectorAll('.map-chapter').length >= 7, null, { timeout: T });
+  check((await page.locator('.map-chapter').count()) === 7, 'Campaña: mapa con los siete capítulos rotulados');
   await page.click('button:has-text("Empezar")');
   await page.waitForURL(/#\/forja/, { timeout: T });
   check(page.url().includes('#/forja'), 'La misión I-1 abre la Forja');

@@ -321,7 +321,7 @@ function Plinth() {
     <group>
       <mesh rotation-x={-Math.PI / 2} position={[0, 0.0, 0.3]} receiveShadow>
         <planeGeometry args={[20.48, 10.24]} />
-        <meshPhysicalMaterial map={tex} roughness={0.35} clearcoat={0.8} clearcoatRoughness={0.2} />
+        <meshStandardMaterial map={tex} roughness={0.45} metalness={0.2} />
       </mesh>
       <mesh position={[0, -0.12, 0.3]}>
         <boxGeometry args={[20.6, 0.22, 10.36]} />
@@ -349,11 +349,14 @@ export function PeriodicScene() {
       <ambientLight intensity={0.35} />
       <directionalLight position={[6, 14, 8]} intensity={2.4} color="#ffe6c8" castShadow />
       <directionalLight position={[-8, 6, -6]} intensity={0.9} color="#a8c4ea" />
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.01} receiveShadow>
-        <planeGeometry args={[60, 40]} />
-        <meshStandardMaterial color="#0c0d10" roughness={0.55} />
-      </mesh>
-      {view !== 'tamanos' && <Plinth />}
+      {view !== 'tamanos' ? (
+        <Plinth />
+      ) : (
+        <mesh rotation-x={-Math.PI / 2} position-y={-0.01} receiveShadow>
+          <planeGeometry args={[60, 40]} />
+          <meshStandardMaterial color="#0c0d10" roughness={0.55} />
+        </mesh>
+      )}
       {view !== 'tamanos' ? (
         <>
           <Blocks />

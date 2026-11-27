@@ -23,3 +23,16 @@
 
 /* ATOM 5.1 · Ejes de la tabla periódica 3D */
 .axis-label { display: block; font-family: var(--font-mono); font-size: 11px; font-variant-numeric: tabular-nums; color: rgb(236 230 220 / 0.55); text-shadow: 0 1px 4px rgb(0 0 0 / 0.8); pointer-events: none; letter-spacing: 0.02em; }
+
+/* ATOM 5.1 · Mapa de campaña */
+.map-chapter { display: inline-flex; align-items: baseline; gap: 8px; padding: 6px 12px 6px 10px; border-radius: 999px; border: 1px solid rgb(236 230 220 / 0.16); background: rgb(14 16 22 / 0.78); color: #ece6dc; cursor: pointer; white-space: nowrap; font-family: var(--font-ui); transition: border-color 120ms, transform 180ms cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(6px); }
+.map-chapter:hover, .map-chapter:focus-visible { border-color: #f2a93b; transform: translateY(-2px); }
+.map-chapter__num { font-family: var(--font-mono); font-size: 11px; color: #f2a93b; letter-spacing: 0.06em; }
+.map-chapter__title { font-weight: 600; font-size: 14px; letter-spacing: -0.005em; }
+.map-chapter__count { font-family: var(--font-mono); font-size: 11px; color: rgb(236 230 220 / 0.6); font-variant-numeric: tabular-nums; }
+.map-mission { display: inline-flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 8px; background: rgb(14 16 22 / 0.9); border: 1px solid rgb(111 168 255 / 0.45); color: #ece6dc; font-size: 13px; white-space: nowrap; pointer-events: none; box-shadow: 0 8px 24px rgb(0 0 0 / 0.35); }
+.map-mission .mono { color: #9cc2ff; font-size: 12px; }
+.map-mission__tag { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #0b0c10; background: #9cc2ff; border-radius: 4px; padding: 1px 5px; }
+.map-title { position: absolute; left: var(--gutter); top: 12px; display: grid; gap: 8px; max-width: 420px; }
+.map-title__h { font-family: var(--font-display); font-weight: 650; font-size: clamp(2rem, 3vw, 2.75rem); line-height: 1; letter-spacing: -0.03em; margin: 0; color: #ece6dc; }
+.app[data-kind="laboratorio"] .map-title .muted { color: rgb(236 230 220 / 0.7); }
