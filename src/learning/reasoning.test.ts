@@ -100,3 +100,21 @@ describe('renderizador de fórmulas', () => {
     expect(() => parseMath('a}')).toThrow();
   });
 });
+
+describe('espectro problema: la identificación es unívoca', async () => {
+  const { buildSpectrumID } = await import('./generators/reasoning');
+  const { VISIBLE_SPECTRA } = await import('../science/data/spectralLines');
+  const syms = VISIBLE_SPECTRA.map((s) => s.symbol);
+  const pairs = syms.flatMap((a, i) => syms.slice(i + 1).map((b) => [a, b]));
+  it.each([...syms.map((s) => [s]), ...pairs])('muestra %s %s', (...sample) => {
+    const ex = buildSpectrumID(sample.filter(Boolean) as string[], 2, 't', mulberry32(1));
+    const fig = ex.figure!;
+    if (fig.kind !== 'espectros') throw new Error('figura');
+    const present = fig.rows[0]!.lines.map((l) => l.nm);
+    for (const ref of fig.rows.slice(1)) {
+      const all = ref.lines.every((l) => present.some((p) => Math.abs(p - l.nm) < 0.6));
+      const inSample = sample.includes(VISIBLE_SPECTRA.find((x) => x.name === ref.label)!.symbol);
+      expect(all, `${ref.label}`).toBe(inSample);
+    }
+  });
+});

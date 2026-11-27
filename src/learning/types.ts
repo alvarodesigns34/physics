@@ -95,7 +95,9 @@ export type ExerciseFigure =
   | { kind: 'onda'; lambdaNm: number; windowNm: number; title: string }
   | { kind: 'puntos'; title: string; xLabel: string; yLabel: string; points: { x: number; y: number; label: string }[]; highlight?: string[] }
   | { kind: 'espectro'; title: string; linesNm: number[]; fromNm: number; toNm: number }
-  | { kind: 'resolucion'; title: string; lines: string[] };
+  | { kind: 'resolucion'; title: string; lines: string[] }
+  /** Varios espectros apilados con la misma escala (muestra problema + referencias) */
+  | { kind: 'espectros'; title: string; fromNm: number; toNm: number; rows: { label: string; lines: { nm: number; i: number }[] }[] };
 
 export interface ExercisePart {
   id: string;

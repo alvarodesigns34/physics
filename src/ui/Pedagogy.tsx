@@ -116,6 +116,39 @@ export function FigureView({ fig }: { fig: ExerciseFigure }) {
       </figure>
     );
   }
+  if (fig.kind === 'espectros') {
+    const W = 560;
+    const rowH = 34;
+    const left = 92;
+    const x = (nm: number) => left + ((nm - fig.fromNm) / (fig.toNm - fig.fromNm)) * (W - left - 12);
+    const H = fig.rows.length * (rowH + 8) + 20;
+    return (
+      <figure className="ex-figure">
+        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${fig.title}. ${fig.rows.map((r) => `${r.label}: ${r.lines.map((l) => Math.round(l.nm)).join(', ')} nm`).join('; ')}`}>
+          {fig.rows.map((r, k) => {
+            const y = k * (rowH + 8);
+            return (
+              <g key={r.label}>
+                <text x={0} y={y + rowH / 2 + 4} className={`fig-label${k === 0 ? ' fig-label--strong' : ''}`}>
+                  {r.label}
+                </text>
+                <rect x={left} y={y} width={W - left - 12} height={rowH} rx="5" fill="#0d1118" />
+                {r.lines.map((l) => (
+                  <line key={l.nm} x1={x(l.nm)} x2={x(l.nm)} y1={y + 3} y2={y + rowH - 3} stroke={wavelengthToCss(l.nm)} strokeWidth="2.2" opacity={Math.max(0.35, Math.min(1, l.i))} />
+                ))}
+              </g>
+            );
+          })}
+          {[400, 450, 500, 550, 600, 650, 700].filter((v) => v >= fig.fromNm && v <= fig.toNm).map((v) => (
+            <text key={v} x={x(v)} y={H - 4} textAnchor="middle" className="fig-label">
+              {v}
+            </text>
+          ))}
+        </svg>
+        <figcaption>{fig.title}</figcaption>
+      </figure>
+    );
+  }
   if (fig.kind === 'puntos') {
     const W = 560;
     const H = 220;

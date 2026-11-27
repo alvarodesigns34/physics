@@ -21,6 +21,7 @@ import { formatConfiguration, groundState, speciesConfiguration, unpairedElectro
 import { commonIon } from '../../science/trends';
 import { ionSymbol } from '../../science/nucleus';
 import { formatNumber } from '../../science/numbers';
+import { VISIBLE_SPECTRA } from '../../science/data/spectralLines';
 import type { Difficulty, EssayCriterion, Exercise, ExerciseGenerator, ExercisePart, ResolutionStep } from '../types';
 import { choicePart, exId, fmt, integerPart, numericPart, pick, rngFor, shuffle } from './util';
 
@@ -728,6 +729,58 @@ export const essayGenerator: ExerciseGenerator = {
   },
 };
 
+
+// Constantes usadas solo para documentar la coherencia con CODATA (N_A exacta desde 2019).
+export const NA_EXACT = CODATA.NA;
+
+// ── 11. Espectro problema: identificar elementos por sus líneas ──────────
+
+
+const strong = (sym: string) => VISIBLE_SPECTRA.find((s) => s.symbol === sym)!.lines.filter((l) => l.intensity >= 0.1).map((l) => ({ nm: l.lambdaNm, i: l.intensity }));
+
+export function buildSpectrumID(sample: string[], difficulty: Difficulty, seedId: string, rng: () => number): Exercise {
+  const refs = shuffle(rng, VISIBLE_SPECTRA.map((s) => s.symbol));
+  const lines = sample.flatMap(strong).sort((a, b) => a.nm - b.nm);
+  const mixture = sample.length > 1;
+  const names = sample.map((s) => VISIBLE_SPECTRA.find((x) => x.symbol === s)!.name);
+  const parts: ExercisePart[] = [
+    choicePart('el', mixture ? '¿Qué elementos contiene la muestra? (marca todos)' : '¿Qué elemento es?', refs.map((s) => O(s, VISIBLE_SPECTRA.find((x) => x.symbol === s)!.name)), sample, `Todas las líneas de la muestra coinciden con las de ${names.join(' y ')}; cada elemento aporta TODAS sus líneas a la vez.`, mixture),
+    choicePart('por', '¿Por qué cada elemento tiene un espectro propio?', [O('niveles', 'Cada elemento tiene sus propios niveles de energía; las líneas son las diferencias entre ellos'), O('color', 'Porque cada elemento tiene un color distinto en estado sólido'), O('temp', 'Porque cada elemento emite a una temperatura distinta'), O('masa', 'Porque la masa del átomo decide la longitud de onda')], ['niveles'], 'Las líneas corresponden a transiciones entre niveles de energía, que dependen de la carga del núcleo y de los electrones: son una «huella dactilar».'),
+  ];
+  return {
+    id: seedId,
+    generatorId: 'espectro-problema',
+    nodeIds: ['3.5', '4.3'],
+    difficulty,
+    level: mixture ? 4 : 3,
+    title: mixture ? 'Analiza la mezcla' : 'Identifica la muestra',
+    statement: mixture ? 'La primera fila de la figura es el espectro de emisión de una lámpara con una MEZCLA de gases. Compáralo con los espectros de referencia (líneas intensas, datos NIST).' : 'La primera fila de la figura es el espectro de emisión de una lámpara de gas desconocido. Compáralo con los espectros de referencia (líneas intensas, datos NIST).',
+    figure: { kind: 'espectros', title: 'Muestra problema (arriba) y espectros de referencia. Escala en nm.', fromNm: 380, toNm: 720, rows: [{ label: 'Muestra', lines }, ...refs.map((s) => ({ label: VISIBLE_SPECTRA.find((x) => x.symbol === s)!.name, lines: strong(s) }))] },
+    parts: [{ ...parts[0]!, nodeIds: ['3.5'], skills: ['razonamiento'] }, { ...parts[1]!, nodeIds: ['4.3'], skills: ['concepto'] }],
+    stepwise: false,
+    hints: ['No busques el color dominante: compara la POSICIÓN de cada línea con las de las referencias.', 'Un elemento está presente solo si aparecen TODAS sus líneas intensas; si falta alguna, descártalo.', mixture ? 'En una mezcla, quita las líneas de un elemento identificado y mira qué queda.' : 'Empieza por las líneas más aisladas.'],
+    solution: [`Muestra: ${names.join(' + ')}.`],
+    resolution: [
+      { kind: 'pregunta', text: 'Identificación por espectro: el método con el que se descubrieron el helio (en el Sol) y otros elementos.' },
+      { kind: 'metodo', text: 'Compara posiciones, no colores ni intensidades: la intensidad depende de las condiciones de la lámpara.' },
+      { kind: 'interpretacion', text: `${names.join(' y ')}: todas sus líneas intensas aparecen en la muestra${mixture ? ', y no sobra ninguna línea.' : '.'}` },
+      { kind: 'errores', text: 'Identificar un elemento por UNA sola línea (He y Na tienen líneas cerca de 588–589 nm). Hay que comprobar todas.' },
+    ],
+  };
+}
+
+export const spectrumIDGenerator: ExerciseGenerator = {
+  id: 'espectro-problema',
+  title: 'Identifica elementos por su espectro',
+  nodeIds: ['3.5', '4.3'],
+  difficulties: [2, 3],
+  create(seed, difficulty) {
+    const rng = rngFor(this.id, seed, difficulty);
+    const syms = shuffle(rng, VISIBLE_SPECTRA.map((s) => s.symbol));
+    return buildSpectrumID(difficulty === 3 ? syms.slice(0, 2) : syms.slice(0, 1), difficulty, exId(this.id, difficulty, seed), rng);
+  },
+};
+
 export const REASONING_GENERATORS: ExerciseGenerator[] = [
   rydbergErrorGenerator,
   cluesGenerator,
@@ -739,7 +792,5 @@ export const REASONING_GENERATORS: ExerciseGenerator[] = [
   mysteryIonGenerator,
   predictionGenerator,
   essayGenerator,
+  spectrumIDGenerator,
 ];
-
-// Constantes usadas solo para documentar la coherencia con CODATA (N_A exacta desde 2019).
-export const NA_EXACT = CODATA.NA;

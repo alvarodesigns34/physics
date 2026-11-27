@@ -343,6 +343,9 @@ function SpectroPanel() {
         </div>
         <VisibleSpectrum lines={ref.lines} mode={spectroMode} label={`Espectro de ${spectroMode} del ${ref.name.toLowerCase()}`} />
         <VisibleAxis />
+        <a className="btn btn--sm btn--primary" style={{ alignSelf: 'flex-start' }} href="#/entrenamiento?gen=espectro-problema">
+          Ponte a prueba: identifica una muestra desconocida
+        </a>
         <details className="details-plain">
           <summary className="small">Medidas del prisma: índice y desviación de cada línea</summary>
           <div className="table-wrap" style={{ marginTop: 8 }}>
