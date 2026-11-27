@@ -359,7 +359,7 @@ export function ArchitectOverlay() {
             </div>
             <div className="segmented" role="radiogroup" aria-label="Carga del ion" style={{ flexWrap: 'wrap' }}>
               {[-3, -2, -1, 0, 1, 2, 3].map((q) => (
-                <button key={q} type="button" role="radio" aria-checked={st.charge === q} aria-pressed={st.charge === q} className="mono" onClick={() => st.set({ charge: q })} disabled={st.z - q < 0}>
+                <button key={q} type="button" role="radio" aria-checked={st.charge === q} className="mono" onClick={() => st.set({ charge: q })} disabled={st.z - q < 0}>
                   {q === 0 ? '0' : chargeLabel(q)}
                 </button>
               ))}

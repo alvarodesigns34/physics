@@ -587,7 +587,7 @@ function ModelsPanel() {
             <span className="small muted">Haz saltar al electrón entre órbitas permitidas:</span>
             <div className="segmented" role="radiogroup" aria-label="Órbita">
               {[1, 2, 3].map((n) => (
-                <button key={n} type="button" role="radio" aria-checked={n === bohrLevel} aria-pressed={n === bohrLevel} onClick={() => set({ bohrLevel: n })}>
+                <button key={n} type="button" role="radio" aria-checked={n === bohrLevel} onClick={() => set({ bohrLevel: n })}>
                   n = {n}
                 </button>
               ))}
@@ -635,7 +635,7 @@ function TubePanel() {
         </div>
         <div className="segmented" role="radiogroup" aria-label="Gas del tubo">
           {(['aire', 'neon', 'hidrogeno'] as const).map((g) => (
-            <button key={g} type="button" role="radio" aria-checked={st.gas === g} aria-pressed={st.gas === g} onClick={() => st.set({ gas: g })}>
+            <button key={g} type="button" role="radio" aria-checked={st.gas === g} onClick={() => st.set({ gas: g })}>
               {g === 'aire' ? 'Aire' : g === 'neon' ? 'Neón' : 'Hidrógeno'}
             </button>
           ))}
@@ -683,10 +683,10 @@ function GeigerPanel() {
       <section className="section">
         <span className="eyebrow">Experimento de Geiger–Marsden</span>
         <div className="segmented" role="radiogroup" aria-label="Modelo atómico del oro">
-          <button type="button" role="radio" aria-checked={st.scModel === 'thomson'} aria-pressed={st.scModel === 'thomson'} onClick={() => st.set({ scModel: 'thomson' })}>
+          <button type="button" role="radio" aria-checked={st.scModel === 'thomson'} onClick={() => st.set({ scModel: 'thomson' })}>
             Átomo de Thomson
           </button>
-          <button type="button" role="radio" aria-checked={st.scModel === 'rutherford'} aria-pressed={st.scModel === 'rutherford'} onClick={() => st.set({ scModel: 'rutherford' })}>
+          <button type="button" role="radio" aria-checked={st.scModel === 'rutherford'} onClick={() => st.set({ scModel: 'rutherford' })}>
             Átomo nuclear
           </button>
         </div>

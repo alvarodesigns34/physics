@@ -852,7 +852,7 @@ export function TrendsWidget() {
     <WidgetFrame title="Compara dos elementos y razónalo" kind="calculo" caption="Datos reales (NIST, CRC, Pyykkö). El razonamiento es el que se pide en el examen: situar, comparar Z_ef o número de capas, concluir.">
       <div className="segmented" role="radiogroup" aria-label="Propiedad" style={{ flexWrap: 'wrap', alignSelf: 'flex-start' }}>
         {(['radio', 'ei1', 'ae', 'en'] as PropertyId[]).map((p) => (
-          <button key={p} type="button" role="radio" aria-checked={prop === p} aria-pressed={prop === p} onClick={() => setProp(p)}>
+          <button key={p} type="button" role="radio" aria-checked={prop === p} onClick={() => setProp(p)}>
             {PROPERTIES[p].short}
           </button>
         ))}
@@ -939,7 +939,7 @@ export function MassAverageWidget() {
     <WidgetFrame title="Espectro de masas → masa atómica" kind="calculo" caption="Cada barra es un isótopo: su posición es la masa y su altura, la abundancia. La media ponderada cae cerca del isótopo más abundante.">
       <div className="segmented" role="radiogroup" aria-label="Elemento" style={{ alignSelf: 'flex-start' }}>
         {MASS_PRESETS.map((p, i) => (
-          <button key={p.label} type="button" role="radio" aria-checked={preset === i} aria-pressed={preset === i} onClick={() => { setPreset(i); setPeaks(p.peaks); }}>
+          <button key={p.label} type="button" role="radio" aria-checked={preset === i} onClick={() => { setPreset(i); setPeaks(p.peaks); }}>
             {p.label}
           </button>
         ))}
@@ -1190,8 +1190,8 @@ export function RydbergInverseWidget() {
           </select>
         </label>
         <div className="segmented" role="radiogroup" aria-label="Dato">
-          <button type="button" role="radio" aria-checked={kind === 'lambda'} aria-pressed={kind === 'lambda'} onClick={() => setKind('lambda')}>λ (nm)</button>
-          <button type="button" role="radio" aria-checked={kind === 'nu'} aria-pressed={kind === 'nu'} onClick={() => setKind('nu')}>ν (Hz)</button>
+          <button type="button" role="radio" aria-checked={kind === 'lambda'} onClick={() => setKind('lambda')}>λ (nm)</button>
+          <button type="button" role="radio" aria-checked={kind === 'nu'} onClick={() => setKind('nu')}>ν (Hz)</button>
         </div>
         <label className="field" style={{ gap: 4 }}>
           <span className="label">{kind === 'lambda' ? 'Longitud de onda (nm)' : 'Frecuencia (Hz), p. ej. 2,34e14'}</span>

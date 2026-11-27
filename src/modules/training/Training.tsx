@@ -830,7 +830,7 @@ function Sources({ onPick }: { onPick: (e: Exercise) => void }) {
         <span className="small muted">Nivel</span>
         <div className="segmented" role="radiogroup" aria-label="Nivel">
           {([0, 1, 2, 3] as const).map((l) => (
-            <button key={l} type="button" role="radio" aria-checked={level === l} aria-pressed={level === l} onClick={() => setLevel(l)}>
+            <button key={l} type="button" role="radio" aria-checked={level === l} onClick={() => setLevel(l)}>
               {l === 0 ? 'Todos' : LEVEL_LABEL[l]}
             </button>
           ))}

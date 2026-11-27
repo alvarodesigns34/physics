@@ -90,7 +90,7 @@ export function ModelMatrix({ current }: { current: ModelKey }) {
   return (
     <section className="section" aria-label="Qué explica cada modelo">
       <span className="eyebrow">Qué explica cada modelo</span>
-      <div className="matrix-wrap">
+      <div className="matrix-wrap" tabIndex={0} role="region" aria-label="Tabla: qué explica cada modelo (desplazable)">
         <table className="matrix">
           <thead>
             <tr>

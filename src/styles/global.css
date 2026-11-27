@@ -2291,7 +2291,7 @@ details.chapter + details.chapter {
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--electron);
+  color: var(--accent-strong);
   margin-right: 6px;
 }
 

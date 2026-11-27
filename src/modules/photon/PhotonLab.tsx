@@ -180,7 +180,7 @@ function LevelPicker({ label, value, onChange, disabled }: { label: string; valu
       </span>
       <div className="segmented" role="radiogroup" aria-labelledby={`lp-${label}`} style={{ width: '100%', justifyContent: 'space-between' }}>
         {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-          <button key={n} type="button" role="radio" aria-checked={value === n} aria-pressed={value === n} disabled={disabled(n)} onClick={() => onChange(n)} style={{ flex: 1, padding: '7px 0', opacity: disabled(n) ? 0.3 : 1 }} className="mono">
+          <button key={n} type="button" role="radio" aria-checked={value === n} disabled={disabled(n)} onClick={() => onChange(n)} style={{ flex: 1, padding: '7px 0', opacity: disabled(n) ? 0.3 : 1 }} className="mono">
             {n}
           </button>
         ))}

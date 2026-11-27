@@ -67,7 +67,7 @@ function SegmentedSetting<T extends string | number | boolean>({ label, value, o
       <span className="label">{label}</span>
       <div className="segmented" role="radiogroup" aria-label={label} style={{ flexWrap: 'wrap' }}>
         {options.map((o) => (
-          <button key={String(o.v)} type="button" role="radio" aria-checked={value === o.v} aria-pressed={value === o.v} onClick={() => onChange(o.v)}>
+          <button key={String(o.v)} type="button" role="radio" aria-checked={value === o.v} onClick={() => onChange(o.v)}>
             {o.label}
           </button>
         ))}

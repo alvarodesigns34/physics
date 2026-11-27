@@ -496,7 +496,7 @@ function Picker({ label, values, value, onChange, render }: { label: string; val
       </span>
       <div className="segmented" role="radiogroup" aria-labelledby={`qp-${label}`} style={{ flexWrap: 'wrap' }}>
         {values.map((v) => (
-          <button key={v} type="button" role="radio" aria-checked={v === value} aria-pressed={v === value} className="mono" onClick={() => onChange(v)} style={{ minWidth: 40 }}>
+          <button key={v} type="button" role="radio" aria-checked={v === value} className="mono" onClick={() => onChange(v)} style={{ minWidth: 40 }}>
             {render ? render(v) : v}
           </button>
         ))}
@@ -681,10 +681,10 @@ export function QuantumOverlay() {
                 <div className="field">
                   <span className="label" id="q-view">Representación</span>
                   <div className="segmented" role="radiogroup" aria-labelledby="q-view">
-                    <button type="button" role="radio" aria-checked={st.view === 'superficie'} aria-pressed={st.view === 'superficie'} onClick={() => st.set({ view: 'superficie' })}>
+                    <button type="button" role="radio" aria-checked={st.view === 'superficie'} onClick={() => st.set({ view: 'superficie' })}>
                       Superficie de probabilidad
                     </button>
-                    <button type="button" role="radio" aria-checked={st.view === 'nube'} aria-pressed={st.view === 'nube'} onClick={() => st.set({ view: 'nube' })}>
+                    <button type="button" role="radio" aria-checked={st.view === 'nube'} onClick={() => st.set({ view: 'nube' })}>
                       Nube de probabilidad
                     </button>
                   </div>

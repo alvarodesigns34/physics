@@ -299,7 +299,7 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
             </span>
           </div>
         )}
-        <h3 className="h3">{exercise.title}</h3>
+        <h2 className="h3">{exercise.title}</h2>
         <p style={{ lineHeight: 1.6 }}>
           <Rich text={exercise.statement} />
         </p>
