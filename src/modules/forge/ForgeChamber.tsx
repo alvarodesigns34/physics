@@ -29,11 +29,11 @@ function useRimMaterial(color: THREE.Color) {
   const mat = useMemo(
     () =>
       new THREE.ShaderMaterial({
-        uniforms: { uColor: { value: new THREE.Color() }, uPower: { value: 2.6 }, uAlpha: { value: 0.55 } },
+        uniforms: { uColor: { value: new THREE.Color() }, uPower: { value: 3.6 }, uAlpha: { value: 0.42 } },
         vertexShader: `varying vec3 vN; varying vec3 vV;
           void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
         fragmentShader: `uniform vec3 uColor; uniform float uPower; uniform float uAlpha; varying vec3 vN; varying vec3 vV;
-          void main(){ float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), uPower); gl_FragColor = vec4(uColor * (0.6 + f), f * uAlpha); }`,
+          void main(){ float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), uPower); gl_FragColor = vec4(uColor * (0.3 + f), f * uAlpha); }`,
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,

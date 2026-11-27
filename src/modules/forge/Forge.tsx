@@ -104,7 +104,7 @@ export function ForgeScene() {
       <NucleusScaled scale={nScale} reduced={reduced}>
         <Nucleus z={sp.z} n={sp.n} reduced={reduced} flash={flash} />
       </NucleusScaled>
-      {density && <ElectronCloud density={density} scale={CLOUD_SCALE} size={(q.tier === 'baja' ? 110 : 80) * Math.max(1, Math.sqrt(radius / 2.5))} opacity={(q.tier === 'baja' ? 0.32 : 0.2) * Math.min(1, Math.max(0.5, 1.2 - 0.25 * Math.log10(sp.e)))} animate={!reduced} />}
+      {density && <ElectronCloud density={density} scale={CLOUD_SCALE} size={(q.tier === 'baja' ? 84 : 58) * Math.max(1, Math.sqrt(radius / 2.5))} opacity={(q.tier === 'baja' ? 0.38 : 0.27) * Math.min(1, Math.max(0.5, 1.2 - 0.25 * Math.log10(sp.e)))} animate={!reduced} />}
       {density && <ProbabilityShell r90={rq(density.positions, CLOUD_SCALE, 0.9)} charge={sp.z - sp.e} reduced={reduced} />}
       <Pedestal radius={radius} pulse={flash} reduced={reduced} />
       <Reservoirs radius={radius} reduced={reduced} />

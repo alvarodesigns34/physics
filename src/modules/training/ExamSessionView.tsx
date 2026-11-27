@@ -21,6 +21,9 @@ import { Icon } from '../../ui/Icon';
 
 const KEY = 'atom:simulacro';
 
+/** Columnas de la rejilla de preguntas: filas completas (6 → 3 × 2, 8 → 4 × 2, 10 → 5 × 2). */
+const gridCols = (n: number) => (n <= 5 ? n : n === 6 ? 3 : n <= 8 ? 4 : 5);
+
 export function loadSavedSession(): ExamSession | null {
   try {
     const raw = localStorage.getItem(KEY);
@@ -84,7 +87,7 @@ export function ExamRunner({ session, onChange, onFinish }: { session: ExamSessi
             </span>
           )}
         </div>
-        <ol className="exam-grid">
+        <ol className="exam-grid" style={{ ["--cols" as string]: gridCols(exercises.length) }}>
           {exercises.map((e, k) => (
             <li key={e.id + k}>
               <button type="button" className={`exam-q exam-q--${states[k]}${k === i ? ' is-current' : ''}${session.flagged.includes(k) ? ' is-flagged' : ''}`} onClick={() => go(k)} aria-current={k === i ? 'step' : undefined} aria-label={`Pregunta ${k + 1}: ${STATE_LABEL[states[k]!]}${session.flagged.includes(k) ? ', marcada para revisar' : ''}`}>
@@ -294,6 +297,7 @@ export function ExamReportView({ report, session, onNew }: { report: ExamReport;
         </div>
         <div className="panel-card stack-12">
           <span className="h3">Competencias</span>
+          {skillAgg.size === 0 && <p className="small faint" style={{ margin: 0 }}>Sin respuestas no hay datos de competencias: responde al menos un apartado en el próximo simulacro.</p>}
           {[...skillAgg.entries()]
             .sort((a, b) => a[1].sum / a[1].n - b[1].sum / b[1].n)
             .map(([k, v]) => (
