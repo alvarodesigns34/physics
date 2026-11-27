@@ -6,9 +6,11 @@ import { masteryPercent } from '../../learning/mastery';
 import { useStore } from '../../state/store';
 import { navigate, useRoute } from '../../app/hooks';
 import { Rich } from '../../ui/common';
+import { formatNumber } from '../../science/numbers';
 import { Icon } from '../../ui/Icon';
 import { GuideWidget } from './widgets';
 import { DEPTH } from '../../learning/guideDepth';
+import { LIVE, sliderToValue, valueToSlider, type LiveFormula } from '../../learning/liveFormulas';
 
 const covered = new Set(COVERED_NODES);
 
@@ -16,7 +18,69 @@ function practiceUrl(nodes: string[]) {
   return `/entrenamiento?v=practica&nodes=${nodes.filter((n) => covered.has(n)).join(',')}`;
 }
 
+/** Explorador de una fórmula: deslizadores para las entradas y el resultado recalculado al instante. */
+const showVal = (i: LiveFormula['inputs'][number], v: number) => (!i.log && Number.isInteger(i.step) ? String(v).replace('-', '−') : formatNumber(v, { sig: i.log ? 3 : 4 })) + (i.unit ? ` ${i.unit}` : '');
+
+function LivePanel({ lf, label }: { lf: LiveFormula; label: string }) {
+  const [vals, setVals] = useState<Record<string, number>>(() => Object.fromEntries(lf.inputs.map((i) => [i.key, i.value])));
+  const r = lf.compute(vals);
+  return (
+    <div className="live" role="group" aria-label={`Explorar ${label}`}>
+      <div className="live__inputs">
+        {lf.inputs.map((i) => {
+          const id = `live-${label}-${i.key}`.replace(/[^\w-]/g, '_');
+          return (
+            <label key={i.key} className="live__in" htmlFor={id}>
+              <span className="live__lab">
+                <span className="mono live__sym">{i.sym}</span> {i.label}
+                <output className="mono live__val" htmlFor={id}>
+                  {showVal(i, vals[i.key]!)}
+                </output>
+              </span>
+              <input
+                id={id}
+                type="range"
+                min={i.log ? 0 : i.min}
+                max={i.log ? 1000 : i.max}
+                step={i.log ? 1 : i.step}
+                value={i.log ? valueToSlider(i, vals[i.key]!) : vals[i.key]!}
+                aria-valuetext={showVal(i, vals[i.key]!)}
+                onChange={(e) => setVals((v) => ({ ...v, [i.key]: i.log ? sliderToValue(i, Number(e.target.value)) : Number(e.target.value) }))}
+              />
+            </label>
+          );
+        })}
+      </div>
+      <div className="live__out" aria-live="polite">
+        {r.invalid ? (
+          <p className="live__invalid">{r.invalid}</p>
+        ) : (
+          <>
+            <dl className="live__results">
+              {r.outputs.map((o, k) => (
+                <div key={o.sym + k} className={o.main ? 'is-main' : undefined}>
+                  <dt className="mono">{o.sym}</dt>
+                  <dd className="mono">
+                    {o.value}
+                    {o.unit ? <span className="live__unit"> {o.unit}</span> : null}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            {r.note && <p className="small muted live__note">{r.note}</p>}
+          </>
+        )}
+        <p className="small live__observe">
+          <strong>Observa:</strong> {lf.observe}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function FormulaCard({ f }: { f: Formula }) {
+  const lf = LIVE[f.expr];
+  const [open, setOpen] = useState(false);
   return (
     <div className="formula">
       <div className="formula__expr">{f.expr}</div>
@@ -34,6 +98,15 @@ function FormulaCard({ f }: { f: Formula }) {
         </tbody>
       </table>
       {f.note && <p className="small muted" style={{ margin: 0 }}>{f.note}</p>}
+      {lf && (
+        <>
+          <button type="button" className="btn btn--ghost btn--sm live__toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+            {open ? 'Ocultar el explorador' : 'Explorar la fórmula'}
+            <span className="live__tag">cálculo</span>
+          </button>
+          {open && <LivePanel lf={lf} label={f.expr} />}
+        </>
+      )}
     </div>
   );
 }

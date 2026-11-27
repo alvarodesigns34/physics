@@ -72,6 +72,14 @@ try {
   await page.locator('#sec-3\\.2 .widget').scrollIntoViewIfNeeded();
   check((await page.locator('#sec-3\\.2 .formula-live').innerText()).includes('m/s'), 'Guía: v = λ·ν calculada en vivo');
   await page.screenshot({ path: `${OUT}/11-guia-ondas.png` });
+  // ATOM 4.0: capas didácticas y fórmula manipulable (Rydberg: 3 → 2 y, con una pulsación, 4 → 2).
+  check((await page.locator('#sec-3\\.6 .guide-why').count()) === 1 && (await page.locator('#sec-3\\.6 .doubt').count()) >= 1, 'Guía: «por qué» y dudas frecuentes en la sección de Rydberg');
+  await page.locator('#sec-3\\.6 button:has-text("Explorar la fórmula")').first().click();
+  const live = page.locator('#sec-3\\.6 .live').first();
+  check((await live.innerText()).includes('656,3'), 'Fórmula manipulable: Hα a 656,3 nm');
+  await live.locator('input[type=range]').nth(1).focus();
+  await page.keyboard.press('ArrowRight');
+  check((await live.innerText()).includes('486,2'), 'Fórmula manipulable: al subir n₂ a 4 sale Hβ (486,2 nm)');
 
   await page.goto(base + '#/fotones');
   await page.waitForSelector('aside [role=tab][aria-selected=true]', { timeout: T });

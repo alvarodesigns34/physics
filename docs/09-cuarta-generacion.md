@@ -72,3 +72,22 @@ La auditoría señaló formas de escribir correctas que el comprobador rechazaba
 
   Cuando algo es una simplificación del curso (Z_ef ≈ Z − electrones internos, o qué cuenta como electrones de valencia en los metales de transición), el texto lo dice.
 - **Pruebas.** `guideDepth.test.ts` exige que todas las secciones tengan las capas, que no haya entradas huérfanas, que toda analogía declare su límite y que cada duda sea una pregunta con respuesta.
+
+## 5. Fórmulas manipulables
+- `src/learning/liveFormulas.ts` añade un explorador a 11 fórmulas de la guía:
+  - A = Z + N
+  - e⁻ = Z − q
+  - masa media
+  - v = λ·ν
+  - E = h·c/λ
+  - Rydberg
+  - número de líneas
+  - rₙ
+  - Eₙ
+  - 2l + 1
+  - 2n²
+
+  Cada explorador tiene deslizadores accesibles (`aria-valuetext` con unidades; escala logarítmica para λ), resultados recalculados al instante y una observación sobre la dependencia entre magnitudes.
+- Se etiquetan como **cálculo** y usan las constantes de la teoría de clase (`THEORY_DATA`).
+- Las combinaciones sin sentido físico (n₂ ≤ n₁, más carga positiva que protones) se explican en lugar de calcularse.
+- **Pruebas.** Unitarias en `liveFormulas.test.ts`: valores de referencia (Hα 656,3 nm, ³⁵Cl/³⁷Cl → 35,45 u, 620 nm → 2,00 eV…) y la ida y vuelta del deslizador logarítmico. En el navegador, la prueba e2e mueve n₂ con el teclado y comprueba Hβ (486,2 nm).
