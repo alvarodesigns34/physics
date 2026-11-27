@@ -139,7 +139,7 @@ function Practice({ initialScope, fixedExercise, onClearFixed, forceVariant }: {
   const scope = initialScope.length ? initialScope : scopeNodes(blocks);
   const pick = useCallback(() => {
     const st = useStore.getState();
-    return selectNext({ mastery: st.mastery, cards: st.cards, recent: recent.current, sessionRetry: retry.current, history: st.history, skills: st.skills }, scope, Date.now(), Math.floor(Math.random() * 1e9));
+    return selectNext({ mastery: st.mastery, cards: st.cards, recent: recent.current, sessionRetry: retry.current, history: st.history, skills: st.skills, notebook: st.notebook }, scope, Date.now(), Math.floor(Math.random() * 1e9));
   }, [scope]);
   const [sel, setSel] = useState<Selection | null>(null);
   const [count, setCount] = useState(0);
@@ -198,7 +198,7 @@ function Practice({ initialScope, fixedExercise, onClearFixed, forceVariant }: {
           {!fixedExercise && sel && (
             <div className="row row--between row--wrap" style={{ marginBottom: 16, gap: 8 }}>
               <span className="small muted">
-                <span className="why-label">{sel.reason === 'repaso' ? 'Repaso' : sel.reason === 'reintento' ? 'Reintento' : sel.reason === 'competencia' ? 'Refuerzo de competencia' : sel.reason === 'prerrequisito' ? 'Prerrequisito' : 'Dominio'}</span> {sel.explanation}
+                <span className="why-label">{sel.reason === 'repaso' ? 'Repaso' : sel.reason === 'reintento' ? 'Reintento' : sel.reason === 'cuaderno' ? 'Cuaderno de errores' : sel.reason === 'competencia' ? 'Refuerzo de competencia' : sel.reason === 'prerrequisito' ? 'Prerrequisito' : 'Dominio'}</span> {sel.explanation}
               </span>
               {node && (
                 <MasteryBadge m={mastery[node]} />

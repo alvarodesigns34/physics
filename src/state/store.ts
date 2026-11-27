@@ -200,7 +200,7 @@ export const useStore = create<AppState>()(
           for (const [node, { y, guess, kind }] of Object.entries(ev.nodes)) {
             mastery[node] = updateMasteryY(mastery[node] ?? initialMastery(), ex.difficulty, y, o.hintsUsed, now, EVIDENCE_WEIGHT[kind], guess);
             const ok = y >= 0.75;
-            if (mode !== 'examen' || !ok) cards[node] = updateCard(cards[node], node, ok, now);
+            if (mode !== 'examen' || !ok) cards[node] = updateCard(cards[node], node, ok, now, kind);
           }
           const skills = { ...s.skills };
           const skillY: Partial<Record<SkillId, number>> = {};

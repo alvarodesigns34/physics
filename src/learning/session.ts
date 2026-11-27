@@ -2,7 +2,7 @@
  * Selección adaptativa del siguiente ejercicio y construcción de exámenes.
  */
 import { mulberry32 } from '../science/numbers';
-import { chooseDifficulty, dueCards, EVIDENCE_LABEL, initialMastery, masteryEstimate, type NodeMastery, type ReviewCard } from './mastery';
+import { chooseDifficulty, displayTheta, dueCards, estimatedInfo, EVIDENCE_LABEL, initialMastery, masteryEstimate, PRIOR_INFO, type NodeMastery, type ReviewCard } from './mastery';
 import { recommend, type AttemptLike } from './diagnosis';
 import { nodeTitle } from './syllabus';
 import type { SkillId } from './types';
@@ -19,12 +19,14 @@ export interface SelectionState {
   /** Historial con errores clasificados y dominio por competencia (para el diagnóstico) */
   history?: AttemptLike[];
   skills?: Partial<Record<SkillId, NodeMastery>>;
+  /** Entradas del cuaderno de errores (ATOM 4.0): las abiertas se reintroducen con variantes nuevas */
+  notebook?: { generatorId: string; nodeIds: string[]; title: string; at: number; resolvedAt?: number }[];
 }
 
 export interface Selection {
   exercise: Exercise;
   nodeId: string;
-  reason: 'repaso' | 'reintento' | 'dominio' | 'fuente' | 'competencia' | 'prerrequisito';
+  reason: 'repaso' | 'reintento' | 'cuaderno' | 'dominio' | 'fuente' | 'competencia' | 'prerrequisito';
   /** Por qué se recomienda esta actividad, con los datos que lo justifican */
   explanation: string;
 }
@@ -61,6 +63,24 @@ export function selectNext(state: SelectionState, scope: string[], now: number, 
       explanation = `Repaso programado de «${nodeTitle(nodeId)}»: lo practicaste hace ${days} día${days === 1 ? '' : 's'} (caja ${due.box} de 5). Recuperarlo de memoria ahora lo consolida.`;
     }
   }
+  // Cuaderno de errores: una entrada abierta (fallada hace ≥ 10 min, para no repetir en caliente) vuelve
+  // como VARIANTE NUEVA del mismo tipo en ~1 de cada 3 ejercicios. Acertarla limpia la supera.
+  let notebookGen: string | undefined;
+  if (!nodeId && state.notebook?.length) {
+    const open = state.notebook
+      .filter((e) => !e.resolvedAt && now - e.at >= 10 * 60_000 && GENERATOR_BY_ID.has(e.generatorId) && !state.recent.slice(-2).includes(e.generatorId))
+      .filter((e) => e.nodeIds.some((n) => nodes.includes(n)))
+      .sort((a, b) => a.at - b.at);
+    const e = open[0];
+    if (e && rng() < 0.35) {
+      nodeId = e.nodeIds.find((n) => nodes.includes(n))!;
+      notebookGen = e.generatorId;
+      reason = 'cuaderno';
+      const mins = Math.round((now - e.at) / 60_000);
+      const ago = mins < 60 ? `hace ${mins} min` : mins < 2880 ? `hace ${Math.round(mins / 60)} h` : `hace ${Math.round(mins / 1440)} días`;
+      explanation = `En tu cuaderno de errores sigue abierto «${e.title}» (fallado ${ago}). Esta es una variante nueva: si la resuelves al primer intento y sin ayuda, queda superado.`;
+    }
+  }
   if (!nodeId && state.history?.length) {
     const rec = recommend(state.history, state.mastery, state.skills ?? {}, scope.length ? nodes : null);
     const target = rec?.nodeIds.find((n) => nodes.includes(n) && generatorsForNode(n).length > 0);
@@ -76,7 +96,11 @@ export function selectNext(state: SelectionState, scope: string[], now: number, 
     const scored = nodes.map((n) => {
       const m = state.mastery[n] ?? initialMastery();
       const recency = m.lastSeen ? Math.max(0, 1 - (now - m.lastSeen) / 120_000) : 0;
-      return { n, score: m.theta + recency * 0.8 + rng() * 0.3 };
+      // θ mostrado (encogido hacia el prior si hay poca evidencia) y una prima de exploración para los
+      // apartados con poca información: un 2/2 en un apartado no debe ocultarlo frente a uno muy medido.
+      const info = m.attempts ? (m.info ?? estimatedInfo(m)) : 0;
+      const explore = 0.3 * (PRIOR_INFO / (info + PRIOR_INFO));
+      return { n, score: (m.attempts ? displayTheta(m) : m.theta) - explore + recency * 0.8 + rng() * 0.3 };
     });
     scored.sort((a, b) => a.score - b.score);
     nodeId = scored[0]!.n;
@@ -89,7 +113,7 @@ export function selectNext(state: SelectionState, scope: string[], now: number, 
 
   const gens = generatorsForNode(nodeId);
   const fresh = gens.filter((g) => !state.recent.slice(-2).includes(g.id));
-  const gen = (fresh.length ? fresh : gens)[Math.floor(rng() * (fresh.length ? fresh.length : gens.length))]!;
+  const gen = (notebookGen ? GENERATOR_BY_ID.get(notebookGen) : undefined) ?? (fresh.length ? fresh : gens)[Math.floor(rng() * (fresh.length ? fresh.length : gens.length))]!;
   const theta = (state.mastery[nodeId] ?? initialMastery()).theta;
   const difficulty: Difficulty = chooseDifficulty(theta, gen.difficulties);
   return { exercise: gen.create(randomSeed(rng), difficulty), nodeId, reason, explanation };

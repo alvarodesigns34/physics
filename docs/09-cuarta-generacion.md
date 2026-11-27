@@ -45,3 +45,12 @@ La auditoría señaló formas de escribir correctas que el comprobador rechazaba
 - **Lagunas conceptuales probables.** Se señalan cuando se repiten errores de concepto o de regla en un mismo apartado, o cuando hay fallos repetidos en un apartado cuyo prerrequisito está sin practicar o tiene un dominio estimado por debajo del 60 %. Siempre se formulan como posibilidad e indican la evidencia en que se basan.
 - **Dónde está.** En Entrenamiento → Cuaderno. Cada entrada enlaza a una variante nueva (`?gen=`) o al mismo ejercicio en modo revisión (`?ex=…&modo=revision`). El cuaderno se guarda en el progreso y se incluye en la copia de seguridad exportada, que se valida al importarla.
 - **Pruebas.** `notebook.test.ts` cubre la lógica. En el navegador, `tools/smoke.mjs` falla un ejercicio completo y comprueba que la entrada aparece, y `tools/a11y.mjs` audita la vista con axe.
+
+## 3. Calidad de la evidencia, repaso y selección
+- **Evidencia por apartado.** Cada intento guarda el resultado y el tipo de evidencia de cada apartado que evalúa (`nodeEvidence`). En Progreso, cada apartado muestra una barra con los aciertos demostrados, los que pudieron ser casuales, los logrados con ayuda, los autoevaluados y los intentos no superados (`evidenceBreakdown`). Una leyenda explica cada tipo. Los intentos anteriores a ATOM 4.0 no registraban el tipo: si fueron limpios se cuentan como demostrados, y si hubo pistas, como asistidos.
+- **Repaso espaciado graduado.** El repaso usa cajas de Leitner con intervalos de 1, 2, 4, 8 y 16 días. Solo un acierto demostrado sube de caja. Un acierto con ayuda, autoevaluado o que pudo ser casual mantiene la caja: no prueba recuerdo autónomo, pero tampoco cuenta como fallo. Antes, cualquier acierto alargaba el intervalo, otra forma de inflación.
+- **Selección.**
+  - Orden de prioridad: reintento en la sesión, repaso vencido, cuaderno de errores, recomendación diagnóstica y, por último, el apartado más débil.
+  - Las entradas abiertas del cuaderno vuelven como variante nueva en torno a 1 de cada 3 ejercicios. Para que no se repitan en caliente, solo vuelven cuando han pasado al menos 10 minutos desde el fallo. El ejercicio explica por qué aparece.
+  - El apartado más débil se elige con el θ mostrado (encogido hacia el prior) y con una prima de exploración para los apartados con poca información.
+- **Pruebas.** `selection4.test.ts` y `evidenceBreakdown.test.ts`.

@@ -70,7 +70,7 @@ export function updateMasteryY(m: NodeMastery, difficulty: Difficulty, y: number
 }
 
 /** Información aproximada para registros antiguos (sin campo info). */
-function estimatedInfo(m: NodeMastery): number {
+export function estimatedInfo(m: NodeMastery): number {
   return m.attempts * 0.2;
 }
 
@@ -93,7 +93,7 @@ export interface MasteryEstimate {
 /** θ a priori (antes de cualquier evidencia). */
 export const THETA_PRIOR = -0.5;
 /** Información a priori I₀: cuánto «pesa» el punto de partida frente a la evidencia acumulada. */
-const PRIOR_INFO = 0.6;
+export const PRIOR_INFO = 0.6;
 
 /**
  * θ que se MUESTRA: contracción hacia el a priori según la evidencia, θ̂ = θ₀ + (θ − θ₀)·I/(I + I₀).
@@ -152,10 +152,22 @@ const DAY = 86_400_000;
 export const BOX_INTERVAL_DAYS: Record<ReviewCard['box'], number> = { 1: 1, 2: 2, 3: 4, 4: 8, 5: 16 };
 
 /** Actualiza una tarjeta de repaso: acierto → sube de caja; fallo → vuelve a la caja 1. */
-export function updateCard(card: ReviewCard | undefined, nodeId: string, correct: boolean, now: number): ReviewCard {
+/**
+ * Repetición espaciada (cajas de Leitner) graduada por la CALIDAD de la evidencia (ATOM 4.0):
+ * - fallo → caja 1 (mañana);
+ * - acierto demostrado (respuesta abierta, primer intento, sin ayuda) → sube una caja;
+ * - acierto con ayuda, autoevaluado o que pudo ser casual → se mantiene la caja y se reprograma con su
+ *   intervalo: no se ha demostrado recuerdo autónomo, así que no se alarga el intervalo; tampoco se
+ *   castiga como un fallo.
+ */
+export function updateCard(card: ReviewCard | undefined, nodeId: string, correct: boolean, now: number, kind: 'demostrada' | 'posible-azar' | 'asistida' | 'autoevaluada' = 'demostrada'): ReviewCard {
   if (!correct) return { nodeId, box: 1, due: now + DAY };
-  if (!card) return { nodeId, box: 2, due: now + BOX_INTERVAL_DAYS[2] * DAY };
-  const box = Math.min(5, card.box + 1) as ReviewCard['box'];
+  const promote = kind === 'demostrada';
+  if (!card) {
+    const box = promote ? 2 : 1;
+    return { nodeId, box, due: now + BOX_INTERVAL_DAYS[box] * DAY };
+  }
+  const box = (promote ? Math.min(5, card.box + 1) : card.box) as ReviewCard['box'];
   return { nodeId, box, due: now + BOX_INTERVAL_DAYS[box] * DAY };
 }
 
