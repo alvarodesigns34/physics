@@ -111,7 +111,20 @@ try {
   await page.waitForSelector('button:has-text("Empezar el simulacro equilibrado")', { timeout: T });
   await page.click('button:has-text("Empezar el simulacro equilibrado")');
   await page.waitForFunction(() => /de 8/.test(document.querySelector('main')?.textContent ?? ''), null, { timeout: T }).catch(() => {});
-  check((await page.locator('main').innerText()).includes('de 8'), 'Simulacro equilibrado: 8 preguntas');
+  check((await page.locator('.exam-q').count()) === 8, 'Simulacro equilibrado: 8 preguntas con navegación libre');
+  // Responder algo en la 1, saltar a la 3, recargar: el simulacro se recupera (guardado automático).
+  const firstInput = page.locator('.exam-main input.input').first();
+  if (await firstInput.count()) await firstInput.fill('1');
+  else await page.locator('.exam-main [role=radio], .exam-main [role=checkbox]').first().click();
+  await page.click('.exam-q >> nth=2');
+  await page.reload();
+  await page.waitForSelector('.exam-q', { timeout: T });
+  check((await page.locator('.exam-main').innerText()).includes('Pregunta 3 de 8') && (await page.locator('.exam-q--respondida, .exam-q--parcial').count()) >= 1, 'Simulacro: se recupera tras recargar (pregunta actual y respuestas)');
+  await page.click('.exam-nav button:has-text("Entregar")');
+  await page.click('button:has-text("Entregar y corregir")');
+  await page.waitForSelector('.exam-grade', { timeout: T });
+  const rep = await page.locator('.exam-report').innerText();
+  check(/sin responder/.test(rep) && /\/ 10/.test(rep), 'Simulacro: informe con nota, apartados y preguntas sin responder');
 
   // Laboratorios de las fases 2–4
   await page.goto(base + '#/periodico');

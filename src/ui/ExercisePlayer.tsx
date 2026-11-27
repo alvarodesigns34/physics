@@ -88,7 +88,7 @@ function ConfigPreview({ text }: { text: string }) {
   );
 }
 
-function PartInput({ part, value, onChange, onSubmit, disabled, labelId }: { part: ExercisePart; value: string | string[]; onChange: (v: string | string[]) => void; onSubmit: () => void; disabled: boolean; labelId: string }) {
+export function PartInput({ part, value, onChange, onSubmit, disabled, labelId }: { part: ExercisePart; value: string | string[]; onChange: (v: string | string[]) => void; onSubmit: () => void; disabled: boolean; labelId: string }) {
   const a = part.answer;
   if (a.kind === 'essay') {
     return <EssayInput spec={a} value={value as string[]} onChange={onChange} onSubmit={onSubmit} disabled={disabled} labelId={labelId} />;

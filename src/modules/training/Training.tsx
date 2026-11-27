@@ -3,13 +3,14 @@ import { useStore } from '../../state/store';
 import { BLOCKS, NODES, nodeTitle, NODE_BY_ID, type ModuleId } from '../../learning/syllabus';
 import { COVERED_NODES, GENERATORS, GENERATOR_BY_ID, SOURCE_EXERCISES, sourceLevel } from '../../learning/registry';
 import { buildExamDetailed, buildProfileExam, MOCK_PROFILES, weakProfile, selectNext, type MockProfile, type Selection } from '../../learning/session';
-import { guideAnchor } from '../../learning/guide';
 import { dueCards, EVIDENCE_LABEL, masteryEstimate, masteryLevel } from '../../learning/mastery';
-import { SKILLS, ERROR_LABEL, buildEvidence, aggregateNodeEvidence } from '../../learning/evidence';
+import { SKILLS, ERROR_LABEL, buildEvidence } from '../../learning/evidence';
 import { weakSkills, explainWeakSkill } from '../../learning/diagnosis';
 import type { ErrorKind, SkillId } from '../../learning/types';
 import type { Exercise } from '../../learning/types';
 import { ExercisePlayer, type ExerciseOutcome, type Variant } from '../../ui/ExercisePlayer';
+import { ExamRunner, ExamReportView, loadSavedSession, saveSession, useFinishExam } from './ExamSessionView';
+import { newSession, type ExamReport, type ExamSession } from '../../learning/examSession';
 import { StudyPath } from './StudyPath';
 import { Feedback } from '../../ui/common';
 import { Icon } from '../../ui/Icon';
@@ -335,109 +336,10 @@ function Review({ onStart }: { onStart: (nodes: string[]) => void }) {
   );
 }
 
-const LAB_OF_BLOCK: Record<number, { route: string; label: string }> = {
-  1: { route: '/forja', label: 'Atomic Forge' },
-  2: { route: '/historia', label: 'Time Machine' },
-  3: { route: '/fotones', label: 'Photon Lab' },
-  4: { route: '/fotones?tab=hidrogeno', label: 'Photon Lab' },
-  5: { route: '/cuantico', label: 'Quantum Space' },
-  6: { route: '/arquitecto', label: 'Electron Architect' },
-  7: { route: '/periodico', label: 'Periodic Universe' },
-};
-
-/** Informe accionable: qué falló, por qué y dónde estudiarlo. */
-function StudyPlan({ run }: { run: ExamRun }) {
-  const failed: { ex: Exercise; prompt: string; canonical: string; kind?: ErrorKind; nodes: string[] }[] = [];
-  const skillAgg = new Map<SkillId, { sum: number; n: number }>();
-  for (const { exercise, outcome } of run.results) {
-    if (!outcome.parts?.length) continue;
-    const ev = buildEvidence(exercise, outcome.parts);
-    for (const [k, v] of Object.entries(ev.skills) as [SkillId, { y: number; n: number }][]) {
-      const cur = skillAgg.get(k) ?? { sum: 0, n: 0 };
-      skillAgg.set(k, { sum: cur.sum + v.y * v.n, n: cur.n + v.n });
-    }
-    outcome.parts.forEach((p, i) => {
-      if (p.credit > 0) return;
-      const part = exercise.parts[i]!;
-      failed.push({ ex: exercise, prompt: part.prompt, canonical: part.canonical, kind: p.errors[0]?.kind, nodes: part.nodeIds?.length ? part.nodeIds : exercise.nodeIds });
-    });
-  }
-  const weakNodes = [...new Set(failed.flatMap((f) => f.nodes))].filter((n) => COVERED_NODES.includes(n));
-  if (failed.length === 0) return <Feedback tone="ok">Ningún apartado fallado. Para consolidarlo, vuelve dentro de unos días: el repaso espaciado lo programará.</Feedback>;
-  return (
-    <section className="stack-12" aria-label="Qué estudiar ahora">
-      <span className="h3">Qué estudiar ahora</span>
-      {skillAgg.size > 0 && (
-        <div className="row row--wrap" style={{ gap: 6 }}>
-          {[...skillAgg.entries()]
-            .sort((a, b) => a[1].sum / a[1].n - b[1].sum / b[1].n)
-            .map(([k, v]) => (
-              <span key={k} className="chip" style={{ color: v.sum / v.n < 0.6 ? 'var(--bad)' : v.sum / v.n < 0.85 ? 'var(--warn)' : 'var(--ok)' }}>
-                {SKILLS[k].label}: {Math.round((v.sum / v.n) * 100)} %
-              </span>
-            ))}
-        </div>
-      )}
-      <ul className="study-list">
-        {failed.slice(0, 12).map((f, i) => {
-          const node = f.nodes[0]!;
-          const lab = LAB_OF_BLOCK[Number(node.split('.')[0])];
-          return (
-            <li key={i}>
-              <span className="small">
-                <b>{f.prompt}</b> <span className="faint">· {f.ex.title}</span>
-              </span>
-              <span className="small muted">
-                {f.kind ? `Tipo de error: ${ERROR_LABEL[f.kind]}. ` : ''}Respuesta: <span className="mono">{f.canonical}</span>
-              </span>
-              <span className="row row--wrap" style={{ gap: 6 }}>
-                <a className="btn btn--ghost btn--sm" href={`#/guia?n=${guideAnchor(node)}`}>
-                  Teoría {node}
-                </a>
-                {lab && (
-                  <a className="btn btn--ghost btn--sm" href={`#${lab.route}`}>
-                    Verlo en {lab.label}
-                  </a>
-                )}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-      {weakNodes.length > 0 && (
-        <a className="btn btn--primary btn--sm" style={{ alignSelf: 'flex-start' }} href={`#/entrenamiento?v=practica&nodes=${weakNodes.join(',')}`}>
-          Practicar solo lo que he fallado ({weakNodes.length} apartado{weakNodes.length > 1 ? 's' : ''})
-        </a>
-      )}
-    </section>
-  );
-}
-
-interface ExamRun {
-  exercises: Exercise[];
-  index: number;
-  results: { exercise: Exercise; outcome: ExerciseOutcome }[];
-  startedAt: number;
-  minutes: number | null;
-  scope: string[];
-  /** Puntos de cada pregunta (examen tipo); por defecto, 1 cada una */
-  points?: number[];
-  /** Semilla: la misma semilla reproduce exactamente el mismo examen */
-  seed: number;
-  kind: 'tipo' | 'medida';
-  /** Limitación declarada al construir el examen (menos preguntas de las pedidas) */
-  limitation?: string;
-}
 
 function parseSeed(t: string): number | null {
   const n = Number(t);
   return t && Number.isSafeInteger(n) && n >= 0 ? n : null;
-}
-
-function runScore(r: ExamRun): number {
-  const pts = r.exercises.map((_, i) => r.points?.[i] ?? 1);
-  const total = pts.reduce((a, b) => a + b, 0);
-  return r.results.reduce((a, x, i) => a + x.outcome.score * pts[i]!, 0) / Math.max(1e-9, total);
 }
 
 function ExamView() {
@@ -447,42 +349,52 @@ function ExamView() {
   const profilePreview = useMemo(() => (profileId === 'debiles' ? weakProfile(masteryAll, 1) : { profile: MOCK_PROFILES.find((p) => p.id === profileId)!, limitation: undefined as string | undefined }), [profileId, masteryAll]);
   const [count, setCount] = useState(8);
   const [minutes, setMinutes] = useState<number | null>(null);
-  const [run, setRun] = useState<ExamRun | null>(null);
   const [seedText, setSeedText] = useState('');
-  const [answered, setAnswered] = useState(false);
-  const [now, setNow] = useState(Date.now());
-  const recordExercise = useStore((s) => s.recordExercise);
-  const recordExam = useStore((s) => s.recordExam);
   const exams = useStore((s) => s.exams);
+  const [session, setSession] = useState<ExamSession | null>(() => loadSavedSession());
+  const [done, setDone] = useState<{ report: ExamReport; session: ExamSession } | null>(null);
+  const [limitation, setLimitation] = useState<string | undefined>();
+  const finish = useFinishExam();
+  const start = (label: string, exercises: Exercise[], points: number[], mins: number | null, seed: number, lim?: string) => {
+    setDone(null);
+    setLimitation(lim);
+    setSession(newSession(label, exercises, points, mins, seed));
+  };
 
-  useEffect(() => {
-    if (!run?.minutes) return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [run?.minutes]);
+  if (done) {
+    return <ExamReportView report={done.report} session={done.session} onNew={() => setDone(null)} />;
+  }
+  if (session) {
+    return (
+      <div className="stack-12">
+        {limitation && <Feedback tone="warn">{limitation}</Feedback>}
+        <ExamRunner
+          session={session}
+          onChange={setSession}
+          onFinish={(s, exs) => {
+            const report = finish({ ...s, finishedAt: Date.now() }, exs);
+            setSession(null);
+            setDone({ report, session: s });
+          }}
+        />
+        <button
+          type="button"
+          className="btn btn--ghost btn--sm"
+          style={{ alignSelf: 'flex-start' }}
+          onClick={() => {
+            if (window.confirm('¿Abandonar el simulacro? Se perderán las respuestas.')) {
+              saveSession(null);
+              setSession(null);
+            }
+          }}
+        >
+          Abandonar el simulacro
+        </button>
+      </div>
+    );
+  }
 
-  const finished = run && run.index >= run.exercises.length;
-  const timeLeft = run?.minutes ? run.minutes * 60_000 - (now - run.startedAt) : null;
-  const timeUp = timeLeft !== null && timeLeft <= 0;
-
-  const finalize = useCallback(
-    (r: ExamRun) => {
-      const byNode = aggregateNodeEvidence(r.results.map(({ exercise, outcome }) => ({ exercise, parts: outcome.parts })));
-      const score = runScore(r);
-      recordExam({ scope: r.scope, total: r.exercises.length, score, byNode });
-    },
-    [recordExam],
-  );
-
-  useEffect(() => {
-    if (run && timeUp && !finished) {
-      const r = { ...run, index: run.exercises.length };
-      setRun(r);
-      finalize(r);
-    }
-  }, [timeUp, run, finished, finalize]);
-
-  if (!run) {
+  {
     return (
       <div className="stack-16">
         <div className="card mock-exam">
@@ -522,9 +434,7 @@ function ExamView() {
               const seed = parseSeed(seedText) ?? Math.floor(Math.random() * 1e6);
               const prof = profileId === 'debiles' ? weakProfile(masteryAll, seed).profile : profilePreview.profile;
               const { exercises, points } = buildProfileExam(prof, seed);
-              setRun({ exercises, index: 0, results: [], startedAt: Date.now(), minutes: prof.minutes, scope: [], points, seed, kind: 'tipo', limitation: profileId === 'debiles' ? weakProfile(masteryAll, seed).limitation : undefined });
-              setAnswered(false);
-              setNow(Date.now());
+              start(`Simulacro ${prof.label.toLowerCase()}`, exercises, points, prof.minutes, seed, profileId === 'debiles' ? weakProfile(masteryAll, seed).limitation : undefined);
             }}
           >
             Empezar el simulacro {profilePreview.profile.label.toLowerCase()}
@@ -572,9 +482,7 @@ function ExamView() {
             const scope = scopeNodes(blocks);
             const seed = parseSeed(seedText) ?? Math.floor(Math.random() * 1e6);
             const built = buildExamDetailed(scope, count, seed);
-            setRun({ exercises: built.exercises, index: 0, results: [], startedAt: Date.now(), minutes, scope, seed, kind: 'medida', limitation: built.limitation });
-            setAnswered(false);
-            setNow(Date.now());
+            start('Examen a medida', built.exercises, built.exercises.map(() => 1), minutes, seed, built.limitation);
           }}
         >
           Empezar examen
@@ -596,135 +504,6 @@ function ExamView() {
       </div>
     );
   }
-
-  if (finished) {
-    const score = runScore(run);
-    const byNode = new Map(Object.entries(aggregateNodeEvidence(run.results.map(({ exercise, outcome }) => ({ exercise, parts: outcome.parts })))));
-    return (
-      <div className="stack-16 enter">
-        <div className="row row--between" style={{ alignItems: 'flex-end' }}>
-          <div className="stack-8">
-            <span className="eyebrow">Resultado</span>
-            <span className="display" style={{ fontSize: '4rem' }}>
-              {(score * 10).toLocaleString('es-ES', { maximumFractionDigits: 1 })}
-              <span className="faint" style={{ fontSize: '1.5rem' }}>
-                {' '}
-                / 10
-              </span>
-            </span>
-          </div>
-          <div className="stack-8" style={{ alignItems: 'flex-end' }}>
-            <button type="button" className="btn" onClick={() => setRun(null)}>
-              Nuevo examen
-            </button>
-            <span className="small faint mono">semilla {run.seed}</span>
-          </div>
-        </div>
-        <StudyPlan run={run} />
-        {run.results.length < run.exercises.length && <Feedback tone="warn">Se acabó el tiempo: {run.exercises.length - run.results.length} pregunta(s) sin responder cuentan como 0.</Feedback>}
-        <div className="stack-8">
-          <span className="small muted">Por apartados</span>
-          {[...byNode.entries()]
-            .sort((a, b) => a[0].localeCompare(b[0], 'es', { numeric: true }))
-            .map(([n, v]) => (
-              <div key={n} className="row row--between small">
-                <span>
-                  <span className="mono faint">{n}</span> {nodeTitle(n)}
-                </span>
-                <span className="row" style={{ gap: 8 }}>
-                  <span className="progress" style={{ width: 90 }}>
-                    <span style={{ width: `${(v.ok / v.total) * 100}%`, background: v.ok / v.total >= 0.7 ? 'var(--ok)' : v.ok / v.total >= 0.4 ? 'var(--warn)' : 'var(--bad)' }} />
-                  </span>
-                  <span className="mono" style={{ width: 36, textAlign: 'right' }}>
-                    {Math.round((v.ok / v.total) * 100)}%
-                  </span>
-                  {v.ok / v.total < 0.7 ? (
-                    <a href={`#/guia?n=${guideAnchor(n)}`} className="small" style={{ color: 'var(--accent)', width: 56 }}>
-                      Repasar
-                    </a>
-                  ) : (
-                    <span style={{ width: 56 }} />
-                  )}
-                </span>
-              </div>
-            ))}
-        </div>
-        <div className="stack-12">
-          <span className="small muted">Revisión</span>
-          {run.results.map(({ exercise, outcome }, i) => (
-            <details key={exercise.id + i} className="card">
-              <summary className="row row--between" style={{ cursor: 'pointer', listStyle: 'none' }}>
-                <span>
-                  <span className="mono faint">{i + 1}.</span> {exercise.title}
-                </span>
-                <span className="mono" style={{ color: outcome.score >= 0.7 ? 'var(--ok)' : 'var(--bad)' }}>
-                  {run.points ? `${(Math.round(outcome.score * run.points[i]! * 100) / 100).toLocaleString('es-ES')} / ${run.points[i]!.toLocaleString('es-ES')} p` : `${Math.round(outcome.score * 100)} %`}
-                </span>
-              </summary>
-              <div className="stack-8 small" style={{ marginTop: 12, color: 'var(--ink-muted)' }}>
-                {exercise.parts.map((p, k) => (
-                  <div key={p.id}>
-                    <span style={{ color: outcome.partResults[k]?.correct ? 'var(--ok)' : 'var(--bad)' }}>{outcome.partResults[k]?.correct ? '✓' : '✗'}</span> <b style={{ fontWeight: 600, color: 'var(--ink)' }}>{p.prompt}:</b> <span className="mono">{p.canonical}</span>. {p.explanation}
-                  </div>
-                ))}
-                {outcome.score < 1 && (
-                  <a className="btn btn--sm" style={{ alignSelf: 'flex-start' }} href={`#/guia?n=${guideAnchor(exercise.nodeIds[0]!)}`}>
-                    Repasar la teoría de este problema
-                  </a>
-                )}
-              </div>
-            </details>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  const ex = run.exercises[run.index]!;
-  return (
-    <div className="stack-16">
-      {run.limitation && run.index === 0 && <Feedback tone="warn">{run.limitation}</Feedback>}
-      <div className="row row--between">
-        <span className="small muted">
-          Pregunta <span className="mono">{run.index + 1}</span> de <span className="mono">{run.exercises.length}</span>
-        </span>
-        {timeLeft !== null && (
-          <span className="mono" style={{ color: timeLeft < 60_000 ? 'var(--bad)' : 'var(--ink-muted)' }} aria-live="off">
-            {Math.max(0, Math.floor(timeLeft / 60000))}:{String(Math.max(0, Math.floor((timeLeft % 60000) / 1000))).padStart(2, '0')}
-          </span>
-        )}
-      </div>
-      <div className="progress">
-        <span style={{ width: `${(run.index / run.exercises.length) * 100}%` }} />
-      </div>
-      <div className="card" style={{ padding: 24 }} key={ex.id + run.index}>
-        <ExercisePlayer
-          exercise={ex}
-          mode="examen"
-          showMeta={false}
-          onFinish={(o) => {
-            setAnswered(true);
-            recordExercise(ex, { ...o, hintsUsed: 0 }, 'examen');
-            setRun((r) => (r ? { ...r, results: [...r.results, { exercise: ex, outcome: o }] } : r));
-          }}
-          onNext={
-            answered
-              ? () => {
-                  setAnswered(false);
-                  setRun((r) => {
-                    if (!r) return r;
-                    const next = { ...r, index: r.index + 1 };
-                    if (next.index >= next.exercises.length) finalize(next);
-                    return next;
-                  });
-                }
-              : undefined
-          }
-          nextLabel={run.index + 1 >= run.exercises.length ? 'Ver resultado' : 'Siguiente pregunta'}
-        />
-      </div>
-    </div>
-  );
 }
 
 function ProgressView() {
@@ -905,8 +684,8 @@ export function TrainingOverlay() {
   return (
     <div className="workspace workspace--full" style={{ minHeight: 0 }}>
       <div ref={scroller} className="interactive" style={{ overflowY: 'auto', minHeight: 0, padding: '8px var(--gutter) 64px' }}>
-        <div style={{ maxWidth: 920, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 32 }}>
-          <header className="stack-12 enter">
+        <div className="training-col" style={{ maxWidth: 920, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 32 }}>
+          <header className="stack-12 enter training-head">
             <span className="eyebrow eyebrow--accent">Centro de entrenamiento</span>
             <h1 className="display training-title" style={{ fontSize: 'clamp(2.5rem, 5vw, 3.75rem)' }}>
               Practica lo que te falta.
@@ -920,7 +699,7 @@ export function TrainingOverlay() {
               ))}
             </div>
           </header>
-          <p className="small muted mode-help">{MODE_HELP[view]}</p>
+          <p className="small muted mode-help training-head">{MODE_HELP[view]}</p>
           {view === 'practica' && practiceScope.length > 0 && !fixed && (
             <div className="card row row--between row--wrap" style={{ gap: 12, padding: '12px 16px' }}>
               <span className="small">

@@ -1,0 +1,187 @@
+/**
+ * ATOM 4.0 · Simulacro profesional (lógica pura).
+ *
+ * - La sesión guarda SOLO identificadores de ejercicio y respuestas: se puede guardar automáticamente en
+ *   el navegador y reconstruir exactamente (los ejercicios son deterministas por id).
+ * - Navegación libre: las respuestas no se corrigen hasta entregar.
+ * - Corrección al final, secuencial dentro de cada ejercicio (arrastre de errores) y con crédito parcial
+ *   por apartado.
+ * - Las preguntas sin responder se diagnostican aparte: cuentan 0 en la nota, aparecen en el informe por
+ *   apartados como «sin responder» y NO se usan como evidencia de dominio (no responder por falta de
+ *   tiempo no demuestra no saber; hallazgo de la auditoría de ATOM 3.0).
+ */
+import { checkAnswer } from './checker';
+import { buildEvidence, type PartRecord } from './evidence';
+import { GENERATOR_BY_ID, SOURCE_EXERCISES } from './registry';
+import type { CheckResult, Exercise, ExercisePart } from './types';
+
+export type PartValue = string | string[];
+
+export interface ExamSession {
+  version: 1;
+  label: string;
+  seed: number;
+  minutes: number | null;
+  startedAt: number;
+  exerciseIds: string[];
+  points: number[];
+  /** exerciseIndex → partId → respuesta */
+  answers: Record<number, Record<string, PartValue>>;
+  flagged: number[];
+  current: number;
+  finishedAt?: number;
+}
+
+let sourceById: Map<string, () => Exercise> | null = null;
+
+/** Reconstruye un ejercicio a partir de su id (generador:dificultad:semilla o id de un ejercicio de los documentos). */
+export function exerciseFromId(id: string): Exercise | null {
+  const m = id.match(/^([a-z0-9-]+):([123]):(\d+)$/);
+  if (m) {
+    const g = GENERATOR_BY_ID.get(m[1]!);
+    if (g) {
+      const d = Number(m[2]) as 1 | 2 | 3;
+      if (g.difficulties.includes(d)) {
+        const ex = g.create(Number(m[3]), d);
+        if (ex.id === id) return ex;
+      }
+    }
+  }
+  if (!sourceById) {
+    sourceById = new Map();
+    for (const s of SOURCE_EXERCISES) sourceById.set(s.build().id, s.build);
+  }
+  return sourceById.get(id)?.() ?? null;
+}
+
+export function newSession(label: string, exercises: Exercise[], points: number[], minutes: number | null, seed: number, now = Date.now()): ExamSession {
+  return { version: 1, label, seed, minutes, startedAt: now, exerciseIds: exercises.map((e) => e.id), points, answers: {}, flagged: [], current: 0 };
+}
+
+/** ¿Se ha escrito algo en este apartado? */
+export function isAnswered(p: ExercisePart, v: PartValue | undefined): boolean {
+  if (v === undefined) return false;
+  if (p.answer.kind === 'order') return Array.isArray(v) && v.length > 0 && (v as string[]).join() !== p.answer.items.map((i) => i.id).join();
+  if (Array.isArray(v)) return v.length > 0 && v.some((x) => String(x).trim() !== '');
+  return v.trim() !== '';
+}
+
+export type QuestionState = 'sin-responder' | 'parcial' | 'respondida';
+
+export function questionState(ex: Exercise, answers: Record<string, PartValue> | undefined): QuestionState {
+  const n = ex.parts.filter((p) => isAnswered(p, answers?.[p.id])).length;
+  return n === 0 ? 'sin-responder' : n < ex.parts.length ? 'parcial' : 'respondida';
+}
+
+export interface GradedPart {
+  part: ExercisePart;
+  value: PartValue | undefined;
+  answered: boolean;
+  result: CheckResult;
+  credit: number;
+}
+
+export interface GradedQuestion {
+  exercise: Exercise;
+  points: number;
+  earned: number;
+  /** 0–1, media del crédito de los apartados */
+  score: number;
+  state: QuestionState;
+  parts: GradedPart[];
+  records: PartRecord[];
+}
+
+/** Corrige un ejercicio: secuencial (arrastre de errores), crédito 1 o 0 por apartado, sin pistas. */
+export function gradeQuestion(ex: Exercise, answers: Record<string, PartValue> | undefined, points: number): GradedQuestion {
+  const prev: Record<string, number> = {};
+  const parts: GradedPart[] = ex.parts.map((p) => {
+    const value = answers?.[p.id];
+    const answered = isAnswered(p, value);
+    const input = value ?? (p.answer.kind === 'choice' ? [] : '');
+    const result = answered ? checkAnswer(p.answer, input, { previousWrong: { ...prev } }) : ({ status: 'vacio', correct: false, message: 'Sin responder.', warnings: [] } as CheckResult);
+    if (answered && (!result.correct || result.status === 'correcto-arrastre') && result.numericValue !== undefined) prev[p.id] = result.numericValue;
+    // Desarrollo en examen: no se autoevalúa durante la prueba → sin crédito automático (se excluye de los simulacros).
+    const credit = result.credit ?? (result.correct ? 1 : 0);
+    return { part: p, value, answered, result, credit };
+  });
+  const score = parts.reduce((a, x) => a + x.credit, 0) / Math.max(1, parts.length);
+  const records: PartRecord[] = parts.map((g) => ({
+    id: g.part.id,
+    credit: g.credit,
+    attempts: g.answered ? 1 : 0,
+    revealed: false,
+    errors: g.answered && !g.result.correct && g.result.errorKind ? [{ kind: g.result.errorKind, skill: g.result.errorSkill, valueCorrect: g.result.valueCorrect }, ...(g.result.secondary ?? [])] : g.answered ? [] : [{ kind: 'incompleto' as const }],
+    carried: g.result.status === 'correcto-arrastre',
+    sigFigIssue: g.result.correct && g.result.errorKind === 'cifras',
+    sigFigsAssessed: g.result.correct ? g.result.sigFigsAssessed : undefined,
+  }));
+  return { exercise: ex, points, earned: score * points, score, state: questionState(ex, answers), parts, records };
+}
+
+export interface ExamReport {
+  questions: GradedQuestion[];
+  /** Nota sobre 10 */
+  grade: number;
+  totalPoints: number;
+  earnedPoints: number;
+  answered: number;
+  partial: number;
+  unanswered: number;
+  /** Apartado → evidencia de lo RESPONDIDO (ok/total) y número de pasos sin responder */
+  byNode: Record<string, { ok: number; total: number; unanswered: number }>;
+}
+
+export function gradeSession(session: ExamSession, exercises: Exercise[]): ExamReport {
+  const questions = exercises.map((ex, i) => gradeQuestion(ex, session.answers[i], session.points[i] ?? 1));
+  const totalPoints = questions.reduce((a, q) => a + q.points, 0);
+  const earnedPoints = questions.reduce((a, q) => a + q.earned, 0);
+  const byNode: ExamReport['byNode'] = {};
+  for (const q of questions) {
+    // Pasos respondidos → evidencia granular; pasos sin responder → recuento aparte.
+    const answeredIdx = q.parts.map((p, k) => (p.answered ? k : -1)).filter((k) => k >= 0);
+    if (answeredIdx.length) {
+      const sub: Exercise = { ...q.exercise, parts: answeredIdx.map((k) => q.exercise.parts[k]!) };
+      const ev = buildEvidence(sub, answeredIdx.map((k) => q.records[k]!));
+      for (const [n, v] of Object.entries(ev.nodes)) {
+        const cur = byNode[n] ?? { ok: 0, total: 0, unanswered: 0 };
+        byNode[n] = { ...cur, ok: cur.ok + v.y * v.n, total: cur.total + v.n };
+      }
+    }
+    q.parts.forEach((p) => {
+      if (p.answered) return;
+      for (const n of p.part.nodeIds?.length ? p.part.nodeIds : q.exercise.nodeIds) {
+        const cur = byNode[n] ?? { ok: 0, total: 0, unanswered: 0 };
+        byNode[n] = { ...cur, unanswered: cur.unanswered + 1 };
+      }
+    });
+  }
+  return {
+    questions,
+    grade: totalPoints ? (earnedPoints / totalPoints) * 10 : 0,
+    totalPoints,
+    earnedPoints,
+    answered: questions.filter((q) => q.state === 'respondida').length,
+    partial: questions.filter((q) => q.state === 'parcial').length,
+    unanswered: questions.filter((q) => q.state === 'sin-responder').length,
+    byNode,
+  };
+}
+
+/** Validación de una sesión guardada (localStorage puede estar dañado o ser de otra versión). */
+export function isValidSession(v: unknown): v is ExamSession {
+  if (typeof v !== 'object' || v === null) return false;
+  const s = v as Partial<ExamSession>;
+  return (
+    s.version === 1 &&
+    typeof s.label === 'string' &&
+    Number.isFinite(s.seed) &&
+    (s.minutes === null || (typeof s.minutes === 'number' && s.minutes > 0 && s.minutes <= 300)) &&
+    Number.isFinite(s.startedAt) &&
+    Array.isArray(s.exerciseIds) && s.exerciseIds.length > 0 && s.exerciseIds.length <= 40 && s.exerciseIds.every((x) => typeof x === 'string') &&
+    Array.isArray(s.points) && s.points.length === s.exerciseIds.length && s.points.every((x) => typeof x === 'number' && x >= 0) &&
+    typeof s.answers === 'object' && s.answers !== null &&
+    Array.isArray(s.flagged) &&
+    Number.isInteger(s.current)
+  );
+}
