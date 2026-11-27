@@ -1,3 +1,4 @@
+import { MISSIONS } from '../learning/campaign';
 import { NavRail, SearchPalette, useSearchShortcut } from './Navigation';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { navigate, notifySceneChange, useRoute, useReducedMotion, type Route } from './hooks';
@@ -221,7 +222,7 @@ function Intro() {
           </button>
           <button type="button" className="intro__path" onClick={() => go('/')}>
             <span className="h3">Explorar</span>
-            <span className="small muted">Siete laboratorios 3D y una campaña de 35 misiones.</span>
+            <span className="small muted">Siete laboratorios 3D y una campaña de {MISSIONS.length} misiones.</span>
           </button>
           <button type="button" className="intro__path" onClick={() => go('/entrenamiento?v=examen')}>
             <span className="h3">Practicar</span>

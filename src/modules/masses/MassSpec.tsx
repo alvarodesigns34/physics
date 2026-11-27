@@ -322,7 +322,7 @@ export function MassOverlay() {
   const measured = st.total ? isotopes.reduce((a, i) => a + i.mass * (st.counts[i.a] ?? 0), 0) / st.total : null;
   const reference = isotopes.length ? averageAtomicMass(isotopes.map((i) => ({ mass: i.mass, abundance: i.abundance }))).normalizedValue : null;
   const sigma = measured && st.total > 1 ? Math.sqrt(isotopes.reduce((a, i) => a + ((st.counts[i.a] ?? 0) / st.total) * (i.mass - measured) ** 2, 0) / st.total) : null;
-  const signal = useMemo(() => ({ masas: { z: st.z, ions: Math.floor(st.total / 100) * 100, measured: measured ? Number(measured.toFixed(2)) : null } }), [st.z, Math.floor(st.total / 100), measured ? measured.toFixed(2) : null]); // eslint-disable-line react-hooks/exhaustive-deps
+  const signal = useMemo(() => ({ masas: { z: st.z, ions: Math.floor(st.total / 100) * 100, measured: measured ? Number(measured.toFixed(2)) : null, unknown: st.unknown } }), [st.z, Math.floor(st.total / 100), measured ? measured.toFixed(2) : null, st.unknown]); // eslint-disable-line react-hooks/exhaustive-deps
   const clTypo = averageAtomicMass([
     { mass: 34.96885, abundance: 74.771 },
     { mass: 36.9659, abundance: 24.229 },

@@ -11,6 +11,9 @@ import { choicePart } from './generators/util';
 import { isoelectronicGenerator } from './generators/nucleus';
 import { HISTORY_ITEMS, QUANTUM_CONCEPT_ITEMS, buildConcept, averageMassGenerator, buildSubshellExercise, trendGenerator, buildTrendOrderExercise, E } from './generators/extra';
 import { configStateGenerator, buildConfigExercise } from './generators/electrons';
+import { buildPrediction, PREDICTIONS, buildMysteryIon, buildIEGraph, spectrumIDGenerator, bohrRatiosGenerator } from './generators/reasoning';
+import { unknownIsotopeGenerator } from './generators/exam2';
+import { mulberry32 } from '../science/numbers';
 
 import type { LabSignal } from '../ui/MissionPanel';
 
@@ -354,7 +357,8 @@ MISSIONS.push(
     id: 'III-4', code: 'III-4', chapter: 3, title: 'Bohr', lab: 'historia', tab: 'modelos', nodeIds: ['4.1', '4.2', '4.4'],
     brief: 'Órbitas permitidas y saltos cuánticos: la idea que explicó el espectro del hidrógeno.',
     steps: [
-      { kind: 'lab', text: 'Abre el modelo de Bohr.', check: (s) => s.history?.model === 'bohr' },
+      { kind: 'ejercicio', text: 'Antes de abrirlo, predice qué espectro dará el hidrógeno según Bohr.', build: () => buildPrediction(PREDICTIONS[3]!, 1, 'camp:III-4p', mulberry32(34)) },
+      { kind: 'lab', text: 'Abre el modelo de Bohr y sigue su recorrido hasta «Lo que se observó».', check: (s) => s.history?.model === 'bohr' },
       { kind: 'ejercicio', text: 'Los postulados.', build: concept(HISTORY_ITEMS[7]!, 'III-4') },
       { kind: 'ejercicio', text: 'Los radios.', build: concept(HISTORY_ITEMS[8]!, 'III-4b') },
       { kind: 'ejercicio', text: 'Las correcciones.', build: concept(HISTORY_ITEMS[9]!, 'III-4c') },
@@ -379,8 +383,11 @@ MISSIONS.push(
   },
   {
     id: 'IV-3', code: 'IV-3', chapter: 4, title: 'Problema inverso', lab: 'masas', nodeIds: ['3.1'],
-    brief: 'Conocida la masa atómica, ¿qué proporción hay de cada isótopo? El problema del examen, al revés.',
-    steps: [{ kind: 'ejercicio', text: 'Calcula las abundancias.', build: () => averageMassGenerator.create(5, 3) }],
+    brief: 'Conocida la masa atómica, ¿qué proporción hay de cada isótopo? El problema del examen, al revés, y después con una muestra que nadie te ha identificado.',
+    steps: [
+      { kind: 'ejercicio', text: 'Calcula las abundancias.', build: () => averageMassGenerator.create(5, 3) },
+      { kind: 'lab', text: 'En el laboratorio, analiza una muestra desconocida hasta contar 2 000 iones e identifícala.', check: (s) => !!s.masas?.unknown && (s.masas?.ions ?? 0) >= 2000 },
+    ],
   },
   // ── V · Probabilidad (Quantum Space) ──
   {
@@ -395,9 +402,9 @@ MISSIONS.push(
     id: 'V-2', code: 'V-2', chapter: 5, title: 'Tres orientaciones', lab: 'cuantico', tab: 'orbitales', nodeIds: ['5.4', '5.5'],
     brief: 'Un subnivel p tiene tres orbitales idénticos salvo en su orientación. Encuéntralos.',
     steps: [
-      { kind: 'lab', text: 'Visita el orbital 2p con m = −1.', check: (s) => s.quantum?.n === 2 && s.quantum.l === 1 && s.quantum.m === -1 },
-      { kind: 'lab', text: 'Ahora con m = +1.', check: (s) => s.quantum?.n === 2 && s.quantum.l === 1 && s.quantum.m === 1 },
-      { kind: 'ejercicio', text: 'Describe el subnivel.', build: () => buildSubshellExercise(2, 1, 2, 'camp:V-2', 'Campaña V-2') },
+      { kind: 'ejercicio', text: 'Antes de mirar: predice cuántos orbitales y electrones tiene el subnivel 2p.', build: () => buildSubshellExercise(2, 1, 2, 'camp:V-2', 'Campaña V-2') },
+      { kind: 'lab', text: 'Comprueba tu predicción: visita el 2p con m = −1…', check: (s) => s.quantum?.n === 2 && s.quantum.l === 1 && s.quantum.m === -1 },
+      { kind: 'lab', text: '…y con m = +1. ¿Qué cambia y qué no?', check: (s) => s.quantum?.n === 2 && s.quantum.l === 1 && s.quantum.m === 1 },
     ],
   },
   {
@@ -462,9 +469,10 @@ MISSIONS.push(
   // ── VII · Periodicidad (Periodic Universe) ──
   {
     id: 'VII-1', code: 'VII-1', chapter: 7, title: 'Mapa de tamaños', lab: 'periodico', nodeIds: ['7.7', '7.6'],
-    brief: 'Levanta la tabla periódica según el radio de cada átomo y descubre las dos tendencias.',
+    brief: 'Levanta la tabla periódica según el radio de cada átomo y descubre las dos tendencias. Predice antes de mirar.',
     steps: [
-      { kind: 'lab', text: 'Representa el radio atómico en la tabla 3D.', check: (s) => s.periodic?.prop === 'radio' },
+      { kind: 'ejercicio', text: 'Predice: ¿qué átomo es mayor en cada pareja?', build: () => buildTrendOrderExercise('radio', [E('Li'), E('C'), E('F')], 2, 'camp:VII-1p', 'Campaña VII-1') },
+      { kind: 'lab', text: 'Compruébalo: representa el radio atómico en la tabla 3D.', check: (s) => s.periodic?.prop === 'radio' },
       { kind: 'ejercicio', text: 'TEO ej. 9a.', build: () => SOURCE_BY_REF.get('TEO ej. 9a')!.build() },
     ],
   },
@@ -502,7 +510,57 @@ MISSIONS.push(
       { kind: 'ejercicio', text: 'Tendencia con excepción.', build: () => trendGenerator.create(4, 3) },
     ],
   },
+  // ── Misiones de ATOM 3.0: conectan con el material nuevo y exigen predecir, deducir o reparar ──
+  {
+    id: 'II-8', code: 'II-8', chapter: 2, title: 'Muestra problema', lab: 'fotones', tab: 'espectroscopio', nodeIds: ['3.5', '4.3'],
+    brief: 'Una lámpara con una mezcla de gases. Identifica sus componentes por las líneas, como se descubrió el helio en el Sol.',
+    steps: [
+      { kind: 'espectro', text: 'Calienta la vista: identifica primero un elemento puro por su espectro de absorción.', answerSymbol: 'Na', mode: 'absorcion' },
+      { kind: 'ejercicio', text: 'Analiza la mezcla.', build: () => spectrumIDGenerator.create(8, 3) },
+    ],
+  },
+  {
+    id: 'III-5', code: 'III-5', chapter: 3, title: 'Predice y contrasta', lab: 'historia', tab: 'modelos', nodeIds: ['2.3', '2.4', '2.5'],
+    brief: 'La ciencia avanza cuando una predicción falla. Predice con Thomson, predice con Rutherford y compara con lo observado.',
+    steps: [
+      { kind: 'ejercicio', text: 'Predicción con el modelo de Thomson.', build: () => buildPrediction(PREDICTIONS[0]!, 1, 'camp:III-5a', mulberry32(35)) },
+      { kind: 'ejercicio', text: 'Predicción con el modelo de Rutherford.', build: () => buildPrediction(PREDICTIONS[1]!, 1, 'camp:III-5b', mulberry32(36)) },
+      { kind: 'lab', text: 'Contrástalo en la lámina de oro con al menos 20 desviaciones grandes del átomo nuclear.', check: (s) => (s.history?.largeR ?? 0) >= 20 },
+    ],
+  },
+  {
+    id: 'IV-4', code: 'IV-4', chapter: 4, title: 'El isótopo que falta', lab: 'masas', nodeIds: ['3.1', '1.3'],
+    brief: 'Conoces la masa atómica y uno de los isótopos: deduce la masa del otro.',
+    steps: [{ kind: 'ejercicio', text: 'Masa del isótopo desconocido.', build: () => unknownIsotopeGenerator.create(7, 2) }],
+  },
+  {
+    id: 'V-5', code: 'V-5', chapter: 5, title: 'Tamaños reales', lab: 'cuantico', tab: 'orbitales', nodeIds: ['5.5', '4.2'],
+    brief: '¿Cuánto mayor es un orbital 3p que un 2p? Compáralos con la misma escala y razona con proporciones.',
+    steps: [
+      { kind: 'lab', text: 'Compara el 2p con el 3p (botón «2p ↔ 3p»).', check: (s) => s.quantum?.n === 2 && s.quantum.l === 1 && s.quantum.compare?.n === 3 && s.quantum.compare.l === 1 },
+      { kind: 'ejercicio', text: 'Razona con proporciones de Bohr.', build: () => bohrRatiosGenerator.create(5, 2) },
+    ],
+  },
+  {
+    id: 'VI-6', code: 'VI-6', chapter: 6, title: 'El ion del hierro', lab: 'arquitecto', nodeIds: ['6.8', '6.4'],
+    brief: 'Los metales de transición no pierden los electrones en el orden en que los ganaron. Constrúyelo y compruébalo.',
+    steps: [
+      { kind: 'lab', text: 'Construye el ion Fe³⁺ en su estado fundamental (desafío «Ion Fe³⁺» o a mano).', check: (s) => s.architect?.z === 26 && s.architect.e === 23 && s.architect.status === 'fundamental' },
+      { kind: 'ejercicio', text: 'Identifica un ion misterioso.', build: () => buildMysteryIon(25, 2, 55, 3, 'camp:VI-6') },
+    ],
+  },
+  {
+    id: 'VII-6', code: 'VII-6', chapter: 7, title: 'Lee la gráfica', lab: 'periodico', tab: 'tendencias', nodeIds: ['7.9', '7.13'],
+    brief: 'Las excepciones a la tendencia no son errores: son pistas sobre la configuración electrónica.',
+    steps: [
+      { kind: 'lab', text: 'Abre la vista «Tendencias» y localiza las excepciones de la EI₁ en el periodo 3.', check: (s) => s.periodic?.view === 'tendencias' },
+      { kind: 'ejercicio', text: 'Justifica las anomalías.', build: () => buildIEGraph(3, 2, 'camp:VII-6') },
+    ],
+  },
 );
+
+// Orden estable por capítulo: las misiones nuevas quedan al final de su capítulo, no de la campaña.
+MISSIONS.sort((a, b) => a.chapter - b.chapter);
 
 export const MISSION_BY_ID = new Map(MISSIONS.map((m) => [m.id, m]));
 

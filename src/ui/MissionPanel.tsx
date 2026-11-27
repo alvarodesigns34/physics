@@ -11,10 +11,10 @@ import { sfx } from '../app/sound';
 /** Estado del laboratorio que las misiones pueden evaluar. `stamp` distingue eventos repetidos. */
 export interface LabSignal {
   periodic?: { prop: string; selected: number | null; compared: [number, number] | null; view: string };
-  quantum?: { n: number; l: number; m: number; slice: boolean; bohr: boolean; tab: string; sigmaNm: number };
+  quantum?: { n: number; l: number; m: number; slice: boolean; bohr: boolean; tab: string; sigmaNm: number; compare?: { n: number; l: number; m: number } | null };
   architect?: { z: number; e: number; status: string; pauli: boolean; hund: boolean };
   history?: { tab: string; model: string; alphasR: number; alphasT: number; largeR: number; largeT: number; balanced: boolean; collapsed: boolean };
-  masas?: { z: number; ions: number; measured: number | null };
+  masas?: { z: number; ions: number; measured: number | null; unknown?: boolean };
   species?: Species;
   lambdaNm?: number;
   transition?: { from: number; to: number; stamp: number };

@@ -133,7 +133,7 @@ export function HomeOverlay() {
                 <path d="M28 28 40 16" />
               </svg>
               <span className="lab-card__name">Campaña</span>
-              <span className="lab-card__blurb">35 misiones guiadas por los siete laboratorios, en el atrio 3D.</span>
+              <span className="lab-card__blurb">{MISSIONS.length} misiones guiadas por los siete laboratorios, en el atrio 3D.</span>
               <span className="lab-card__topics">
                 {missionsDone}/{MISSIONS.length} completadas
               </span>

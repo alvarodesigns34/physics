@@ -622,7 +622,7 @@ export function QuantumOverlay() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.get('tab')]);
   const { n, l, m } = st;
-  const signal = useMemo(() => ({ quantum: { n, l, m, slice: st.slice, bohr: st.bohr, tab: st.tab, sigmaNm: st.sigmaNm } }), [n, l, m, st.slice, st.bohr, st.tab, st.sigmaNm]);
+  const signal = useMemo(() => ({ quantum: { n, l, m, slice: st.slice, bohr: st.bohr, tab: st.tab, sigmaNm: st.sigmaNm, compare: st.compare } }), [n, l, m, st.slice, st.bohr, st.tab, st.sigmaNm, st.compare]);
   const tryTuple = () => {
     const t = parseQuantumTuple(tuple);
     if (!t) return setTupleMsg({ ok: false, msg: 'Escribe cuatro números: (n, l, m_l, m_s).' });

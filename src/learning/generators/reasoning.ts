@@ -579,7 +579,7 @@ interface Prediction {
   nodeIds: string[];
 }
 
-const PREDICTIONS: Prediction[] = [
+export const PREDICTIONS: Prediction[] = [
   {
     model: 'Thomson', experiment: 'Bombardeas una lámina de oro muy fina con partículas α.', nodeIds: ['2.3', '2.4'],
     options: [['todas', 'Casi todas atraviesan con desviaciones muy pequeñas'], ['rebote', 'La mayoría pasa, pero algunas rebotan'], ['ninguna', 'Ninguna atraviesa la lámina'], ['espiral', 'Las α caen en espiral hacia los átomos']],
