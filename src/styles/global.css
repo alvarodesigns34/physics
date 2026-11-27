@@ -3954,3 +3954,38 @@ kbd {
 .matrix .v-na {
   color: var(--ink-faint);
 }
+
+/* Electron Architect 3.0 · desafíos */
+.challenge-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.challenge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface-raised);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.challenge-chip:hover {
+  border-color: var(--accent-line);
+}
+.challenge-chip.is-done {
+  border-color: color-mix(in srgb, var(--ok) 40%, transparent);
+  color: var(--ok);
+  background: var(--ok-quiet);
+}
+.challenge-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--r-inner);
+  background: var(--surface-tint);
+  border: 1px solid var(--accent-line);
+}

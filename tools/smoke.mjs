@@ -131,6 +131,11 @@ try {
   await page.waitForFunction(() => /Estado fundamental/.test(document.querySelector('aside')?.textContent ?? ''), null, { timeout: T }).catch(() => {});
   check((await page.locator('aside').innerText()).includes('Estado fundamental'), 'Electron Architect: oxígeno en estado fundamental');
   await page.screenshot({ path: `${OUT}/08-arquitecto.png` });
+  await page.click('button.challenge-chip:has-text("Repara: nitrógeno")');
+  await page.waitForSelector('.challenge-card', { timeout: T });
+  check(!(await page.locator('aside').innerText()).includes('objetivo:'), 'Desafío: el objetivo queda oculto mientras se resuelve');
+  await page.click('.challenge-card button:has-text("Regla de Hund")');
+  check((await page.locator('.challenge-card').innerText()).includes('Correcto: incumple'), 'Desafío «Repara: nitrógeno»: regla de Hund identificada');
 
   await page.goto(base + '#/historia?tab=geiger');
   await page.waitForSelector('[role=radio]:has-text("Átomo nuclear")', { timeout: T });

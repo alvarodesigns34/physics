@@ -1,3 +1,4 @@
+import { ChallengesPanel } from './Challenges';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -22,10 +23,12 @@ interface AState {
   charge: number;
   boxes: Boxes;
   focus: string | null;
+  /** Desafío activo: oculta las ayudas que darían la respuesta (objetivo, llenado automático) */
+  challenge: string | null;
   set: (p: Partial<Omit<AState, 'set'>>) => void;
 }
 
-export const useArchitect = create<AState>((set) => ({ z: 8, charge: 0, boxes: {}, focus: null, set: (p) => set(p) }));
+export const useArchitect = create<AState>((set) => ({ z: 8, charge: 0, boxes: {}, focus: null, challenge: null, set: (p) => set(p) }));
 
 const STATUS_TEXT = {
   vacio: 'Sin electrones',
@@ -92,7 +95,7 @@ function OrbitalBox({ state, x, onClick, bad, hund }: { state: BoxState; x: numb
           document.body.style.cursor = '';
         }}
       >
-        <meshPhysicalMaterial color={bad ? '#5a2620' : hund ? '#4a3c20' : '#26231f'} roughness={0.25} metalness={0.1} clearcoat={0.8} transparent opacity={hover ? 0.95 : 0.8} emissive={hover ? '#f2a93b' : '#000000'} emissiveIntensity={hover ? 0.15 : 0} />
+        <meshPhysicalMaterial color={bad ? '#7a2e24' : hund ? '#6b5420' : '#3a465e'} roughness={0.25} metalness={0.1} clearcoat={0.8} transparent opacity={hover ? 0.95 : 0.8} emissive={hover ? '#f2a93b' : '#000000'} emissiveIntensity={hover ? 0.15 : 0} />
       </mesh>
       {state === 1 && <Arrow up color={col} x={0} />}
       {state === 2 && <Arrow up={false} color={col} x={0} />}
@@ -325,6 +328,7 @@ export function ArchitectOverlay() {
           <Icon name={collapsed ? 'chevron-up' : 'chevron-down'} />
         </button>
         <div className="side__scroll">
+          <ChallengesPanel />
           <MissionPanel lab="arquitecto" signal={signal} />
           <section className="section">
             <span className="eyebrow">Especie</span>
@@ -392,11 +396,18 @@ export function ArchitectOverlay() {
             <div className="row row--wrap" style={{ gap: 6 }}>
               <span className="chip">{unpairedElectrons(conf)} desapareados</span>
               {conf.length > 0 && <span className="chip">{valenceElectrons(conf)} en la capa externa</span>}
-              <span className="chip" style={{ color: tone2(statusTone) }}>
-                objetivo: {formatConfiguration(target, { abbreviate: e > 10 })}
-              </span>
+              {!st.challenge && (
+                <span className="chip" style={{ color: tone2(statusTone) }}>
+                  objetivo: {formatConfiguration(target, { abbreviate: e > 10 })}
+                </span>
+              )}
             </div>
           </section>
+          {st.challenge ? (
+            <p className="small faint" style={{ margin: 0 }}>
+              Durante el desafío se ocultan el objetivo y el llenado automático. Construye en las cajas o en el diagrama de Möller.
+            </p>
+          ) : (
           <section className="section">
             <div className="row row--wrap" style={{ gap: 6 }}>
               <button
@@ -440,6 +451,7 @@ export function ArchitectOverlay() {
               </button>
             </div>
           </section>
+          )}
           <section className="section">
             <span className="eyebrow">Diagrama de Möller</span>
             <MollerDiagram
