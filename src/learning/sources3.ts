@@ -392,7 +392,7 @@ const EBAU: SourceExercise3[] = [
         `${STATUS_LABEL[d.status]}${el ? ` (${el.name}, ${d.electrons} e⁻)` : ''}. ${d.issues.map((x) => x.message).join(' ')}`.trim(),
       );
     }),
-    ['Imposible: aparece un subnivel que no existe (2d, 1p, 3f…) o se supera su capacidad.', 'Excitado: subniveles reales, pero queda un hueco por debajo de un electrón.', 'El orden de escritura (3d antes de 4s) no cambia el estado.'],
+    ['Para cada configuración hazte dos preguntas: ¿existen todos sus subniveles y ninguno supera su capacidad? ¿Queda algún hueco por debajo de un electrón?', 'Si falla la primera pregunta, es imposible; si solo falla la segunda (hay un hueco), es un estado excitado; si no falla ninguna, es fundamental.', 'Recuerda: 1p, 2d y 3f no existen (l < n), y el orden de escritura (3d antes de 4s) no cambia el estado.'],
     { source: 'EBAU (hoja del tema)' },
   ),
   tableRow('EBAU-3 b · ²⁰⁸Pb', sp(82, 208), '²⁰⁸Pb · electrones = 82 · carga 0', ['p', 'n'], 2),

@@ -351,3 +351,28 @@ describe('P1.6 — coherencia de los apartados declarados', async () => {
     expect([...new Set(out)]).toEqual([]);
   });
 });
+
+describe('8.3 — la primera pista orienta sin revelar', async () => {
+  const { GENERATORS, SOURCE_EXERCISES } = await import('./registry');
+  const { formatNumber } = await import('../science/numbers');
+  const all = [...GENERATORS.flatMap((g) => g.difficulties.flatMap((d) => [1, 5, 9].map((s) => g.create(s, d)))), ...SOURCE_EXERCISES.map((s) => s.build())];
+  it('no contiene el resultado numérico, la opción correcta (salvo definiciones de todas) ni datos sustituidos', () => {
+    const leaks: string[] = [];
+    for (const ex of all) {
+      const h = ex.hints[0];
+      if (/=\s*[−-]?\d[\d,.]*\s*(·|×)\s*10/.test(h)) leaks.push(`${ex.id}: fórmula sustituida`);
+      for (const p of ex.parts) {
+        if (p.answer.kind === 'numeric') {
+          const m = formatNumber(p.answer.value, { sig: 3 }).split(/[·×]/)[0]!.trim();
+          if (m.replace(/\D/g, '').replace(/0+$/, '').length >= 2 && h.includes(m)) leaks.push(`${ex.id}/${p.id}: ${m}`);
+        } else if (p.answer.kind === 'choice' && !p.answer.multiple) {
+          const texts = p.answer.options.map((o) => o.text);
+          const right = p.answer.options.find((o) => o.id === p.answer.correct[0])!.text;
+          const definesAll = texts.filter((t) => h.includes(t)).length >= 2;
+          if (right.length > 3 && h.includes(right) && !definesAll) leaks.push(`${ex.id}/${p.id}: «${right}»`);
+        }
+      }
+    }
+    expect(leaks).toEqual([]);
+  });
+});
