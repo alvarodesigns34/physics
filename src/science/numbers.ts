@@ -77,6 +77,9 @@ function countMantissaSigFigs(mantissa: string): { sig: number; ambiguous: boole
 export function parseNumber(input: string): ParsedNumber | null {
   if (!input) return null;
   let s = normalizeSuperscripts(input.trim());
+  // Variantes de escritura frecuentes (ATOM 4.0): «10**14», «10^{14}», «6,0 . 10^14», «6,0 10^14».
+  s = s.replace(/\*\*/g, '^').replace(/\^\s*\{\s*([+−–-]?\s*\d+)\s*\}/g, '^$1');
+  s = s.replace(/\s+\.\s+(?=10\b)/g, '·').replace(/^([+−–-]?[\d.,]+)\s+(?=10\s*\^)/, '$1·');
   s = s.replace(/[−–]/g, '-').replace(/\s*([·×xX*])\s*/g, '$1');
   // Notación «mantisa · 10^exp» con múltiples variantes
   const tenPow = s.match(/^(.+?)[·×xX*]10\s*(?:\^\s*\(?\s*([+-]?\d+)\s*\)?|([+-]\d+))$/);

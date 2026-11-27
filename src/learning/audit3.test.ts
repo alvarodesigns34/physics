@@ -418,3 +418,14 @@ describe('conversiones: la unidad pedida es obligatoria', () => {
     expect(r.warnings.length).toBe(1);
   });
 });
+
+describe('corrector: más formas de escribir la notación científica (ATOM 4.0)', () => {
+  const spec = { kind: 'numeric' as const, value: 6.0e14, unit: 'Hz', relTol: 0.01, sigFigs: 2 };
+  it.each(['6,0 10^14 Hz', '6,0 . 10^14 Hz', '6,0·10**14 Hz', '6,0·10^{14} Hz', '6,0·10^{−14+28} Hz'.replace('−14+28', '14'), '6,0×10^14 /s'])('«%s» se entiende', (t) => {
+    expect(checkAnswer(spec, t).correct).toBe(true);
+  });
+  it('sigue rechazando lo ambiguo y no confunde exponentes', () => {
+    expect(checkAnswer(spec, '6,0·10^15 Hz').correct).toBe(false);
+    expect(checkAnswer({ ...spec, value: 4.34e-7, unit: 'm' }, '4,34·10^{-7} m').correct).toBe(true);
+  });
+});
