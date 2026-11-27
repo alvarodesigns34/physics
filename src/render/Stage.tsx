@@ -107,15 +107,15 @@ function FrameMonitor() {
  */
 export type Mood = 'forja' | 'historia' | 'fotones' | 'masas' | 'cuantico' | 'arquitecto' | 'periodico' | 'campana' | 'neutro';
 export const MOODS: Record<Mood, { top: string; bottom: string; halo: string; key: string; rim: string; fog: string }> = {
-  forja: { top: '#0b0a0c', bottom: '#1d140d', halo: '#3a2412', key: '#ffd3a0', rim: '#8fb6ea', fog: '#0d0a08' },
-  historia: { top: '#0c0b0a', bottom: '#1b1610', halo: '#33281a', key: '#ffdcae', rim: '#9fbbe0', fog: '#0d0b08' },
-  fotones: { top: '#040509', bottom: '#0b0d16', halo: '#161a2c', key: '#f3ead8', rim: '#7d9ce8', fog: '#05060a' },
-  masas: { top: '#070a0f', bottom: '#0f1620', halo: '#1a2636', key: '#e6eef8', rim: '#7fb0e8', fog: '#080b10' },
-  cuantico: { top: '#06061a', bottom: '#0d0f26', halo: '#1d1f4a', key: '#e9e4ff', rim: '#8a8dff', fog: '#07071a' },
-  arquitecto: { top: '#06101e', bottom: '#0c1a2e', halo: '#14304d', key: '#e8f1ff', rim: '#6fb6ff', fog: '#07101c' },
-  periodico: { top: '#09090b', bottom: '#141518', halo: '#24252b', key: '#fff1dc', rim: '#a9c7ee', fog: '#0a0a0c' },
-  campana: { top: '#05060c', bottom: '#0f121c', halo: '#1b2036', key: '#ffe2bd', rim: '#9dbfe8', fog: '#06070c' },
-  neutro: { top: '#0e121b', bottom: '#151b27', halo: '#1f2738', key: '#ffd9a8', rim: '#a9c7ee', fog: '#0b0a09' },
+  forja: { top: '#17140f', bottom: '#2c2116', halo: '#5a3a1e', key: '#ffd3a0', rim: '#8fb6ea', fog: '#1d1711' },
+  historia: { top: '#1a1713', bottom: '#2d251b', halo: '#54412a', key: '#ffdcae', rim: '#9fbbe0', fog: '#1e1914' },
+  fotones: { top: '#0b0d15', bottom: '#161a28', halo: '#2a3150', key: '#f3ead8', rim: '#7d9ce8', fog: '#0e1019' },
+  masas: { top: '#10151d', bottom: '#1b2531', halo: '#2d405a', key: '#e6eef8', rim: '#7fb0e8', fog: '#131a23' },
+  cuantico: { top: '#0e0e26', bottom: '#191b3c', halo: '#33367a', key: '#e9e4ff', rim: '#8a8dff', fog: '#111230' },
+  arquitecto: { top: '#0d1a2c', bottom: '#16283f', halo: '#24497a', key: '#e8f1ff', rim: '#6fb6ff', fog: '#101d30' },
+  periodico: { top: '#141417', bottom: '#212227', halo: '#3a3c45', key: '#fff1dc', rim: '#a9c7ee', fog: '#17171a' },
+  campana: { top: '#0b0d16', bottom: '#181c2a', halo: '#2c3352', key: '#ffe2bd', rim: '#9dbfe8', fog: '#0e1018' },
+  neutro: { top: '#151a25', bottom: '#1f2635', halo: '#323d55', key: '#ffd9a8', rim: '#a9c7ee', fog: '#141820' },
 };
 
 /**
@@ -141,10 +141,11 @@ function StudioEnvironment({ mood }: { mood: Mood }) {
   const m = MOODS[mood];
   return (
     <Environment resolution={128} frames={1}>
-      <Lightformer form="rect" intensity={2.2} color={m.key} position={[0, 5, -6]} scale={[10, 2, 1]} />
-      <Lightformer form="rect" intensity={0.9} color={m.rim} position={[-6, 2, 3]} rotation-y={Math.PI / 2} scale={[6, 3, 1]} />
+      <Lightformer form="rect" intensity={3} color={m.key} position={[0, 5, -6]} scale={[10, 2, 1]} />
+      <Lightformer form="rect" intensity={1.3} color={m.rim} position={[-6, 2, 3]} rotation-y={Math.PI / 2} scale={[6, 3, 1]} />
+      <Lightformer form="rect" intensity={1.1} color="#ffffff" position={[0, 4, 6]} scale={[8, 3, 1]} />
       <Lightformer form="ring" intensity={1.4} color="#f2a93b" position={[5, 3, 2]} scale={2} />
-      <Lightformer form="rect" intensity={0.5} color={m.rim} position={[0, -4, 0]} rotation-x={Math.PI / 2} scale={[12, 12, 1]} />
+      <Lightformer form="rect" intensity={0.7} color={m.rim} position={[0, -4, 0]} rotation-x={Math.PI / 2} scale={[12, 12, 1]} />
     </Environment>
   );
 }
@@ -218,7 +219,11 @@ export function Stage({ children, camera = [0, 2.4, 9] as [number, number, numbe
       {auto && !reduced && <FrameMonitor />}
       <Suspense fallback={null}>
         {q.tier !== 'baja' ? (
-          <StudioEnvironment mood={mood} />
+          <>
+            <StudioEnvironment mood={mood} />
+            {/* ATOM 5.2 · Relleno suave común: la auditoría vio laboratorios demasiado oscuros. */}
+            <hemisphereLight args={[MOODS[mood].key, MOODS[mood].bottom, 0.45]} />
+          </>
         ) : (
           // Sin mapa de entorno (calidad baja), las escenas sin luces propias quedaban planas: un juego de
           // luces barato (sin sombras) conserva el volumen.
@@ -233,7 +238,7 @@ export function Stage({ children, camera = [0, 2.4, 9] as [number, number, numbe
       {q.bloom && (
         <EffectComposer multisampling={q.tier === 'alta' ? 4 : 0} enableNormalPass={false}>
           <Bloom mipmapBlur intensity={q.tier === 'alta' ? 0.9 : 0.6} luminanceThreshold={0.85} luminanceSmoothing={0.2} radius={0.7} />
-          <Vignette offset={0.32} darkness={0.55} />
+          <Vignette offset={0.38} darkness={0.32} />
           <ToneMapping mode={ToneMappingMode.NEUTRAL} />
         </EffectComposer>
       )}

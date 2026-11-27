@@ -36,7 +36,7 @@ export function Prediction({ resetKey, question, options, correct, explanation, 
       <p id={labelId} className="prediction__q">
         {question}
       </p>
-      <div className="segmented" role="radiogroup" aria-labelledby={labelId}>
+      <div className="segmented prediction__opts" role="radiogroup" aria-labelledby={labelId}>
         {options.map((o) => (
           <button key={o.id} type="button" role="radio" aria-checked={choice === o.id} disabled={checked} onClick={() => setChoice(o.id)}>
             {o.label}

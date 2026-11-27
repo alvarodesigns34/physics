@@ -1,5 +1,5 @@
 import { useContinuousRender } from '../../render/demand';
-import { ACC_LEN, ARC_ROTATION, arcArgs, arcPosition, ionPosition, MAGNET_ROTATION_X, MAGNET_SCALE, MAGNET_THETA } from './geometry';
+import { ACC_LEN, ARC_ROTATION, arcArgs, arcPosition, ionPosition, MAGNET_SCALE } from './geometry';
 import { Prediction } from '../../ui/Prediction';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -139,56 +139,23 @@ function Spectrometer() {
   return (
     <>
       <LabelProjector anchors={anchors} avoidOverlap />
-      {/* fuente y aceleración */}
-      <mesh position={[-ACC_LEN - 0.4, 0, 0]}>
-        <boxGeometry args={[0.6, 0.5, 0.5]} />
-        <meshStandardMaterial color="#8a8f9a" metalness={0.5} roughness={0.35} />
-      </mesh>
-      {[-1.6, -0.9].map((x, i) => (
-        <mesh key={x} position={[x, 0, 0]} rotation-y={Math.PI / 2}>
-          <ringGeometry args={[0.05, 0.32, 32]} />
-          <meshStandardMaterial color={i === 0 ? '#d08a3c' : '#7d90ab'} metalness={0.6} roughness={0.35} side={THREE.DoubleSide} />
-        </mesh>
-      ))}
-      {/* Sector magnético: semidisco en x ≥ 0, el mismo semiplano que recorren los iones (x = r·sen φ ≥ 0).
-          Antes estaba en x ≤ 0 y los iones se curvaban fuera del campo dibujado. */}
-      <mesh rotation-x={MAGNET_ROTATION_X} position={[0, -0.12, -rMean]}>
-        <circleGeometry args={[rMean * MAGNET_SCALE, 96, MAGNET_THETA[0], MAGNET_THETA[1]]} />
-        <meshStandardMaterial color="#3d5578" transparent opacity={0.45} roughness={0.5} />
-      </mesh>
-      <mesh rotation-x={MAGNET_ROTATION_X} position={[0, 0.12, -rMean]}>
-        <circleGeometry args={[rMean * MAGNET_SCALE, 96, MAGNET_THETA[0], MAGNET_THETA[1]]} />
-        <meshStandardMaterial color="#3d5578" transparent opacity={0.2} roughness={0.5} side={THREE.DoubleSide} />
-      </mesh>
-      {/* ATOM 5.1 · Piezas polares del electroimán (norte arriba, sur abajo), por encima y por debajo del plano de
-          los iones: el campo B es vertical entre ellas. Mismo semidisco x ≥ 0 (θ de 0 a π en el cilindro). */}
-      {([[0.34, '#7a2a24'], [-0.34, '#23324f']] as const).map(([y, edge]) => (
-        <group key={y} position={[0, y, -rMean]}>
-          <mesh castShadow>
-            <cylinderGeometry args={[rMean * MAGNET_SCALE, rMean * MAGNET_SCALE, 0.4, 96, 1, false, 0, Math.PI]} />
-            {/* La pieza superior casi transparente: la cámara mira desde arriba y no debe tapar las trayectorias */}
-            <meshPhysicalMaterial color="#2a2d33" metalness={0.85} roughness={0.32} clearcoat={0.5} transparent opacity={y > 0 ? 0.12 : 0.85} depthWrite={false} />
-          </mesh>
-          <mesh position-y={y > 0 ? 0.205 : -0.205} rotation-x={-Math.PI / 2}>
-            <ringGeometry args={[rMean * MAGNET_SCALE - 0.06, rMean * MAGNET_SCALE, 96, 1, -Math.PI / 2, Math.PI]} />
-            <meshBasicMaterial color={edge} toneMapped={false} side={THREE.DoubleSide} />
-          </mesh>
-        </group>
-      ))}
+      <Instrument rMean={rMean} radii={radii} />
       {/* trayectorias */}
       {radii.map((r, i) => (
         // Arco del toro de θ = −π/2 a π/2 (Rz) llevado al plano horizontal (Rx): (r·cosθ, 0, −r + r·senθ),
         // exactamente la trayectoria de los iones, de (0, 0, 0) a (0, 0, −2r) pasando por (r, 0, −r).
         <mesh key={i} rotation={ARC_ROTATION} position={arcPosition(r)}>
           <torusGeometry args={arcArgs(r)} />
-          <meshBasicMaterial color={new THREE.Color(ISO_COLORS[i % ISO_COLORS.length]!).multiplyScalar(1.4)} transparent opacity={0.45} toneMapped={false} />
+          <meshBasicMaterial color={new THREE.Color(ISO_COLORS[i % ISO_COLORS.length]!).multiplyScalar(1.4)} transparent opacity={0.5} toneMapped={false} />
         </mesh>
       ))}
-      {/* detector */}
-      <mesh position={[-0.05, 0, -rMean * 2]}>
-        <boxGeometry args={[0.08, 0.4, rMean * 0.9 + 0.6]} />
-        <meshStandardMaterial color="#3f6a50" emissive="#1c3a28" emissiveIntensity={0.6} roughness={0.6} />
-      </mesh>
+      {/* Colector: una copa de Faraday donde aterriza cada isótopo (x = 0, z = −2r) */}
+      {radii.map((r, i) => (
+        <mesh key={`cup-${i}`} position={[-0.16, 0, -2 * r]} rotation-z={Math.PI / 2}>
+          <cylinderGeometry args={[0.075, 0.06, 0.16, 20, 1, true]} />
+          <meshStandardMaterial color={ISO_COLORS[i % ISO_COLORS.length]} emissive={ISO_COLORS[i % ISO_COLORS.length]} emissiveIntensity={0.55} metalness={0.6} roughness={0.35} side={THREE.DoubleSide} />
+        </mesh>
+      ))}
       <instancedMesh ref={mesh} args={[undefined, undefined, 400]} frustumCulled={false}>
         <sphereGeometry args={[0.045, 10, 8]} />
         <meshBasicMaterial toneMapped={false} />
@@ -197,15 +164,143 @@ function Spectrometer() {
   );
 }
 
+/** Contorno en D (semidisco x ≥ 0 en el plano de los iones) para extruir piezas polares y bobinas. */
+function dShape(R: number, hole = 0, edge = 0, holeEdge = 0): THREE.Shape {
+  // En coordenadas de la forma, u = x y v = −(z + rMean) tras la rotación; semicírculo en u ≥ edge.
+  const sh = new THREE.Shape();
+  sh.moveTo(edge, -R);
+  sh.lineTo(0, -R);
+  sh.absarc(0, 0, R, -Math.PI / 2, Math.PI / 2, false);
+  sh.lineTo(edge, R);
+  sh.lineTo(edge, -R);
+  if (hole > 0) {
+    const h = new THREE.Path();
+    h.moveTo(holeEdge, -hole);
+    h.lineTo(0, -hole);
+    h.absarc(0, 0, hole, -Math.PI / 2, Math.PI / 2, false);
+    h.lineTo(holeEdge, hole);
+    h.lineTo(holeEdge, -hole);
+    sh.holes.push(h);
+  }
+  return sh;
+}
+
+/**
+ * ATOM 5.2 · El instrumento, reconstruido: cámara de ionización con filamento, electrodos con rendija sobre
+ * aisladores cerámicos, tubo de vuelo, electroimán con piezas polares en D y bobinas de cobre, y un
+ * colector con una copa de Faraday por isótopo. Las cotas que importan (arcos, imán, aterrizajes) salen
+ * de geometry.ts, la misma fuente que verifican las pruebas.
+ */
+function Instrument({ rMean, radii }: { rMean: number; radii: number[] }) {
+  const R = rMean * MAGNET_SCALE;
+  const geos = useMemo(() => {
+    const pole = new THREE.ExtrudeGeometry(dShape(R), { depth: 0.26, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 3, curveSegments: 72 });
+    const coil = new THREE.ExtrudeGeometry(dShape(R + 0.2, R + 0.05, -0.2, 0.04), { depth: 0.2, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.025, bevelSegments: 2, curveSegments: 72 });
+    return { pole, coil };
+  }, [R]);
+  useEffect(() => () => {
+    geos.pole.dispose();
+    geos.coil.dispose();
+  }, [geos]);
+  const zMin = -2 * Math.max(...radii, rMean) - 0.6;
+  const zMax = 0.9;
+  const xMin = -ACC_LEN - 1.25;
+  const xMax = R + 0.5;
+  // Las formas extruidas crecen en +z local; con rotación −π/2 en x quedan horizontales (z local → y).
+  const flat: [number, number, number] = [-Math.PI / 2, 0, 0];
+  return (
+    <group>
+      {/* Bancada */}
+      <mesh position={[(xMin + xMax) / 2, -0.72, (zMin + zMax) / 2]} receiveShadow>
+        <boxGeometry args={[xMax - xMin, 0.12, zMax - zMin]} />
+        <meshPhysicalMaterial color="#2b3038" metalness={0.55} roughness={0.42} clearcoat={0.4} clearcoatRoughness={0.3} />
+      </mesh>
+      {/* Cámara de ionización: cilindro con bridas y filamento incandescente */}
+      <group position={[-ACC_LEN - 0.62, 0, 0]}>
+        <mesh rotation-z={Math.PI / 2} castShadow>
+          <cylinderGeometry args={[0.26, 0.26, 0.7, 40]} />
+          <meshPhysicalMaterial color="#b9bec7" metalness={0.9} roughness={0.28} clearcoat={0.6} />
+        </mesh>
+        {[-0.37, 0.37].map((x) => (
+          <mesh key={x} position-x={x} rotation-z={Math.PI / 2}>
+            <cylinderGeometry args={[0.33, 0.33, 0.05, 40]} />
+            <meshStandardMaterial color="#8e949e" metalness={0.9} roughness={0.32} />
+          </mesh>
+        ))}
+        <mesh position={[0.4, 0, 0]} rotation-z={Math.PI / 2}>
+          <cylinderGeometry args={[0.05, 0.05, 0.02, 20]} />
+          <meshBasicMaterial color={new THREE.Color('#ffb46b').multiplyScalar(2)} toneMapped={false} />
+        </mesh>
+        {/* entrada de gas */}
+        <mesh position={[-0.1, 0.42, 0]}>
+          <cylinderGeometry args={[0.035, 0.035, 0.36, 12]} />
+          <meshStandardMaterial color="#c9a46a" metalness={0.9} roughness={0.3} />
+        </mesh>
+        <mesh position={[0, -0.47, 0]}>
+          <cylinderGeometry args={[0.14, 0.2, 0.42, 24]} />
+          <meshStandardMaterial color="#e9e5dc" roughness={0.55} />
+        </mesh>
+      </group>
+      {/* Electrodos de aceleración con rendija (+ cobre, − acero) sobre aisladores */}
+      {([[-1.6, '#c98a4b'], [-0.9, '#a7b3c4']] as const).map(([x, c]) => (
+        <group key={x} position-x={x}>
+          {[0.19, -0.19].map((y) => (
+            <mesh key={y} position-y={y} castShadow>
+              <boxGeometry args={[0.05, 0.3, 0.62]} />
+              <meshPhysicalMaterial color={c} metalness={0.95} roughness={0.25} clearcoat={0.4} />
+            </mesh>
+          ))}
+          {[0.24, -0.24].map((z) => (
+            <mesh key={z} position={[0, 0, z]}>
+              <boxGeometry args={[0.05, 0.08, 0.14]} />
+              <meshPhysicalMaterial color={c} metalness={0.95} roughness={0.25} />
+            </mesh>
+          ))}
+          <mesh position-y={-0.5}>
+            <cylinderGeometry args={[0.06, 0.08, 0.36, 16]} />
+            <meshStandardMaterial color="#ece8df" roughness={0.5} />
+          </mesh>
+        </group>
+      ))}
+      {/* Tubo de vuelo recto (vidrio) */}
+      <mesh position={[-ACC_LEN / 2 - 0.1, 0, 0]} rotation-z={Math.PI / 2}>
+        <cylinderGeometry args={[0.1, 0.1, ACC_LEN + 0.2, 24, 1, true]} />
+        <meshPhysicalMaterial color="#dfe9f2" transparent opacity={0.12} roughness={0.05} metalness={0} depthWrite={false} side={THREE.DoubleSide} />
+      </mesh>
+      {/* Electroimán: piezas polares en D arriba (casi transparente, para ver las trayectorias) y abajo, y bobinas */}
+      <group position={[0, 0, -rMean]}>
+        <mesh geometry={geos.pole} rotation={flat} position-y={-0.48} castShadow receiveShadow>
+          <meshPhysicalMaterial color="#30353e" metalness={0.8} roughness={0.38} clearcoat={0.7} clearcoatRoughness={0.25} />
+        </mesh>
+        <mesh geometry={geos.pole} rotation={flat} position-y={0.18}>
+          <meshPhysicalMaterial color="#9aa6b8" metalness={0.3} roughness={0.15} transparent opacity={0.1} depthWrite={false} />
+        </mesh>
+        <mesh geometry={geos.coil} rotation={flat} position-y={-0.5}>
+          <meshPhysicalMaterial color="#b8733a" metalness={1} roughness={0.32} clearcoat={0.8} clearcoatRoughness={0.2} />
+        </mesh>
+        <mesh geometry={geos.coil} rotation={flat} position-y={0.24}>
+          <meshPhysicalMaterial color="#b8733a" metalness={1} roughness={0.32} clearcoat={0.8} clearcoatRoughness={0.2} transparent opacity={0.55} depthWrite={false} />
+        </mesh>
+      </group>
+      {/* Carcasa del colector, paralela a la rendija de entrada */}
+      <mesh position={[-0.28, 0, (zMin + 0.6 - 0.25) / 2 - 0.05]} castShadow>
+        <boxGeometry args={[0.12, 0.34, Math.abs(zMin + 0.6) + 0.1]} />
+        <meshPhysicalMaterial color="#2f3a46" metalness={0.7} roughness={0.35} clearcoat={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
 export function MassScene() {
   // El espectrómetro cuenta iones de forma continua mientras está en marcha.
   useContinuousRender(useMass((s) => s.running));
   return (
-    <Stage mood="masas" camera={[0.4, 8.5, 1.2]} fov={40}>
-      <ambientLight intensity={0.75} />
-      <directionalLight position={[3, 8, 4]} intensity={1.8} color="#ffe6c8" />
+    <Stage mood="masas" camera={[-1.5, 6.3, 3.4]} fov={40}>
+      <ambientLight intensity={0.55} />
+      <directionalLight position={[3, 8, 4]} intensity={2} color="#ffe6c8" castShadow shadow-mapSize={[1024, 1024]} />
+      <directionalLight position={[-5, 3, -4]} intensity={0.7} color="#a9c7ee" />
       <Spectrometer />
-      <OrbitControls enablePan={false} enableDamping minDistance={3} maxDistance={16} target={[0, 0, -2.2]} />
+      <OrbitControls enablePan={false} enableDamping minDistance={3} maxDistance={16} target={[0.5, -0.5, -1.5]} />
     </Stage>
   );
 }

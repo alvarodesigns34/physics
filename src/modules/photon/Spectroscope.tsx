@@ -250,6 +250,85 @@ function Screen({ tex }: { tex: THREE.Texture }) {
   );
 }
 
+/** Mesa óptica: tablero de taladros roscados cada 25 mm (textura procedural, sin descargas). */
+const TABLE_Y = -0.76;
+function OpticalTable({ center, w, d }: { center: THREE.Vector3; w: number; d: number }) {
+  const tex = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 256;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#3a3f47';
+    g.fillRect(0, 0, 256, 256);
+    for (let y = 16; y < 256; y += 32)
+      for (let x = 16; x < 256; x += 32) {
+        g.fillStyle = '#1d2026';
+        g.beginPath();
+        g.arc(x, y, 4.2, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = 'rgba(255,255,255,0.12)';
+        g.beginPath();
+        g.arc(x, y, 5.4, Math.PI * 0.9, Math.PI * 1.6);
+        g.stroke();
+      }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(w / 1.6, d / 1.6);
+    t.anisotropy = 8;
+    return t;
+  }, [w, d]);
+  useEffect(() => () => tex.dispose(), [tex]);
+  return (
+    <group position={[center.x, TABLE_Y, center.z]}>
+      <mesh position-y={-0.06} receiveShadow>
+        <boxGeometry args={[w, 0.12, d]} />
+        <meshPhysicalMaterial color="#5b616b" metalness={0.6} roughness={0.42} clearcoat={0.3} />
+      </mesh>
+      <mesh position-y={0.001} rotation-x={-Math.PI / 2} receiveShadow>
+        <planeGeometry args={[w - 0.04, d - 0.04]} />
+        <meshPhysicalMaterial map={tex} metalness={0.55} roughness={0.5} clearcoat={0.25} clearcoatRoughness={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Poste de soporte (acero) desde la mesa hasta y = top, con su base. */
+function Post({ at, top }: { at: THREE.Vector3; top: number }) {
+  const h = top - TABLE_Y;
+  return (
+    <group position={[at.x, TABLE_Y, at.z]}>
+      <mesh position-y={h / 2}>
+        <cylinderGeometry args={[0.035, 0.035, h, 16]} />
+        <meshStandardMaterial color="#c3c8cf" metalness={0.95} roughness={0.2} />
+      </mesh>
+      <mesh position-y={0.03}>
+        <cylinderGeometry args={[0.13, 0.15, 0.06, 32]} />
+        <meshStandardMaterial color="#2a2e35" metalness={0.7} roughness={0.35} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Platina giratoria graduada bajo el prisma. */
+function RotationStage({ at }: { at: THREE.Vector3 }) {
+  return (
+    <group position={[at.x, TABLE_Y, at.z]}>
+      <mesh position-y={0.1}>
+        <cylinderGeometry args={[0.78, 0.82, 0.2, 96]} />
+        <meshPhysicalMaterial color="#9ea5ae" metalness={0.9} roughness={0.28} clearcoat={0.5} />
+      </mesh>
+      <mesh position-y={0.205} rotation-x={-Math.PI / 2}>
+        <ringGeometry args={[0.68, 0.78, 96]} />
+        <meshStandardMaterial color="#2b2f36" metalness={0.5} roughness={0.4} />
+      </mesh>
+      <mesh position-y={0.2}>
+        <cylinderGeometry args={[0.66, 0.66, 0.04, 96]} />
+        <meshStandardMaterial color="#1f2328" metalness={0.4} roughness={0.6} />
+      </mesh>
+    </group>
+  );
+}
+
 export const SPECTRO_ANCHORS: Anchor[] = (() => {
   const src = PRISM.trace(550)!.source;
   const c = PRISM.screenCenter;
@@ -285,13 +364,29 @@ export function SpectroscopeScene({ symbol, mode, gas = 'frio' }: { symbol: stri
   const slitAt = entry.clone().addScaledVector(inc, -0.9);
   const cellAt = entry.clone().addScaledVector(inc, -1.65);
   const quatCell = useMemo(() => new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(1, 0, 0), inc.clone().normalize()), [inc]);
+  const prismCenter = useMemo(() => {
+    const v = PRISM.vertices;
+    return to3([(v[0][0] + v[1][0] + v[2][0]) / 3, (v[0][1] + v[1][1] + v[2][1]) / 3]);
+  }, []);
+  const screenAt = to3([PRISM.screenCenter[0] + PRISM.screenDir[0] * S_CENTER, PRISM.screenCenter[1] + PRISM.screenDir[1] * S_CENTER]);
+  const bench = useMemo(() => {
+    const pts = [src, screenAt, prismCenter, slitAt];
+    const xs = pts.map((p) => p.x);
+    const zs = pts.map((p) => p.z);
+    const x0 = Math.min(...xs) - 1.1;
+    const x1 = Math.max(...xs) + 1.1;
+    const z0 = Math.min(...zs) - 1.3;
+    const z1 = Math.max(...zs) + 1.3;
+    return { center: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), w: x1 - x0, d: z1 - z0 };
+  }, [src.x, src.z, screenAt.x, screenAt.z, prismCenter, slitAt.x, slitAt.z]); // eslint-disable-line react-hooks/exhaustive-deps
   const target = useMemo(() => {
     const scr = to3(PRISM.screenCenter);
     return new THREE.Vector3().addVectors(src, scr).multiplyScalar(0.5);
   }, [src]);
   return (
-    <Stage mood="fotones" camera={[target.x - 0.2, 5.4, target.z + 9.4]} fov={36}>
-      <ambientLight intensity={0.25} />
+    <Stage mood="fotones" camera={[target.x - 0.4, 4.6, target.z + 7.6]} fov={36}>
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[target.x - 3, 6, target.z + 4]} intensity={1.4} color="#fff1dc" />
       <group>
         <Lamp color={lamp} flicker={!reduced} position={src} />
         <Beam a={src} b={entry} color={lamp.clone().multiplyScalar(0.8)} radius={0.012} />
@@ -311,10 +406,11 @@ export function SpectroscopeScene({ symbol, mode, gas = 'frio' }: { symbol: stri
         <Prism glassy={q.tier !== 'baja'} />
         <RayFan rays={rays} thick={mode === 'emision'} />
         <Screen tex={tex} />
-        <mesh position={[target.x, -0.75, target.z]} rotation-x={-Math.PI / 2}>
-          <planeGeometry args={[16, 9]} />
-          <meshStandardMaterial color="#0e0d0c" metalness={0.2} roughness={0.85} />
-        </mesh>
+        <OpticalTable center={bench.center} w={bench.w} d={bench.d} />
+        <RotationStage at={prismCenter} />
+        <Post at={src} top={-0.76} />
+        <Post at={slitAt} top={-0.45} />
+        <Post at={screenAt} top={-SCREEN_H / 2 - 0.07} />
       </group>
       <LabelProjector anchors={SPECTRO_ANCHORS} />
       <OrbitControls target={target} enablePan={false} enableDamping minDistance={4} maxDistance={13} maxPolarAngle={1.45} />

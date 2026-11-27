@@ -183,13 +183,32 @@ const SURFACE_MATERIALS = new Map<string, THREE.MeshPhysicalMaterial>();
  * superficie que ocupa media pantalla; eran la causa principal de la latencia al cambiar de orbital
  * (regresión de 5.0). Solo se usan en calidad alta.
  */
+/**
+ * ATOM 5.2 · Superficies con acabado satinado (antes, plástico saturado): poca emisión, brillo de capa
+ * transparente y un realce de borde (Fresnel) que dibuja el contorno de cada lóbulo sin oscurecerlo.
+ */
 function surfaceMaterial(color: string, rich: boolean) {
   const key = `${color}|${rich ? 1 : 0}`;
   let m = SURFACE_MATERIALS.get(key);
   if (!m) {
+    const base = new THREE.Color(color);
+    const light = base.clone().lerp(new THREE.Color('#ffffff'), 0.55);
     m = rich
-      ? new THREE.MeshPhysicalMaterial({ color, emissive: color, emissiveIntensity: 0.32, roughness: 0.26, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.18, envMapIntensity: 1.3, sheen: 0.4, sheenColor: new THREE.Color(color), side: THREE.DoubleSide })
-      : new THREE.MeshPhysicalMaterial({ color, emissive: color, emissiveIntensity: 0.34, roughness: 0.3, metalness: 0, envMapIntensity: 1.4, side: THREE.DoubleSide });
+      ? new THREE.MeshPhysicalMaterial({ color: base, emissive: base, emissiveIntensity: 0.1, roughness: 0.38, metalness: 0, clearcoat: 0.8, clearcoatRoughness: 0.12, envMapIntensity: 1.15, sheen: 0.8, sheenRoughness: 0.45, sheenColor: light, side: THREE.DoubleSide })
+      : new THREE.MeshPhysicalMaterial({ color: base, emissive: base, emissiveIntensity: 0.14, roughness: 0.4, metalness: 0, envMapIntensity: 1.2, side: THREE.DoubleSide });
+    const rim = light;
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.uRim = { value: rim };
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform vec3 uRim;')
+        .replace(
+          '#include <emissivemap_fragment>',
+          `#include <emissivemap_fragment>
+          float fres = pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 3.0);
+          totalEmissiveRadiance += uRim * fres * 0.55;`,
+        );
+    };
+    m.customProgramCacheKey = () => `atom-orbital-rim-${rich ? 1 : 0}`;
     SURFACE_MATERIALS.set(key, m);
   }
   return m;

@@ -27,18 +27,18 @@ export function buildAtlas(fontFamily = '"Inter Tight Variable", "Inter Tight", 
     const y0 = Math.floor(i / COLS) * CELL;
     g.textAlign = 'left';
     g.textBaseline = 'top';
-    g.font = `600 22px ${fontFamily}`;
-    g.globalAlpha = 0.78;
-    g.fillText(String(el.z), x0 + 14, y0 + 12);
+    g.font = `650 27px ${fontFamily}`;
+    g.globalAlpha = 0.9;
+    g.fillText(String(el.z), x0 + 12, y0 + 9);
     g.globalAlpha = 1;
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    const size = el.symbol.length > 2 ? 44 : 58;
-    g.font = `650 ${size}px ${fontFamily}`;
-    g.fillText(el.symbol, x0 + CELL / 2, y0 + CELL / 2 + 8);
+    const size = el.symbol.length > 2 ? 48 : 64;
+    g.font = `700 ${size}px ${fontFamily}`;
+    g.fillText(el.symbol, x0 + CELL / 2, y0 + CELL / 2 + 10);
   }
   const t = new THREE.CanvasTexture(c);
-  t.anisotropy = 8;
+  t.anisotropy = 16;
   t.generateMipmaps = true;
   t.minFilter = THREE.LinearMipmapLinearFilter;
   return t;
@@ -46,7 +46,7 @@ export function buildAtlas(fontFamily = '"Inter Tight Variable", "Inter Tight", 
 
 /** Material físico con el atlas inyectado (atributo por instancia `aCell` = Z − 1). */
 export function tileMaterial(atlas: THREE.Texture, footprint: number): THREE.MeshPhysicalMaterial {
-  const mat = new THREE.MeshPhysicalMaterial({ roughness: 0.3, metalness: 0.05, clearcoat: 0.9, clearcoatRoughness: 0.16, envMapIntensity: 0.9 });
+  const mat = new THREE.MeshPhysicalMaterial({ roughness: 0.3, metalness: 0.05, clearcoat: 0.55, clearcoatRoughness: 0.22, envMapIntensity: 0.8 });
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uAtlas = { value: atlas };
     sh.vertexShader = sh.vertexShader
@@ -69,7 +69,7 @@ export function tileMaterial(atlas: THREE.Texture, footprint: number): THREE.Mes
           float a = texture2D(uAtlas, vAtlas).a;
           float lum = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
           vec3 ink = lum > 0.16 ? vec3(0.025, 0.027, 0.032) : vec3(0.93, 0.9, 0.85);
-          diffuseColor.rgb = mix(diffuseColor.rgb, ink, a * 0.92);
+          diffuseColor.rgb = mix(diffuseColor.rgb, ink, a);
         } else {
           // Laterales: el mismo color, más profundo (pieza de vidrio tintado vista de canto)
           diffuseColor.rgb *= 0.42;

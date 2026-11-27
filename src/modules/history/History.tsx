@@ -6,7 +6,7 @@ import { flashPosition, SCREEN_H, SCREEN_R, SCREEN_TICKS, tickPosition } from '.
 import { useContinuousRender } from '../../render/demand';
 import { ModelStoryView, ModelMatrix } from './Story';
 import type { ModelKey } from '../../learning/history';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -339,6 +339,14 @@ function GeigerContent() {
   const m4 = useMemo(() => new THREE.Matrix4(), []);
   const q = useMemo(() => new THREE.Quaternion(), []);
   const sc = useMemo(() => new THREE.Vector3(), []);
+  const flashTint = useMemo(() => new THREE.Color(), []);
+  // El color por instancia debe existir antes de compilar el material (si no, el shader lo ignora).
+  useLayoutEffect(() => {
+    const fm = flashes.current;
+    if (!fm) return;
+    for (let i = 0; i < MAX_FLASH; i++) fm.setColorAt(i, flashTint.setRGB(0, 0, 0));
+    if (fm.instanceColor) fm.instanceColor.needsUpdate = true;
+  }, [flashTint]);
   useFrame((state, dt) => {
     const st = useHistory.getState();
     const S = store.current;
@@ -354,8 +362,8 @@ function GeigerContent() {
         const deg = (th * 180) / Math.PI;
         const b = BINS.findIndex((x, i) => deg >= x && deg < BINS[i + 1]!);
         if (b >= 0) bins[b]! += 1;
-        // Visualiza todas las desviaciones > 2° y una muestra de las pequeñas
-        if (deg > 2 || rng() < 0.012) {
+        // Se visualizan todas las desviaciones > 10° y una muestra de las pequeñas (si no, se apelotonan en 0°).
+        if (deg > 10 || rng() < (deg > 2 ? 0.04 : 0.003)) {
           sfx.geiger();
           const phi = rng() * Math.PI * 2;
           flashPosition(th, phi, S.pos[S.i]!);
@@ -373,13 +381,17 @@ function GeigerContent() {
     }
     const fm = flashes.current;
     if (fm) {
+      // ATOM 5.2 · Centelleos sobrios (la auditoría los vio demasiado intensos): el brillo de cada uno cae
+      // con su vida (color por instancia, sobre mezcla aditiva) y el tamaño es menor.
       for (let i = 0; i < MAX_FLASH; i++) {
-        S.life[i] = Math.max(0, S.life[i]! - dt * 0.7);
-        sc.setScalar(0.02 + 0.05 * S.life[i]!);
+        const life = (S.life[i] = Math.max(0, S.life[i]! - dt * 1.1));
+        sc.setScalar(life > 0 ? 0.012 + 0.026 * life : 0);
         m4.compose(S.pos[i]!, q, sc);
         fm.setMatrixAt(i, m4);
+        fm.setColorAt(i, flashTint.setRGB(0.45, 0.85, 0.6).multiplyScalar(life * life * 0.9));
       }
       fm.instanceMatrix.needsUpdate = true;
+      if (fm.instanceColor) fm.instanceColor.needsUpdate = true;
     }
     const tm = tracks.current;
     if (tm) {
@@ -450,7 +462,7 @@ function GeigerContent() {
       })}
       <instancedMesh ref={flashes} args={[undefined, undefined, MAX_FLASH]} frustumCulled={false}>
         <sphereGeometry args={[1, 8, 6]} />
-        <meshBasicMaterial color={new THREE.Color('#b5ffcf').multiplyScalar(3)} toneMapped={false} transparent blending={THREE.AdditiveBlending} depthWrite={false} />
+        <meshBasicMaterial color="#ffffff" toneMapped={false} transparent blending={THREE.AdditiveBlending} depthWrite={false} />
       </instancedMesh>
       <instancedMesh ref={tracks} args={[undefined, undefined, 40]} frustumCulled={false}>
         <cylinderGeometry args={[0.008, 0.008, 1, 6]} />
@@ -494,31 +506,41 @@ function GoldFoil() {
 }
 
 /** Base de la cámara de vacío con la escala angular grabada: el ángulo de desviación se lee desde arriba. */
+/**
+ * ATOM 5.2 · Cámara de vacío del experimento: placa trasera de metal cepillado (antes, un disco casi negro que
+ * se leía como un agujero), brida con pernos y pedestal. La graduación angular va impresa en la placa.
+ */
 function GeigerBase() {
   const tex = useMemo(() => {
     const S = 1024;
     const c = document.createElement('canvas');
     c.width = c.height = S;
     const g = c.getContext('2d')!;
-    g.fillStyle = '#121316';
+    const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    grad.addColorStop(0, '#7a8089');
+    grad.addColorStop(1, '#4b5058');
+    g.fillStyle = grad;
     g.beginPath();
     g.arc(S / 2, S / 2, S / 2, 0, Math.PI * 2);
     g.fill();
+    // Cepillado concéntrico (torneado): círculos finos de alfa aleatorio con semilla fija.
+    const rng = mulberry32(5);
+    for (let r = 4; r < S / 2; r += 2.2) {
+      g.strokeStyle = rng() < 0.5 ? `rgba(255,255,255,${0.02 + rng() * 0.05})` : `rgba(0,0,0,${0.03 + rng() * 0.06})`;
+      g.lineWidth = 1;
+      g.beginPath();
+      g.arc(S / 2, S / 2, r, 0, Math.PI * 2);
+      g.stroke();
+    }
     const R = (SCREEN_R / (SCREEN_R + 0.4)) * (S / 2);
     for (let d = 0; d <= 360; d += 5) {
       const a = (d * Math.PI) / 180;
       const major = d % 30 === 0;
-      g.strokeStyle = major ? 'rgba(236,230,220,0.45)' : 'rgba(236,230,220,0.14)';
-      g.lineWidth = major ? 2 : 1;
+      g.strokeStyle = major ? 'rgba(18,20,24,0.75)' : 'rgba(18,20,24,0.35)';
+      g.lineWidth = major ? 3 : 1.5;
       g.beginPath();
       g.moveTo(S / 2 + Math.cos(a) * (R - (major ? 34 : 14)), S / 2 - Math.sin(a) * (R - (major ? 34 : 14)));
       g.lineTo(S / 2 + Math.cos(a) * (R - 2), S / 2 - Math.sin(a) * (R - 2));
-      g.stroke();
-    }
-    for (const r of [0.25, 0.5, 0.75]) {
-      g.strokeStyle = 'rgba(236,230,220,0.06)';
-      g.beginPath();
-      g.arc(S / 2, S / 2, R * r, 0, Math.PI * 2);
       g.stroke();
     }
     const t = new THREE.CanvasTexture(c);
@@ -527,11 +549,45 @@ function GeigerBase() {
     return t;
   }, []);
   useEffect(() => () => tex.dispose(), [tex]);
+  const bolts = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const m = bolts.current;
+    if (!m) return;
+    const o = new THREE.Object3D();
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      o.position.set(Math.cos(a) * (SCREEN_R + 0.3), Math.sin(a) * (SCREEN_R + 0.3), -SCREEN_H / 2 + 0.02);
+      o.rotation.set(Math.PI / 2, 0, 0);
+      o.updateMatrix();
+      m.setMatrixAt(i, o.matrix);
+    }
+    m.instanceMatrix.needsUpdate = true;
+  }, []);
   return (
-    <mesh position-z={-SCREEN_H / 2 - 0.03}>
-      <circleGeometry args={[SCREEN_R + 0.4, 128]} />
-      <meshStandardMaterial map={tex} roughness={0.55} metalness={0.3} />
-    </mesh>
+    <group>
+      <mesh position-z={-SCREEN_H / 2 - 0.03} receiveShadow>
+        <circleGeometry args={[SCREEN_R + 0.4, 128]} />
+        <meshPhysicalMaterial map={tex} roughness={0.38} metalness={0.75} clearcoat={0.3} clearcoatRoughness={0.4} />
+      </mesh>
+      {/* Brida: anillo grueso en el borde */}
+      <mesh position-z={-SCREEN_H / 2 - 0.02}>
+        <torusGeometry args={[SCREEN_R + 0.4, 0.06, 16, 128]} />
+        <meshPhysicalMaterial color="#9aa1ab" metalness={0.9} roughness={0.25} clearcoat={0.5} />
+      </mesh>
+      <instancedMesh ref={bolts} args={[undefined, undefined, 24]}>
+        <cylinderGeometry args={[0.035, 0.035, 0.05, 6]} />
+        <meshStandardMaterial color="#c9ced6" metalness={0.95} roughness={0.22} />
+      </instancedMesh>
+      {/* Pedestal */}
+      <mesh position={[0, -SCREEN_R - 0.75, -SCREEN_H / 2 + 0.1]}>
+        <boxGeometry args={[0.5, 0.7, 0.45]} />
+        <meshPhysicalMaterial color="#3a3f47" metalness={0.7} roughness={0.4} clearcoat={0.4} />
+      </mesh>
+      <mesh position={[0, -SCREEN_R - 1.12, -SCREEN_H / 2 + 0.1]}>
+        <cylinderGeometry args={[1.1, 1.2, 0.08, 64]} />
+        <meshPhysicalMaterial color="#2c3037" metalness={0.6} roughness={0.45} clearcoat={0.5} />
+      </mesh>
+    </group>
   );
 }
 
@@ -884,7 +940,7 @@ export function HistoryOverlay() {
   );
   const TABS: { id: Tab; label: string }[] = [
     { id: 'modelos', label: 'Modelos' },
-    { id: 'tubo', label: 'Tubo de Thomson' },
+    { id: 'tubo', label: 'Tubo catódico' },
     { id: 'geiger', label: 'Lámina de oro' },
   ];
   const info = MODELS.find((m) => m.id === st.model)!;
@@ -947,7 +1003,7 @@ export function HistoryOverlay() {
         <div className="side__scroll">
           <div className="segmented" role="tablist" style={{ alignSelf: 'stretch' }}>
             {TABS.map((t) => (
-              <button key={t.id} type="button" role="tab" aria-selected={st.tab === t.id} style={{ flex: 1, padding: '7px 6px' }} onClick={() => st.set({ tab: t.id })}>
+              <button key={t.id} type="button" role="tab" aria-selected={st.tab === t.id} style={{ flex: 1, padding: '7px 6px', whiteSpace: 'nowrap' }} onClick={() => st.set({ tab: t.id })}>
                 {t.label}
               </button>
             ))}

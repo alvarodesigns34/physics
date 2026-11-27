@@ -33,7 +33,7 @@ const CATHODE_X = -3.05;
 
 export type TubeView = 'perspectiva' | 'lateral' | 'pantalla';
 const VIEWS: Record<TubeView, { pos: [number, number, number]; target: [number, number, number] }> = {
-  perspectiva: { pos: [-2.2, 4.6, 7.0], target: [0.6, -0.1, 0] },
+  perspectiva: { pos: [-1.0, 4.4, 8.4], target: [0.3, -0.15, 0] },
   lateral: { pos: [0.5, 0, 9.4], target: [0.5, 0, 0] },
   pantalla: { pos: [8.6, 0.5, 1.4], target: [3.6, 0, 0] },
 };
@@ -491,8 +491,8 @@ export function ThomsonTubeScene({ res, plates, B, accel, gas, view }: { res: Ca
   const gasColor = useMemo(() => new THREE.Color(GAS_GLOW[gas]), [gas]);
   return (
     <Stage mood="historia" camera={VIEWS.perspectiva.pos} fov={36}>
-      <ambientLight intensity={0.22} />
-      <directionalLight position={[-3, 6, 5]} intensity={1.5} color="#ffe2bf" castShadow shadow-mapSize={[1024, 1024]} />
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[-3, 6, 5]} intensity={1.9} color="#ffe2bf" castShadow shadow-mapSize={[1024, 1024]} />
       <directionalLight position={[6, 2, -5]} intensity={0.8} color="#9ec2f0" />
       <pointLight position={[CATHODE_X + 0.2, 0, 0]} intensity={0.6} distance={2.5} color="#ff9a4a" />
       <pointLight position={[SCREEN_X - 0.3, spotY ?? 0, 0]} intensity={spotY !== null ? 0.9 : 0} distance={3} color="#8ff5c0" />
