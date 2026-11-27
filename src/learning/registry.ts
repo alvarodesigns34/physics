@@ -1,4 +1,5 @@
 import { annotateParts } from './attribution';
+import { familyResolution } from './familyResolutions';
 import { REASONING_GENERATORS } from './generators/reasoning';
 /**
  * Registro de generadores y ejercicios de las fuentes (TEO y AMP), con su resolución verificada.
@@ -86,7 +87,14 @@ const RAW_GENERATORS: ExerciseGenerator[] = [
 ];
 
 /** Generadores con atribución granular por paso (véase attribution.ts). */
-export const GENERATORS: ExerciseGenerator[] = RAW_GENERATORS.map((gen) => ({ ...gen, create: (seed, d) => annotateParts(gen.create(seed, d)) }));
+/** ATOM 5.1: las familias sin resolución propia reciben la específica de su familia (familyResolutions). */
+function withFamilyResolution(ex: Exercise): Exercise {
+  if (ex.resolution) return ex;
+  const r = familyResolution(ex);
+  return r ? { ...ex, resolution: r } : ex;
+}
+
+export const GENERATORS: ExerciseGenerator[] = RAW_GENERATORS.map((gen) => ({ ...gen, create: (seed, d) => withFamilyResolution(annotateParts(gen.create(seed, d))) }));
 
 
 export const GENERATOR_BY_ID = new Map(GENERATORS.map((g) => [g.id, g]));
