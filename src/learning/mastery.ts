@@ -29,7 +29,7 @@ export function pCorrect(theta: number, difficulty: Difficulty): number {
 }
 
 export function initialMastery(): NodeMastery {
-  return { theta: -0.5, attempts: 0, correct: 0, lastSeen: 0 };
+  return { theta: THETA_PRIOR, attempts: 0, correct: 0, lastSeen: 0 };
 }
 
 /**
@@ -45,21 +45,27 @@ export function updateMastery(m: NodeMastery, difficulty: Difficulty, correct: b
  * Δθ = K·(y − p), con la ganancia reducida por las pistas cuando y > p. Acumula la información de Fisher
  * p(1 − p) para poder expresar la incertidumbre de la estimación.
  */
-export function updateMasteryY(m: NodeMastery, difficulty: Difficulty, y: number, hintsUsed: number, now: number, weight = 1): NodeMastery {
+export function updateMasteryY(m: NodeMastery, difficulty: Difficulty, y: number, hintsUsed: number, now: number, weight = 1, guess = 0): NodeMastery {
   const yy = Math.min(1, Math.max(0, Number.isFinite(y) ? y : 0));
   const w = Math.min(1, Math.max(0, weight));
-  const p = pCorrect(m.theta, difficulty);
+  const c = Math.min(0.9, Math.max(0, Number.isFinite(guess) ? guess : 0));
+  // Modelo con probabilidad de adivinar (3PL con discriminación 1): P = c + (1 − c)·σ(θ − b).
+  const s = pCorrect(m.theta, difficulty);
+  const p = c + (1 - c) * s;
   const K = Math.max(0.35, 1.2 / Math.sqrt(1 + m.attempts / 3));
   const hintFactor = [1, 0.7, 0.45, 0.25][Math.min(3, Math.max(0, hintsUsed))]!;
-  const delta = yy > p ? K * w * hintFactor * (yy - p) : K * w * (yy - p);
-  const info = (m.info ?? estimatedInfo(m)) + w * p * (1 - p);
+  // Gradiente de la log-verosimilitud del 3PL: un acierto en un ítem adivinable informa menos sobre θ.
+  const slope = p > 0 && p < 1 ? (s * (1 - c)) / p : 1;
+  const raw = yy > p ? K * w * hintFactor * (yy - p) : K * w * (yy - p);
+  const delta = yy > p ? raw * slope : raw;
+  const info = (m.info ?? estimatedInfo(m)) + w * ((1 - c) * s) ** 2 * ((1 - p) / Math.max(1e-9, p));
   return {
     theta: Math.max(-3, Math.min(3, m.theta + delta)),
     attempts: m.attempts + 1,
     correct: m.correct + (yy >= 0.999 ? 1 : 0),
     lastSeen: now,
     info,
-    demonstrated: (m.demonstrated ?? 0) + (yy >= 0.999 && hintsUsed === 0 && difficulty >= 2 ? 1 : 0),
+    demonstrated: (m.demonstrated ?? 0) + (yy >= 0.999 && hintsUsed === 0 && difficulty >= 2 && c < 0.2 && w >= 1 ? 1 : 0),
   };
 }
 
@@ -84,13 +90,29 @@ export interface MasteryEstimate {
  * Estimación con su incertidumbre. Error típico de θ ≈ 1/√(I + I₀), con I₀ = 0,6 como información a priori.
  * Se redondea a múltiplos de 5 para no transmitir una precisión que el modelo no tiene.
  */
+/** θ a priori (antes de cualquier evidencia). */
+export const THETA_PRIOR = -0.5;
+/** Información a priori I₀: cuánto «pesa» el punto de partida frente a la evidencia acumulada. */
+const PRIOR_INFO = 0.6;
+
+/**
+ * θ que se MUESTRA: contracción hacia el a priori según la evidencia, θ̂ = θ₀ + (θ − θ₀)·I/(I + I₀).
+ * Con un solo acierto difícil no se muestra un dominio alto (hallazgo de la auditoría de ATOM 3.0:
+ * inflación de las estimaciones con poca evidencia).
+ */
+export function displayTheta(m: NodeMastery): number {
+  const info = m.info ?? estimatedInfo(m);
+  return THETA_PRIOR + (m.theta - THETA_PRIOR) * (info / (info + PRIOR_INFO));
+}
+
 export function masteryEstimate(m: NodeMastery | undefined): MasteryEstimate {
   if (!m || m.attempts === 0) return { mid: 0, low: 0, high: 0, evidence: 'sin-datos', demonstrated: 0 };
   const info = m.info ?? estimatedInfo(m);
-  const se = 1 / Math.sqrt(info + 0.6);
+  const se = 1 / Math.sqrt(info + PRIOR_INFO);
+  const t = displayTheta(m);
   const r5 = (x: number) => Math.round(x * 20) * 5;
   const evidence: EvidenceLevel = m.attempts < 3 || se > 1 ? 'escasa' : se > 0.6 ? 'moderada' : 'solida';
-  return { mid: r5(pCorrect(m.theta, 2)), low: r5(pCorrect(m.theta - se, 2)), high: r5(pCorrect(m.theta + se, 2)), evidence, demonstrated: m.demonstrated ?? 0 };
+  return { mid: r5(pCorrect(t, 2)), low: r5(pCorrect(t - se, 2)), high: r5(pCorrect(t + se, 2)), evidence, demonstrated: m.demonstrated ?? 0 };
 }
 
 export const EVIDENCE_LABEL: Record<EvidenceLevel, string> = { 'sin-datos': 'sin datos', escasa: 'evidencia escasa', moderada: 'evidencia moderada', solida: 'evidencia sólida' };
@@ -98,7 +120,7 @@ export const EVIDENCE_LABEL: Record<EvidenceLevel, string> = { 'sin-datos': 'sin
 /** Dominio mostrado al alumno: probabilidad de acertar un ítem de dificultad media. */
 export function masteryPercent(m: NodeMastery | undefined): number {
   if (!m || m.attempts === 0) return 0;
-  return Math.round(pCorrect(m.theta, 2) * 100);
+  return Math.round(pCorrect(displayTheta(m), 2) * 100);
 }
 
 export type MasteryLevel = 'sin-datos' | 'iniciado' | 'en-progreso' | 'dominado';

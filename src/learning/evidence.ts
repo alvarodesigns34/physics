@@ -86,9 +86,50 @@ export interface PartRecord {
   sigFigsAssessed?: boolean;
 }
 
+/** Cómo se obtuvo la evidencia de un apartado (ATOM 4.0): no todo acierto demuestra lo mismo. */
+export type EvidenceKind = 'demostrada' | 'posible-azar' | 'asistida' | 'autoevaluada';
+
+export interface NodeEvidence {
+  /** Resultado medio 0–1 */
+  y: number;
+  /** Pasos que lo evalúan */
+  n: number;
+  /** Probabilidad media de acertar adivinando (1/opciones en preguntas cerradas; 0 en respuestas abiertas) */
+  guess: number;
+  /** Tipo de evidencia dominante del apartado en este ejercicio */
+  kind: EvidenceKind;
+}
+
+/** Peso de cada tipo de evidencia en el modelo de dominio (documentado en docs/09). */
+export const EVIDENCE_WEIGHT: Record<EvidenceKind, number> = { demostrada: 1, 'posible-azar': 1, asistida: 0.6, autoevaluada: 0.4 };
+
+export const EVIDENCE_KIND_LABEL: Record<EvidenceKind, string> = {
+  demostrada: 'comprensión demostrada',
+  'posible-azar': 'acierto que pudo ser casual',
+  asistida: 'respuesta con ayuda',
+  autoevaluada: 'autoevaluación',
+};
+
+/** Probabilidad de acertar un paso al azar. */
+export function guessChance(p: ExercisePart): number {
+  const a = p.answer;
+  if (a.kind === 'choice') {
+    const k = a.options.length;
+    if (!a.multiple) return k > 0 ? 1 / k : 0;
+    // Marcar exactamente el subconjunto correcto entre 2^k posibles.
+    return k > 0 ? 1 / Math.pow(2, k) : 0;
+  }
+  if (a.kind === 'order') {
+    let f = 1;
+    for (let i = 2; i <= a.items.length; i++) f *= i;
+    return 1 / f;
+  }
+  return 0;
+}
+
 export interface Evidence {
   /** Apartado → resultado medio 0–1 y número de pasos que lo evalúan */
-  nodes: Record<string, { y: number; n: number }>;
+  nodes: Record<string, NodeEvidence>;
   /** Competencia → resultado medio 0–1 y número de observaciones */
   skills: Partial<Record<SkillId, { y: number; n: number }>>;
   /** Errores clasificados, con el paso y el apartado en que ocurrieron */
@@ -135,9 +176,18 @@ export function buildEvidence(ex: Exercise, records: PartRecord[]): Evidence {
     // Apartados
     let yNode = r.revealed ? 0 : r.credit;
     if (!r.carried && !r.revealed && r.credit > 0 && realErrors.length > 0) yNode = Math.max(yNode, Math.min(...realErrors.map(nodeFloor)));
+    const g = guessChance(part);
+    const partKind: EvidenceKind = part.answer.kind === 'essay' ? 'autoevaluada' : r.revealed || r.attempts > 1 || r.carried ? 'asistida' : g >= 0.2 ? 'posible-azar' : 'demostrada';
+    const rank: Record<EvidenceKind, number> = { autoevaluada: 3, asistida: 2, 'posible-azar': 1, demostrada: 0 };
     for (const n of partNodes) {
-      const cur = nodes[n] ?? { y: 0, n: 0 };
-      nodes[n] = { y: (cur.y * cur.n + yNode) / (cur.n + 1), n: cur.n + 1 };
+      const cur = nodes[n] ?? { y: 0, n: 0, guess: 0, kind: 'demostrada' as EvidenceKind };
+      nodes[n] = {
+        y: (cur.y * cur.n + yNode) / (cur.n + 1),
+        n: cur.n + 1,
+        guess: (cur.guess * cur.n + g) / (cur.n + 1),
+        // El apartado hereda el tipo de evidencia más débil de sus pasos.
+        kind: rank[partKind] > rank[cur.kind] ? partKind : cur.kind,
+      };
     }
     // Competencias
     const failedSkills = new Set<SkillId>(realErrors.map((e) => e.skill).filter((s): s is SkillId => !!s));

@@ -7,7 +7,7 @@ import { persist, createJSONStorage, type StateStorage } from 'zustand/middlewar
 import type { Species } from '../science/nucleus';
 import { initialMastery, updateCard, updateMastery, updateMasteryY, type NodeMastery, type ReviewCard } from '../learning/mastery';
 import type { Difficulty, ErrorKind, Exercise, SkillId } from '../learning/types';
-import { buildEvidence, type PartRecord } from '../learning/evidence';
+import { buildEvidence, EVIDENCE_WEIGHT, type EvidenceKind, type PartRecord } from '../learning/evidence';
 import { parseExport, PROGRESS_VERSION, validateProgress } from './validate';
 import type { ConfigOrder } from '../science/configuration';
 
@@ -43,6 +43,13 @@ export interface Attempt {
   errors?: { kind: ErrorKind; skill?: SkillId; nodeIds: string[] }[];
   /** Resultado medio 0–1 por competencia en este intento */
   skills?: Partial<Record<SkillId, number>>;
+  /** Tipo de evidencia (ATOM 4.0): demostrada, posible azar, asistida o autoevaluada */
+  evidence?: EvidenceKind;
+}
+
+const KIND_RANK: Record<EvidenceKind, number> = { demostrada: 0, 'posible-azar': 1, asistida: 2, autoevaluada: 3 };
+function weakestKind(ks: EvidenceKind[]): EvidenceKind {
+  return ks.reduce<EvidenceKind>((a, k) => (KIND_RANK[k] > KIND_RANK[a] ? k : a), 'demostrada');
 }
 
 export interface MissionProgress {
@@ -184,8 +191,8 @@ export const useStore = create<AppState>()(
           const ev = buildEvidence(ex, o.parts);
           const mastery = { ...s.mastery };
           const cards = { ...s.cards };
-          for (const [node, { y }] of Object.entries(ev.nodes)) {
-            mastery[node] = updateMasteryY(mastery[node] ?? initialMastery(), ex.difficulty, y, o.hintsUsed, now);
+          for (const [node, { y, guess, kind }] of Object.entries(ev.nodes)) {
+            mastery[node] = updateMasteryY(mastery[node] ?? initialMastery(), ex.difficulty, y, o.hintsUsed, now, EVIDENCE_WEIGHT[kind], guess);
             const ok = y >= 0.75;
             if (mode !== 'examen' || !ok) cards[node] = updateCard(cards[node], node, ok, now);
           }
@@ -206,6 +213,7 @@ export const useStore = create<AppState>()(
             at: now,
             errors: ev.errors.map(({ kind, skill, nodeIds }) => ({ kind, skill, nodeIds })),
             skills: skillY,
+            evidence: weakestKind(Object.values(ev.nodes).map((n) => n.kind)),
           };
           return { mastery, skills, cards, history: [...s.history, attempt].slice(-400) };
         }),

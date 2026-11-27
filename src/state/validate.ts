@@ -78,7 +78,8 @@ export function attemptEntry(v: unknown): boolean {
     (v.hintsUsed === undefined || intIn(v.hintsUsed, 0, 100)) &&
     ts(v.at) && MODES.has(v.mode as string) &&
     (v.errors === undefined || (Array.isArray(v.errors) && v.errors.length <= 50 && v.errors.every(errorEntry))) &&
-    (v.skills === undefined || (isObj(v.skills) && Object.entries(v.skills).every(([k, y]) => SKILL_IDS.has(k) && finite(y) && y >= 0 && y <= 1)))
+    (v.skills === undefined || (isObj(v.skills) && Object.entries(v.skills).every(([k, y]) => SKILL_IDS.has(k) && finite(y) && y >= 0 && y <= 1))) &&
+    (v.evidence === undefined || ['demostrada', 'posible-azar', 'asistida', 'autoevaluada'].includes(v.evidence as string))
   );
 }
 
