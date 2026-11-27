@@ -257,6 +257,20 @@ const G: Record<string, FamilyGuide> = {
     check: 'Para un electrón a unos 10⁶ m/s, λ es del orden de 10⁻¹⁰ m (el tamaño de un átomo); para un objeto macroscópico, λ es inapreciable.',
     errors: 'No pasar la masa a kg, usar la velocidad en km/s, o confundir λ = h/p con E = hν.',
   },
+  'error-ion-transicion': {
+    method: 'Detectar un error en un razonamiento ajeno: comprueba cada línea por separado (¿el punto de partida es correcto?, ¿la operación aplicada es la correcta?) y localiza la primera que falla.',
+    principle: 'Para formar un catión de transición se quitan primero los electrones ns y después los (n−1)d.',
+    why: 'Con los orbitales 3d ocupados, el 4s queda por encima en energía: sus electrones son los más externos y los primeros en salir. El orden de llenado no es el orden de vaciado.',
+    check: 'El ion resultante de un metal de transición conserva sus electrones d: Fe²⁺ [Ar] 3d⁶, Cu²⁺ [Ar] 3d⁹, Zn²⁺ [Ar] 3d¹⁰.',
+    errors: 'Vaciar en el orden inverso al de llenado (quitar 3d antes que 4s) o, al revés, añadir electrones para formar un catión.',
+  },
+  'verdadero-falso': {
+    method: 'Verdadero o falso: busca un contraejemplo. Si existe uno solo, la afirmación es falsa; si es verdadera, identifica la razón exacta, no una que «suene bien».',
+    principle: 'Una afirmación científica general tiene que cumplirse siempre; las razones correctas citan la causa física (electrones, Z_ef, n, Pauli…).',
+    why: 'Muchas afirmaciones falsas mezclan dos conceptos cercanos (intensidad y energía, órbita y orbital, Hund y Aufbau): separarlos es el objetivo.',
+    check: 'Relee la justificación elegida: ¿explica el porqué o solo repite la afirmación con otras palabras?',
+    errors: 'Elegir una justificación que es cierta pero no explica la afirmación, o aceptar una afirmación por un ejemplo que sí la cumple.',
+  },
   'pauli-hund': {
     method: 'Diagramas de cajas: rellena orbital a orbital comprobando primero Pauli y después Hund.',
     principle: 'Pauli: máximo dos electrones por orbital y con espín opuesto. Hund: en orbitales de igual energía, primero uno en cada uno con el mismo espín.',
