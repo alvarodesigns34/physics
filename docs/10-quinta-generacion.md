@@ -176,3 +176,25 @@ Seguí el método de criterio de diseño: primero fijar el sujeto y el gesto, de
 - **Instalación.** `manifest.webmanifest`, iconos (192, 512, enmascarable y `apple-touch-icon`) y las metaetiquetas de Apple permiten añadir ATOM a la pantalla de inicio del iPad y abrirlo a pantalla completa.
 - **Prueba en CI.** `tools/resilience.mjs` visita varias vistas con red, la corta y comprueba que el inicio, la guía, el entrenamiento y un laboratorio cargan sin errores.
 - **Límite.** Lo que nunca se ha visitado con conexión no está guardado; por ejemplo, un laboratorio que no se haya abierto antes no funcionará sin red. Probado en Chromium; Safari/iPadOS sin probar.
+
+## 8. Estudio: sincronización opcional y segura entre dispositivos
+**Situación actual.** El progreso vive en el navegador (`localStorage`). Se puede exportar a un archivo JSON e importarlo en otro dispositivo; la importación valida cada campo y hace una copia de seguridad previa.
+
+**Restricción del proyecto.** No se pueden usar servicios externos, claves ni costes, así que no se ha implementado ninguna sincronización automática.
+
+| Opción | Ventajas | Inconvenientes |
+|---|---|---|
+| A. Archivo exportado (actual) | Sin servidor; el alumno controla sus datos | Manual |
+| B. Código de transferencia en pantalla (QR con el progreso comprimido) | Sin servidor; de iPad a ordenador en segundos | El tamaño del QR limita el historial. Habría que transferir solo el resumen (dominio, cartas, cuaderno) |
+| C. Archivo en la nube del propio alumno (iCloud Drive o Google Drive con el selector de archivos del sistema) | Sin servidor propio | Depende del navegador; en Safari, sin acceso persistente |
+| D. Servidor propio con cuenta | Automático | Requiere servicio, autenticación, RGPD con menores y costes: fuera del alcance acordado |
+
+**Recomendación.** Primero la B y después la A mejorada (exportar o importar con un solo toque y fusionar el progreso en lugar de sustituirlo).
+
+**Regla de fusión propuesta**, con datos que ya existen y sin servidor:
+- historial: unión por (id de ejercicio, fecha);
+- dominio: se recalcula reproduciendo el historial unido;
+- cartas de repaso: se queda la de vencimiento más próximo;
+- cuaderno: unión por id, conservando la resolución si existe en cualquiera de las dos copias.
+
+La D solo tendría sentido con la autorización expresa del centro y del usuario.
