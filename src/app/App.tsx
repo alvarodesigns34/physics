@@ -1,3 +1,5 @@
+import { useStudyPath } from '../state/studyPath';
+import { NODES } from '../learning/syllabus';
 import { MISSIONS } from '../learning/campaign';
 import { NavRail, SearchPalette, useSearchShortcut } from './Navigation';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -285,6 +287,25 @@ function MobileNav({ route }: { route: Route }) {
   );
 }
 
+/** Continuidad de la ruta de estudio: desde un laboratorio o la guía se vuelve al paso exacto. */
+function PathReturn({ route }: { route: Route }) {
+  const path = useStudyPath((s) => s.path);
+  const { query } = useRoute();
+  if (!path) return null;
+  if (route === '/entrenamiento' && query.get('v') === 'ruta') return null;
+  const title = NODES.find((n) => n.id === path.node)?.title ?? path.node;
+  return (
+    <span className="path-return interactive">
+      <a href={`#/entrenamiento?v=ruta&n=${path.node}`} className="path-return__link">
+        <Icon name="arrow-left" size={14} /> Ruta: {title} <span className="num faint">· paso {path.step + 1}/6</span>
+      </a>
+      <button type="button" className="path-return__x" aria-label="Cerrar la ruta de estudio" onClick={() => useStudyPath.getState().set(null)}>
+        ×
+      </button>
+    </span>
+  );
+}
+
 function TopBar({ route, onSettings, onSearch }: { route: Route; onSettings: () => void; onSearch: () => void }) {
   const sound = useStore((s) => s.settings.sound);
   const set = useStore((s) => s.setSettings);
@@ -294,6 +315,7 @@ function TopBar({ route, onSettings, onSearch }: { route: Route; onSettings: () 
         <span className="brand__mark">ATOM</span>
         <span className="brand__crumb">{CRUMB[route]}</span>
       </button>
+      <PathReturn route={route} />
       <span className="topbar__spacer" />
       <button type="button" className="topbar__search interactive" onClick={onSearch} aria-label="Buscar un concepto (⌘K)">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">

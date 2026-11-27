@@ -107,6 +107,13 @@ try {
   await page.click('.path-steps button:has-text("Practicar guiado")');
   await page.waitForSelector('article', { timeout: T });
   check((await page.locator('.path-steps button').count()) === 6 && (await page.locator('article').count()) === 1, 'Ruta de estudio 3.6: seis pasos y ejercicio guiado');
+  await page.click('.path-steps button:has-text("Observar")');
+  await page.click('a:has-text("Abrir Photon Lab")');
+  await page.waitForSelector('.path-return', { timeout: T });
+  check((await page.locator('.path-return').innerText()).includes('paso 2/6'), 'Ruta de estudio: desde el laboratorio se ve «volver a la ruta» con el paso');
+  await page.click('.path-return__link');
+  await page.waitForSelector('.path-steps', { timeout: T });
+  check((await page.locator('.path-steps button[aria-current=step]').innerText()).includes('Observar') && (await page.locator('.path-steps button.done').count()) >= 1, 'Ruta de estudio: al volver, el paso y lo hecho se conservan');
   await page.goto(base + '#/entrenamiento?v=examen');
   await page.waitForSelector('button:has-text("Empezar el simulacro equilibrado")', { timeout: T });
   await page.click('button:has-text("Empezar el simulacro equilibrado")');

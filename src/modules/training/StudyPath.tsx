@@ -4,7 +4,9 @@
  * Une guía, laboratorio y entrenamiento en una sola experiencia; el paso final se adapta a los errores
  * cometidos en la propia ruta (p. ej., si fallaste unidades, propone un ejercicio de conversiones).
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useStudyPath } from '../../state/studyPath';
+import { exerciseFromId } from '../../learning/examSession';
 import { NODES } from '../../learning/syllabus';
 import { LESSONS } from '../../learning/guide';
 import { generatorsForNode } from '../../learning/registry';
@@ -46,18 +48,29 @@ export function StudyPath({ node }: { node: string }) {
   const lesson = LESSONS.find((l) => l.block === nd?.block);
   const sections = lesson?.sections.filter((s) => s.node === node) ?? [];
   const recordExercise = useStore((s) => s.recordExercise);
-  const [step, setStep] = useState(0);
-  const [errors, setErrors] = useState<{ kind: string; skill?: SkillId }[]>([]);
-  const [done, setDone] = useState<Set<StepId>>(new Set());
+  // Estado persistente: si ya había una ruta de este apartado, se retoma en el mismo paso y con los mismos ejercicios.
+  const { path, set: setPath, patch } = useStudyPath();
   const reasoningIds = useMemo(() => new Set(REASONING_GENERATORS.map((g) => g.id)), []);
-  const exercises = useMemo(
-    () => ({
-      guiado: makeExercise(pickGen(node, 1), 1),
-      aplicar: makeExercise(pickGen(node, 2), 2),
-      examen: makeExercise(pickGen(node, 3, (g) => reasoningIds.has(g.id) || g.id.startsWith('examen-')), 3),
-    }),
-    [node, reasoningIds],
-  );
+  const exercises = useMemo(() => {
+    const prev = path?.node === node ? path.exerciseIds : null;
+    const fromPrev = (k: string) => (prev?.[k] ? exerciseFromId(prev[k]!) : null);
+    return {
+      guiado: fromPrev('guiado') ?? makeExercise(pickGen(node, 1), 1),
+      aplicar: fromPrev('aplicar') ?? makeExercise(pickGen(node, 2), 2),
+      examen: fromPrev('examen') ?? makeExercise(pickGen(node, 3, (g) => reasoningIds.has(g.id) || g.id.startsWith('examen-')), 3),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [node, reasoningIds]);
+  useEffect(() => {
+    if (path?.node !== node) setPath({ node, step: 0, done: [], errors: [], exerciseIds: { guiado: exercises.guiado?.id ?? null, aplicar: exercises.aplicar?.id ?? null, examen: exercises.examen?.id ?? null }, updatedAt: Date.now() });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [node]);
+  const step = path?.node === node ? Math.min(path.step, STEPS.length - 1) : 0;
+  const setStep = (f: number | ((x: number) => number)) => patch({ step: typeof f === 'function' ? f(step) : f });
+  const done = new Set<StepId>((path?.node === node ? path.done : []) as StepId[]);
+  const setDone = (f: (d: Set<StepId>) => Set<StepId>) => patch({ done: [...f(new Set(done))] });
+  const errors = (path?.node === node ? path.errors : []) as { kind: string; skill?: SkillId }[];
+  const setErrors = (f: (e: typeof errors) => typeof errors) => patch({ errors: f(errors) });
   if (!nd || !lesson) return <p className="small muted">Apartado desconocido.</p>;
   const s = STEPS[step]!;
   const finish = (id: StepId) => (o: ExerciseOutcome) => {

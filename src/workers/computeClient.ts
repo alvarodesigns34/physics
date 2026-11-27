@@ -8,7 +8,7 @@ export interface ComputeClient<Req, Res> {
   cached(req: Req): Res | undefined;
   /** Descarta la petición pendiente (p. ej., al desmontar la vista) */
   cancel(): void;
-  stats(): { entries: number; bytes: number };
+  stats(): { entries: number; bytes: number; cancelled: number };
 }
 
 export function createComputeClient<Req extends object, Res>(opts: {
@@ -27,6 +27,21 @@ export function createComputeClient<Req extends object, Res>(opts: {
   let busy = false;
   let pending: { req: Req; resolve: (r: Res | null) => void; reject: (e: unknown) => void } | null = null;
   const inflight = new Map<number, { key: string; resolve: (r: Res | null) => void; reject: (e: unknown) => void }>();
+  let cancelled = 0;
+  /**
+   * Cancelación real (ATOM 4.0): si llega una petición distinta mientras el Worker calcula otra, la del
+   * Worker ya no interesa (solo importa el último estado de los controles). En lugar de esperar a que
+   * termine un cálculo obsoleto, se termina el Worker y se crea otro.
+   */
+  const abortInflight = () => {
+    if (!worker || inflight.size === 0) return;
+    worker.terminate();
+    worker = null;
+    busy = false;
+    for (const j of inflight.values()) j.resolve(null);
+    cancelled += inflight.size;
+    inflight.clear();
+  };
 
   const remember = (key: string, r: Res) => {
     if (cache.has(key)) return;
@@ -114,14 +129,17 @@ export function createComputeClient<Req extends object, Res>(opts: {
       return new Promise((resolve, reject) => {
         if (pending) pending.resolve(null);
         pending = { req, resolve, reject };
+        const k = opts.key(req);
+        if (busy && ![...inflight.values()].some((j) => j.key === k)) abortInflight();
         pump();
       });
     },
     cancel() {
       if (pending) pending.resolve(null);
       pending = null;
+      abortInflight();
     },
-    stats: () => ({ entries: cache.size, bytes: cacheBytes }),
+    stats: () => ({ entries: cache.size, bytes: cacheBytes, cancelled }),
   };
 }
 
