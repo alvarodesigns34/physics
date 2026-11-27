@@ -15,7 +15,7 @@ Cada criterio indica cómo verificarlo. Estado: ✅ cumple · ⏳ pendiente · �
 | G9 | Diseño | Sin Instrument Serif; cuerpo ≥ 16 px en escritorio | inspección CSS + capturas | ✅ |
 | G10 | UX | Desde el inicio, ≤ 1 clic a: continuar, cada laboratorio, guía, examen, fórmulas, errores | capturas + e2e («Inicio: siete laboratorios…») | ✅ |
 | G11 | Búsqueda | «Rydberg», «Hund», «isótopos», «energía de ionización» devuelven teoría + laboratorio + práctica | `search.test.ts` + e2e | ✅ |
-| G12 | iPad | 1180×820 y 820×1180 sin desbordes horizontales; objetivos táctiles ≥ 44 px | capturas `c3d` (horizontal) y `c3e` (vertical) | ◐ desbordes revisados visualmente; tamaño táctil sin verificar automáticamente |
+| G12 | iPad | 1180×820 y 820×1180 sin desbordes horizontales; objetivos táctiles ≥ 44 px | capturas `despues/*-ipad` y `*-ipadv` | ◐ desbordes revisados visualmente; tamaño táctil sin verificar automáticamente |
 | G13 | Accesibilidad | axe-core sin violaciones serias/críticas en 10 vistas | `npm run a11y` (CI) | ✅ 0 infracciones (revisión con lector de pantalla pendiente) |
 | G14 | Regresión visual | 12 vistas deterministas (escritorio + iPad) con umbral 0,5 % | `npm run visual` (local; referencias ligadas a este entorno) | ✅ |
 | G15 | Documentación | Cifras (ejercicios, generadores, pruebas) generadas desde el código | `npm run stats` → docs/ESTADISTICAS.md | ✅ |

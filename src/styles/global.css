@@ -4019,3 +4019,8 @@ kbd {
   color: var(--accent-strong);
   font-weight: 650;
 }
+@media (max-width: 1000px) {
+  .lab-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

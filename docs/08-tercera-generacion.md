@@ -36,7 +36,7 @@
 - **Navegación**: raíl lateral (escritorio e iPad) con todo a un clic; búsqueda global con índice local, sinónimos de clase y resultados agrupados en teoría / laboratorio / práctica.
 - **iPad**: horizontal con raíl + visor + panel; vertical con visor arriba y panel abajo; la barra inferior queda solo para móvil.
 - **Defecto propio corregido**: el aviso «Se ha perdido el contexto gráfico» aparecía al salir de cualquier laboratorio (era la liberación intencionada del contexto al desmontar).
-- Capturas: `docs/capturas/antes/` frente a `c3b`–`c3e` (escritorio, iPad horizontal y vertical).
+- Capturas: `docs/capturas/antes/` (2.0) frente a `docs/capturas/despues/` (3.0: `*-desktop`, `*-ipad` horizontal, `*-ipadv` vertical).
 
 ## 4. Ciclo 4 — Pedagogía
 **Fórmulas.** KaTeX daría la máxima fidelidad, pero añade ≈ 270 kB de JavaScript y sus fuentes para un temario que solo necesita fracciones, potencias, subíndices, raíces y letras griegas. `MathText` implementa ese subconjunto (parser puro, probado, que nunca ejecuta código).

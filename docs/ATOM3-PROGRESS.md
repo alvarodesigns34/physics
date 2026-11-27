@@ -66,7 +66,7 @@ Rama: `claude/proyecto-atom-interactive-830d7u` · Producción (`main`) intacta 
 - [ ] Medición en GPU real y en iPad (no disponible en este entorno).
 
 ## Ciclo 7 — Inspección visual ◐
-- [x] Capturas escritorio (`c3*`, `c4*`, `c5*`), iPad horizontal (`c3d`) y vertical (`c3e`), tema oscuro y campaña (`c8`).
+- [x] Capturas finales en `despues/` (escritorio, iPad horizontal y vertical), ejemplos de ejercicios (`c4`), laboratorios (`c5`), tema oscuro y campaña (`c8`); las intermedias se retiraron del árbol (siguen en el historial de git).
 - [x] Regresión visual determinista: `npm run visual` (12 vistas, 0 % de diferencia).
 - [ ] Revisar cada pestaña interna de cada laboratorio en iPad vertical.
 
