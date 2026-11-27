@@ -1,3 +1,5 @@
+import { ModelStoryView, ModelMatrix } from './Story';
+import type { ModelKey } from '../../learning/history';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -566,16 +568,7 @@ function ModelsPanel() {
           {info.title}
         </h2>
         <p className="small">{info.idea}</p>
-        <p className="small muted">
-          <b style={{ color: 'var(--ok)', fontWeight: 600 }}>Explica: </b>
-          {info.evidence}
-        </p>
-        {info.limit !== '—' && (
-          <p className="small muted">
-            <b style={{ color: 'var(--bad)', fontWeight: 600 }}>Limitación: </b>
-            {info.limit}
-          </p>
-        )}
+        <ModelStoryView model={model as ModelKey} />
         {model === 'rutherford' && (
           <div className="stack-8">
             <button type="button" className="btn btn--primary btn--sm" style={{ alignSelf: 'flex-start' }} disabled={!!collapse && !collapsed} onClick={() => set({ collapse: performance.now(), collapsed: false })}>
@@ -604,6 +597,7 @@ function ModelsPanel() {
         )}
         <EpiTag kind={info.epi}>{info.epi === 'historico' ? 'Representación del modelo histórico, no del átomo real' : 'Densidad electrónica 1s calculada'}</EpiTag>
       </section>
+      <ModelMatrix current={model as ModelKey} />
     </>
   );
 }

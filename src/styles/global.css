@@ -3859,3 +3859,98 @@ kbd {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Time Machine 3.0 · recorrido de 7 pasos y matriz de modelos */
+.story {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.story__dots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 6px;
+}
+.story__dots button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface-raised);
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+.story__dots button.done {
+  background: var(--accent-quiet);
+  color: var(--accent);
+  border-color: var(--accent-line);
+}
+.story__dots button[aria-current='step'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+.story__card {
+  padding: 14px 16px;
+  border-radius: var(--r-inner);
+  background: var(--surface-raised-2);
+  border: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 140px;
+}
+.story__text {
+  margin: 0;
+  line-height: 1.6;
+}
+.matrix-wrap {
+  overflow-x: auto;
+}
+.matrix {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--fs-xs);
+}
+.matrix th,
+.matrix td {
+  padding: 6px 5px;
+  border-bottom: 1px solid var(--hairline);
+  text-align: center;
+}
+.matrix thead th {
+  font-weight: 650;
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+.matrix tbody th {
+  text-align: left;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.matrix tbody tr {
+  cursor: pointer;
+}
+.matrix tbody tr:hover,
+.matrix tbody tr.is-open {
+  background: var(--surface-sunken);
+}
+.matrix .is-current {
+  background: var(--accent-quiet);
+  color: var(--ink);
+}
+.matrix .v-si {
+  color: var(--ok);
+  font-weight: 700;
+}
+.matrix .v-no {
+  color: var(--bad);
+  font-weight: 700;
+}
+.matrix .v-na {
+  color: var(--ink-faint);
+}
