@@ -49,6 +49,7 @@ import { SOURCE_EXERCISES_2 } from './sources2';
 import { SOURCE_EXERCISES_3 } from './sources3';
 import { EXAM_GENERATORS } from './generators/exam';
 import { EXAM2_GENERATORS } from './generators/exam2';
+import { QUANTUM4_GENERATORS } from './generators/quantum4';
 
 const RAW_GENERATORS: ExerciseGenerator[] = [
   speciesGenerator,
@@ -81,6 +82,7 @@ const RAW_GENERATORS: ExerciseGenerator[] = [
   ...EXAM_GENERATORS,
   ...EXAM2_GENERATORS,
   ...REASONING_GENERATORS,
+  ...QUANTUM4_GENERATORS,
 ];
 
 /** Generadores con atribución granular por paso (véase attribution.ts). */

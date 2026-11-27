@@ -97,3 +97,15 @@ La auditoría señaló formas de escribir correctas que el comprobador rechazaba
 - **Ahora.** `structuredResolution` (`autoResolution.ts`) da a esas familias una resolución por bloques: qué nos piden, datos, principio (fórmula de la guía del apartado), por qué, cada paso con su resultado y su razonamiento, resultado final y errores típicos del apartado.
 - **Sin cálculos nuevos.** Solo reorganiza contenido ya verificado: los pasos del propio ejercicio, generados con sus mismos números, y la guía. Se usa también en el informe del simulacro.
 - **Defecto encontrado y corregido.** La explicación de Slater citaba un subnivel inexistente, «(1s,1p)». Ahora dice «(1s)». Se añadió una prueba de regresión que recorre todas las familias con varias semillas y prohíbe mencionar 1p, 1d, 2d, 1f, 2f o 3f fuera de las preguntas de validez, que los citan a propósito.
+
+## 7. Familias nuevas para los apartados con menos práctica
+- **`de-broglie` (5.1).** Tres niveles:
+  - electrón con una velocidad dada → p, λ y comparación con el tamaño atómico;
+  - electrón acelerado por una diferencia de potencial → E = eV, p = √(2mE) y λ (100 V → 1,23·10⁻¹⁰ m, valor de referencia);
+  - cociente λₑ/λₚ = mₚ/mₑ y por qué no se observa la onda de un objeto cotidiano.
+- **`heisenberg` (5.2, 5.3).** Δp y Δv mínimas de un electrón confinado en un átomo, comparadas con la velocidad de Bohr: por qué no hay órbitas. En nivel 3, la misma cuenta con un objeto macroscópico.
+- **`pauli-hund` (6.1, 6.2, 6.4).** Elegir el diagrama de cajas fundamental entre cuatro: el correcto, uno apareado antes de tiempo (incumple Hund), uno con desapareados antiparalelos y uno imposible (incumple Pauli). Después, contar los desapareados y clasificar el diagrama imposible.
+- **Detalles.** Las opciones con forma de diagrama se dibujan como cajas, con una lectura accesible («orbital 1, dos electrones apareados…»).
+- **Diagnóstico.** Se reconocen la masa en gramos, la falta de raíz, h/p invertido, la falta de 4π y el cociente de masas invertido.
+- **Unidades.** Se añade kg·m/s (también se aceptan kg*m/s, kg m/s, N·s y kg·m·s⁻¹).
+- **Pruebas.** `quantum4.test.ts`, además de las pruebas de autoconsistencia y de atribución por paso que ya recorren todas las familias.

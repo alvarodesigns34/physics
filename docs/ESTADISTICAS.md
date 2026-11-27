@@ -6,7 +6,7 @@
 |---|---|
 | Apartados del temario | 54 |
 | Apartados con ejercicios | 54 |
-| Generadores de ejercicios (familias) | 48 |
+| Generadores de ejercicios (familias) | 51 |
 | · de ellos, de razonamiento (ATOM 3.0) | 12 |
 | Preguntas de desarrollo con rúbrica | 9 |
 | Ejercicios de los documentos | 129 |
@@ -20,6 +20,6 @@
 | Secciones de la guía | 52 |
 | Apartados con trucos | 26 |
 | Notas de rigor | 14 |
-| Pruebas unitarias (vitest) | 857 superadas de 857 |
-| Llamadas a check() en tools/smoke.mjs (en ejecución pueden ser más: algunas están en bucles) | 30 |
-| Archivos versionados | 314 |
+| Pruebas unitarias (vitest) | 948 superadas de 948 |
+| Llamadas a check() en tools/smoke.mjs (en ejecución pueden ser más: algunas están en bucles) | 38 |
+| Archivos versionados | 270 |

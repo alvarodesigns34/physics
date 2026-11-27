@@ -12,6 +12,7 @@ export type Quantity =
   | 'numero-ondas'
   | 'masa'
   | 'velocidad'
+  | 'cantidad-movimiento'
   | 'carga'
   | 'porcentaje'
   | 'adimensional';
@@ -62,6 +63,7 @@ export const UNITS: Record<string, UnitDef> = {
   kg: U('kg', 'masa', 1),
   g: U('g', 'masa', 1e-3),
   'm/s': U('m/s', 'velocidad', 1),
+  'kg·m/s': U('kg·m/s', 'cantidad-movimiento', 1),
   C: U('C', 'carga', 1),
   '%': U('%', 'porcentaje', 1),
   '': U('', 'adimensional', 1),
@@ -73,6 +75,7 @@ const ALIASES: Record<string, string> = {
   hz: 'Hz', HZ: 'Hz', herzios: 'Hz', hercios: 'Hz', khz: 'kHz', mhz: 'MHz', ghz: 'GHz', thz: 'THz', phz: 'PHz',
   's^-1': 's⁻¹',
   '/s': 's⁻¹',
+  'kg*m/s': 'kg·m/s', 'kg m/s': 'kg·m/s', 'kgm/s': 'kg·m/s', 'kg.m/s': 'kg·m/s', 'kg·m·s⁻¹': 'kg·m/s', 'kg·m·s^-1': 'kg·m/s', 'N·s': 'kg·m/s', 'N*s': 'kg·m/s', 'Ns': 'kg·m/s',
   '/m': 'm⁻¹',
   '/cm': 'cm⁻¹', 's-1': 's⁻¹', '1/s': 's⁻¹', 'seg^-1': 's⁻¹',
   'm^-1': 'm⁻¹', 'm-1': 'm⁻¹', '1/m': 'm⁻¹',
@@ -127,6 +130,7 @@ export const QUANTITY_LABEL: Record<Quantity, string> = {
   'numero-ondas': 'número de ondas',
   masa: 'masa',
   velocidad: 'velocidad',
+  'cantidad-movimiento': 'cantidad de movimiento',
   carga: 'carga',
   porcentaje: 'porcentaje',
   adimensional: 'sin unidades',

@@ -38,6 +38,24 @@ type Mode = 'practica' | 'examen' | 'campana';
 export type Variant = 'guiado' | 'autonomo' | 'desafio' | 'revision';
 
 /** Enlace a la sección de la guía que explica el apartado del ejercicio. */
+const BOX_DIAGRAM = /^(\[[^\]]{0,2}\]\s?)+$/;
+const ARROW_NAME: Record<string, string> = { '': 'vacío', '↑': 'un electrón, espín hacia arriba', '↓': 'un electrón, espín hacia abajo', '↑↓': 'dos electrones apareados', '↑↑': 'dos electrones con el mismo espín', '↓↓': 'dos electrones con el mismo espín' };
+
+/** Texto de una opción; los diagramas de cajas («[↑↓] [↑] [ ]») se dibujan como cajas con su lectura accesible. */
+function OptionText({ text }: { text: string }) {
+  if (!BOX_DIAGRAM.test(text.trim())) return <span>{text}</span>;
+  const boxes = [...text.matchAll(/\[([^\]]*)\]/g)].map((m) => m[1]!.trim());
+  return (
+    <span className="box-diagram" role="img" aria-label={`Diagrama de ${boxes.length} orbitales: ${boxes.map((b, i) => `orbital ${i + 1}, ${ARROW_NAME[b] ?? b}`).join('; ')}`}>
+      {boxes.map((b, i) => (
+        <span key={i} className="box-diagram__box">
+          {b}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function TheoryLink({ nodeId, prominent, generatorId }: { nodeId: string | undefined; prominent: boolean; generatorId?: string }) {
   if (!nodeId) return null;
   const anchor = guideAnchorFor(nodeId, generatorId);
@@ -122,7 +140,7 @@ export function PartInput({ part, value, onChange, onSubmit, disabled, labelId }
               }}
             >
               <span aria-hidden="true" style={{ width: 16, height: 16, flex: 'none', borderRadius: a.multiple ? 4 : 999, border: '1.5px solid ' + (on ? 'var(--accent)' : 'var(--hairline-strong)'), background: on ? 'var(--accent)' : 'transparent', boxShadow: on ? 'inset 0 0 0 3px var(--surface-raised)' : 'none' }} />
-              <span>{o.text}</span>
+              <OptionText text={o.text} />
             </button>
           );
         })}
