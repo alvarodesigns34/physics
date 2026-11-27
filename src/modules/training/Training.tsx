@@ -4,6 +4,7 @@ import { BLOCKS, NODES, nodeTitle, NODE_BY_ID, type ModuleId } from '../../learn
 import { COVERED_NODES, GENERATORS, GENERATOR_BY_ID, SOURCE_EXERCISES, sourceLevel } from '../../learning/registry';
 import { buildExamDetailed, buildProfileExam, MOCK_PROFILES, weakProfile, selectNext, type MockProfile, type Selection } from '../../learning/session';
 import { dueCards, EVIDENCE_LABEL, masteryEstimate, masteryLevel } from '../../learning/mastery';
+import { evidenceBreakdown, EVIDENCE_KIND_LABEL, type EvidenceKind } from '../../learning/evidence';
 import { SKILLS, ERROR_LABEL, buildEvidence } from '../../learning/evidence';
 import { weakSkills, explainWeakSkill } from '../../learning/diagnosis';
 import type { ErrorKind, SkillId } from '../../learning/types';
@@ -95,7 +96,7 @@ function RoutePicker() {
               const e = masteryEstimate(mastery[n.id]);
               return (
                 <a key={n.id} className="challenge-chip" href={`#/entrenamiento?v=ruta&n=${n.id}`} title={e.evidence === 'sin-datos' ? 'Sin practicar' : `Dominio estimado ${e.low}–${e.high} %`}>
-                  <span className="mono faint">{n.id}</span> {n.title}
+                  <span className="nid">{n.id}</span> {n.title}
                 </a>
               );
             })}
@@ -242,6 +243,38 @@ function MasteryBadge({ m }: { m: Parameters<typeof masteryEstimate>[0] }) {
   );
 }
 
+const KIND_ORDER: EvidenceKind[] = ['demostrada', 'posible-azar', 'asistida', 'autoevaluada'];
+
+/** Barra de calidad de la evidencia de un apartado: qué parte de los aciertos demuestra comprensión. */
+function EvidenceStrip({ node, history }: { node: string; history: Parameters<typeof evidenceBreakdown>[0] }) {
+  const b = evidenceBreakdown(history, node);
+  if (!b.total) return null;
+  const parts = [...KIND_ORDER.map((k) => ({ k, n: b.successes[k] })), { k: 'fallo' as const, n: b.misses }].filter((x) => x.n > 0);
+  const label = `${parts.map((p) => `${p.n} ${p.k === 'fallo' ? 'sin superar' : EVIDENCE_KIND_LABEL[p.k]}`).join(', ')}. ${b.summary}`;
+  return (
+    <span className="ev-strip" role="img" aria-label={label} title={label}>
+      {parts.map((p) => (
+        <span key={p.k} className={`ev-strip__seg ev--${p.k}`} style={{ flexGrow: p.n }} />
+      ))}
+    </span>
+  );
+}
+
+function EvidenceLegend() {
+  return (
+    <details className="ev-legend">
+      <summary className="small">Qué significa cada color de la barra de evidencia</summary>
+      <ul className="small muted">
+        <li><span className="ev-dot ev--demostrada" /> <strong>Comprensión demostrada</strong>: respuesta abierta (número, expresión, orden) correcta al primer intento y sin pistas. Es la que más pesa en la estimación del dominio.</li>
+        <li><span className="ev-dot ev--posible-azar" /> <strong>Pudo ser casual</strong>: acierto en una pregunta de opciones, donde adivinar tiene una probabilidad apreciable (1 entre el número de opciones). El modelo descuenta esa probabilidad.</li>
+        <li><span className="ev-dot ev--asistida" /> <strong>Con ayuda</strong>: acierto tras pistas, varios intentos o pasos vistos resueltos. Cuenta, pero menos.</li>
+        <li><span className="ev-dot ev--autoevaluada" /> <strong>Autoevaluación</strong>: preguntas de desarrollo que corriges tú con la rúbrica. Útil para practicar, débil como prueba.</li>
+        <li><span className="ev-dot ev--fallo" /> <strong>Sin superar</strong>: intentos con menos del 75 % del apartado bien.</li>
+      </ul>
+    </details>
+  );
+}
+
 /** Diagnóstico por competencias: dominio estimado de cada una y debilidades con sus pruebas. */
 function SkillsPanel() {
   const skills = useStore((s) => s.skills);
@@ -308,7 +341,7 @@ function Review({ onStart }: { onStart: (nodes: string[]) => void }) {
             {due.map((c) => (
               <li key={c.nodeId} className="row row--between">
                 <span>
-                  <span className="mono faint">{c.nodeId}</span> {nodeTitle(c.nodeId)}
+                  <span className="nid">{c.nodeId}</span> {nodeTitle(c.nodeId)}
                 </span>
                 <span className="faint">caja {c.box}</span>
               </li>
@@ -327,7 +360,7 @@ function Review({ onStart }: { onStart: (nodes: string[]) => void }) {
           {upcoming.map((c) => (
             <div key={c.nodeId} className="row row--between small">
               <span>
-                <span className="mono faint">{c.nodeId}</span> {nodeTitle(c.nodeId)}
+                <span className="nid">{c.nodeId}</span> {nodeTitle(c.nodeId)}
               </span>
               <span className="faint">{new Date(c.due).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
             </div>
@@ -542,10 +575,11 @@ function ProgressView() {
         ))}
       </div>
       <SkillsPanel />
+      <EvidenceLegend />
       {BLOCKS.map((b) => (
         <section key={b.id} className="stack-8">
           <span className="h3">
-            <span className="mono faint">{b.id}.</span> {b.title}
+            <span className="nid">{b.id}.</span> {b.title}
           </span>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 6 }}>
             {NODES.filter((n) => n.block === b.id).map((n) => {
@@ -555,13 +589,14 @@ function ProgressView() {
               return (
                 <div key={n.id} className="card" style={{ padding: '10px 12px', opacity: has ? 1 : 0.55, display: 'flex', gap: 10, alignItems: 'flex-start' }} title={n.sources}>
                   <span style={{ width: 10, height: 10, marginTop: 5, borderRadius: 3, flex: 'none', background: levelColor[lvl], border: '1px solid var(--hairline-strong)' }} aria-hidden="true" />
-                  <span className="stack-8" style={{ gap: 2, minWidth: 0 }}>
+                  <span className="stack-8" style={{ gap: 2, minWidth: 0, flex: 1 }}>
                     <span className="small">
-                      <span className="mono faint">{n.id}</span> {n.title}
+                      <span className="nid">{n.id}</span> {n.title}
                     </span>
                     <span className="small faint">
                       {has ? (m?.attempts ? `${(() => { const e = masteryEstimate(m); return e.low === e.high ? `${e.mid} %` : `${e.low}–${e.high} %`; })()} · ${m.attempts} intento${m.attempts > 1 ? 's' : ''}${cards[n.id] ? ` · repaso ${new Date(cards[n.id]!.due).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}` : ''}` : 'Sin practicar') : `Llega con ${n.modules.map((x) => MODULE_LABEL[x]).join(' / ')}`}
                     </span>
+                    {has && <EvidenceStrip node={n.id} history={history} />}
                   </span>
                 </div>
               );

@@ -94,7 +94,7 @@ export function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) 
   return (
     <section id={`sec-${s.id ?? s.node}`} className="guide-sec" aria-labelledby={`h-${s.id ?? s.node}`} data-block={s.node.split('.')[0]}>
       <header className="guide-sec__head">
-        <span className="mono guide-sec__num">{s.node}</span>
+        <span className="guide-sec__num num">{s.node}</span>
         <h2 id={`h-${s.id ?? s.node}`} className="h2 guide-sec__title">
           {s.title}
         </h2>
@@ -243,7 +243,7 @@ function FormulaSheet() {
       {LESSONS.filter((l) => l.sections.some((s) => s.formulas)).map((l) => (
         <section key={l.block} className="stack-12">
           <span className="h3">
-            <span className="mono faint">{l.block}.</span> {l.title}
+            <span className="nid">{l.block}.</span> {l.title}
           </span>
           <div className="formula-grid">
             {l.sections.flatMap((s) => (s.formulas ?? []).map((f) => <FormulaCard key={s.node + f.expr} f={f} />))}
@@ -390,7 +390,7 @@ export function GuideOverlay() {
                           document.getElementById(`sec-${s.id ?? s.node}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         }}
                       >
-                        <span className="mono faint">{s.node}</span> {s.title}
+                        <span className="nid">{s.node}</span> {s.title}
                       </a>
                     ))}
                   </nav>

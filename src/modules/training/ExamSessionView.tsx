@@ -248,7 +248,7 @@ export function ExamReportView({ report, session, onNew }: { report: ExamReport;
           {nodes.map(([n, v]) => (
             <div key={n} className="exam-node">
               <span className="small">
-                <span className="mono faint">{n}</span> {nodeTitle(n)}
+                <span className="nid">{n}</span> {nodeTitle(n)}
               </span>
               {v.total > 0 ? <Bar value={v.ok} total={v.total} /> : <span className="small faint">sin evidencia</span>}
               <span className="small num" style={{ width: 44, textAlign: 'right' }}>

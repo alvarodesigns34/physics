@@ -226,3 +226,44 @@ export function aggregateNodeEvidence(results: { exercise: Exercise; parts: Part
   }
   return out;
 }
+
+export interface EvidenceBreakdown {
+  /** Intentos con resultado ≥ 0,75 en el apartado, por tipo de evidencia */
+  successes: Record<EvidenceKind, number>;
+  /** Intentos con resultado < 0,75 */
+  misses: number;
+  total: number;
+  /** Frase que resume la calidad de la evidencia (no solo cuánta hay) */
+  summary: string;
+}
+
+/**
+ * Desglose de la evidencia de un apartado (ATOM 4.0): separa la comprensión demostrada de los aciertos
+ * que pudieron ser casuales, de los logrados con ayuda y de las autoevaluaciones. Se calcula a partir del
+ * historial; los intentos antiguos sin `nodeEvidence` usan el tipo global del intento, o se cuentan como
+ * «demostrada» solo si fueron limpios (sin pistas) — antes de ATOM 4.0 no se registraba el tipo.
+ */
+export function evidenceBreakdown(
+  history: { nodeIds: string[]; score: number; hintsUsed: number; evidence?: EvidenceKind; nodeEvidence?: Record<string, { y: number; kind: EvidenceKind }> }[],
+  node: string,
+): EvidenceBreakdown {
+  const successes: Record<EvidenceKind, number> = { demostrada: 0, 'posible-azar': 0, asistida: 0, autoevaluada: 0 };
+  let misses = 0;
+  for (const h of history) {
+    if (!h.nodeIds.includes(node)) continue;
+    const ne = h.nodeEvidence?.[node];
+    const y = ne?.y ?? h.score;
+    const kind: EvidenceKind = ne?.kind ?? h.evidence ?? (h.hintsUsed > 0 ? 'asistida' : 'demostrada');
+    if (y >= 0.75) successes[kind]++;
+    else misses++;
+  }
+  const ok = Object.values(successes).reduce((a, b) => a + b, 0);
+  const total = ok + misses;
+  let summary: string;
+  if (!total) summary = 'Sin evidencia todavía.';
+  else if (!ok) summary = 'Aún ningún acierto en este apartado.';
+  else if (successes.demostrada === 0) summary = 'Ningún acierto demostrado todavía: los aciertos fueron con ayuda, autoevaluados o pudieron ser casuales.';
+  else if (successes.demostrada / ok >= 0.6) summary = `Evidencia sólida: ${successes.demostrada} de ${ok} aciertos demuestran comprensión.`;
+  else summary = `Evidencia mixta: solo ${successes.demostrada} de ${ok} aciertos demuestran comprensión; el resto pudo ser azar o tuvo ayuda.`;
+  return { successes, misses, total, summary };
+}

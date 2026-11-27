@@ -137,6 +137,15 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
+/* Identificador de apartado («3.6»): tipografía de la interfaz con cifras tabulares. En monoespaciada el
+   punto ocupa una celda entera y se lee «3 . 6». */
+.nid {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--ink-faint);
+  margin-right: 2px;
+}
+
 p {
   margin: 0;
 }
@@ -2606,6 +2615,7 @@ details.chapter + details.chapter {
   border: 1px solid color-mix(in srgb, var(--bc, var(--accent)) 45%, transparent);
   color: var(--bc, var(--accent));
   font-size: 0.8125rem;
+  font-weight: 600;
 }
 
 /* Fórmulas: barra de acento y expresión más grande */
@@ -4358,3 +4368,22 @@ kbd {
   flex-direction: column;
   gap: 6px;
 }
+
+/* ATOM 4.0 · Calidad de la evidencia por apartado */
+.ev-strip {
+  display: flex;
+  gap: 2px;
+  height: 4px;
+  margin-top: 6px;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+.ev-strip__seg { min-width: 4px; }
+.ev--demostrada { background: var(--ok); }
+.ev--posible-azar { background: repeating-linear-gradient(135deg, var(--ok) 0 2px, var(--ok-quiet) 2px 4px); }
+.ev--asistida { background: var(--warn); }
+.ev--autoevaluada { background: var(--ink-faint); }
+.ev--fallo { background: var(--bad); opacity: 0.55; }
+.ev-legend summary { cursor: pointer; color: var(--ink-muted); }
+.ev-legend ul { margin: 8px 0 0; padding-left: 0; list-style: none; display: grid; gap: 6px; line-height: 1.5; }
+.ev-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; }

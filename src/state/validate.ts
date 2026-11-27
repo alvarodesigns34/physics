@@ -69,6 +69,8 @@ function errorEntry(e: unknown): boolean {
   return isObj(e) && ERROR_KINDS.has(e.kind as string) && (e.skill === undefined || SKILL_IDS.has(e.skill as string)) && nodeList(e.nodeIds);
 }
 
+const EVIDENCE_KINDS = new Set(['demostrada', 'posible-azar', 'asistida', 'autoevaluada']);
+
 export function attemptEntry(v: unknown): boolean {
   return (
     isObj(v) && shortStr(v.exerciseId) && nodeList(v.nodeIds) && (v.nodeIds as string[]).length > 0 &&
@@ -80,7 +82,10 @@ export function attemptEntry(v: unknown): boolean {
     ts(v.at) && MODES.has(v.mode as string) &&
     (v.errors === undefined || (Array.isArray(v.errors) && v.errors.length <= 50 && v.errors.every(errorEntry))) &&
     (v.skills === undefined || (isObj(v.skills) && Object.entries(v.skills).every(([k, y]) => SKILL_IDS.has(k) && finite(y) && y >= 0 && y <= 1))) &&
-    (v.evidence === undefined || ['demostrada', 'posible-azar', 'asistida', 'autoevaluada'].includes(v.evidence as string))
+    (v.evidence === undefined || EVIDENCE_KINDS.has(v.evidence as string)) &&
+    (v.nodeEvidence === undefined ||
+      (isObj(v.nodeEvidence) && Object.keys(v.nodeEvidence).length <= 40 &&
+        Object.values(v.nodeEvidence).every((x) => isObj(x) && finite(x.y) && x.y >= 0 && x.y <= 1 && EVIDENCE_KINDS.has(x.kind as string))))
   );
 }
 

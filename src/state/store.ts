@@ -46,6 +46,8 @@ export interface Attempt {
   skills?: Partial<Record<SkillId, number>>;
   /** Tipo de evidencia (ATOM 4.0): demostrada, posible azar, asistida o autoevaluada */
   evidence?: EvidenceKind;
+  /** Apartado → resultado 0–1 y tipo de evidencia de ESE apartado en este intento */
+  nodeEvidence?: Record<string, { y: number; kind: EvidenceKind }>;
 }
 
 const KIND_RANK: Record<EvidenceKind, number> = { demostrada: 0, 'posible-azar': 1, asistida: 2, autoevaluada: 3 };
@@ -218,6 +220,7 @@ export const useStore = create<AppState>()(
             errors: ev.errors.map(({ kind, skill, nodeIds }) => ({ kind, skill, nodeIds })),
             skills: skillY,
             evidence: weakestKind(Object.values(ev.nodes).map((n) => n.kind)),
+            nodeEvidence: Object.fromEntries(Object.entries(ev.nodes).map(([n, v]) => [n, { y: Math.round(v.y * 100) / 100, kind: v.kind }])),
           };
           // Cuaderno de errores: los pasos no superados dejan entrada; un ejercicio limpio (primer intento,
           // sin pistas ni pasos revelados) puede superar entradas abiertas de su mismo tipo.
