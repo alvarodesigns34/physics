@@ -69,6 +69,7 @@ function errorEntry(e: unknown): boolean {
   return isObj(e) && ERROR_KINDS.has(e.kind as string) && (e.skill === undefined || SKILL_IDS.has(e.skill as string)) && nodeList(e.nodeIds);
 }
 
+const unit = (x: unknown): boolean => finite(x) && (x as number) >= 0 && (x as number) <= 1;
 const EVIDENCE_KINDS = new Set(['demostrada', 'posible-azar', 'asistida', 'autoevaluada']);
 
 export function attemptEntry(v: unknown): boolean {
@@ -85,7 +86,9 @@ export function attemptEntry(v: unknown): boolean {
     (v.evidence === undefined || EVIDENCE_KINDS.has(v.evidence as string)) &&
     (v.nodeEvidence === undefined ||
       (isObj(v.nodeEvidence) && Object.keys(v.nodeEvidence).length <= 40 &&
-        Object.values(v.nodeEvidence).every((x) => isObj(x) && finite(x.y) && x.y >= 0 && x.y <= 1 && EVIDENCE_KINDS.has(x.kind as string))))
+        Object.values(v.nodeEvidence).every((x) => isObj(x) && unit(x.y) && EVIDENCE_KINDS.has(x.kind as string) && (x.w === undefined || unit(x.w)) && (x.g === undefined || (finite(x.g) && x.g >= 0 && x.g <= 0.9))))) &&
+    (v.skillEvidence === undefined ||
+      (isObj(v.skillEvidence) && Object.entries(v.skillEvidence).every(([k, x]) => SKILL_IDS.has(k) && isObj(x) && unit(x.y) && unit(x.w) && finite(x.g) && x.g >= 0 && x.g <= 0.9)))
   );
 }
 

@@ -48,36 +48,16 @@ export interface Attempt {
   /** Tipo de evidencia (ATOM 4.0): demostrada, posible azar, asistida o autoevaluada */
   evidence?: EvidenceKind;
   /** Apartado → resultado 0–1 y tipo de evidencia de ESE apartado en este intento */
-  nodeEvidence?: Record<string, { y: number; kind: EvidenceKind }>;
+  nodeEvidence?: Record<string, { y: number; kind: EvidenceKind; w?: number; g?: number }>;
+  /**
+   * ATOM 5.2 · Actualización exacta por competencia (y sin redondear, peso final y azar) para que la fusión
+   * entre dispositivos reproduzca la misma actualización que hizo el dispositivo original.
+   */
+  skillEvidence?: Partial<Record<SkillId, { y: number; w: number; g: number }>>;
 }
 
-/**
- * Peso de un intento según si el MISMO enunciado ya se había resuelto: 1 la primera vez; 0,35 si se repite
- * (0,15 a partir de la tercera); 0,6 si la vez anterior fue hace ≥ 2 días (recuperación espaciada, que sí
- * es aprendizaje, aunque no demuestra transferencia a datos nuevos).
- */
-/** Días que deben pasar para que repetir el mismo enunciado sea recuperación espaciada (no memoria inmediata). */
-export const SPACED_RETRIEVAL_MS = 2 * 86_400_000;
-
-/**
- * Repetición del mismo enunciado (ATOM 5.1). Una sola fuente de verdad para el peso de la evidencia y para
- * el cuaderno de errores: antes, el cuaderno exigía `factor === 1` y su propia regla «el mismo enunciado
- * pasados 2 días» era inalcanzable, porque ese caso siempre es una repetición (factor 0,6).
- * - primera vez: factor 1;
- * - repetición tras ≥ 2 días: factor 0,6 y `spaced` (recuperación espaciada: puede cerrar el cuaderno);
- * - repetición inmediata: 0,35 la segunda vez y 0,15 después (memoria de la respuesta, no dominio).
- */
-export function repetitionInfo(history: { exerciseId: string; at: number }[], id: string, now: number): { factor: number; spaced: boolean } {
-  const prev = history.filter((h) => h.exerciseId === id);
-  if (!prev.length) return { factor: 1, spaced: false };
-  const last = Math.max(...prev.map((h) => h.at));
-  if (now - last >= SPACED_RETRIEVAL_MS) return { factor: 0.6, spaced: true };
-  return { factor: prev.length === 1 ? 0.35 : 0.15, spaced: false };
-}
-
-export function repetitionFactor(history: { exerciseId: string; at: number }[], id: string, now: number): number {
-  return repetitionInfo(history, id, now).factor;
-}
+export { SPACED_RETRIEVAL_MS, repetitionInfo, repetitionFactor } from './repetition';
+import { repetitionInfo } from './repetition';
 
 const KIND_RANK: Record<EvidenceKind, number> = { demostrada: 0, 'posible-azar': 1, asistida: 2, autoevaluada: 3 };
 function weakestKind(ks: EvidenceKind[]): EvidenceKind {
@@ -234,15 +214,23 @@ export const useStore = create<AppState>()(
           }
           const mastery = { ...s.mastery };
           const cards = { ...s.cards };
+          // Peso final (tipo de evidencia × repetición) y azar de cada actualización: se guardan en el intento
+          // (ATOM 5.2) para que la fusión con otro dispositivo aplique EXACTAMENTE la misma actualización.
+          const nodeEvidence: NonNullable<Attempt['nodeEvidence']> = {};
+          const skillEvidence: NonNullable<Attempt['skillEvidence']> = {};
           for (const [node, { y, guess, kind }] of Object.entries(ev.nodes)) {
-            mastery[node] = updateMasteryY(mastery[node] ?? initialMastery(), ex.difficulty, y, o.hintsUsed, now, EVIDENCE_WEIGHT[kind] * rep, guess);
+            const w = EVIDENCE_WEIGHT[kind] * rep;
+            nodeEvidence[node] = { y, kind, w, g: guess };
+            mastery[node] = updateMasteryY(mastery[node] ?? initialMastery(), ex.difficulty, y, o.hintsUsed, now, w, guess);
             const ok = y >= 0.75;
             if (mode !== 'examen' || !ok) cards[node] = updateCard(cards[node], node, ok, now, kind);
           }
           const skills = { ...s.skills };
           const skillY: Partial<Record<SkillId, number>> = {};
           for (const [k, v] of Object.entries(ev.skills) as [SkillId, { y: number; n: number; guess: number; kind: EvidenceKind }][]) {
-            skills[k] = updateMasteryY(skills[k] ?? initialMastery(), 2, v.y, o.hintsUsed, now, Math.min(1, 0.5 + v.n * 0.25) * EVIDENCE_WEIGHT[v.kind] * rep, v.guess);
+            const w = Math.min(1, 0.5 + v.n * 0.25) * EVIDENCE_WEIGHT[v.kind] * rep;
+            skillEvidence[k] = { y: v.y, w, g: v.guess };
+            skills[k] = updateMasteryY(skills[k] ?? initialMastery(), 2, v.y, o.hintsUsed, now, w, v.guess);
             skillY[k] = Math.round(v.y * 100) / 100;
           }
           const attempt: Attempt = {
@@ -257,7 +245,8 @@ export const useStore = create<AppState>()(
             errors: ev.errors.map(({ kind, skill, nodeIds }) => ({ kind, skill, nodeIds })),
             skills: skillY,
             evidence: weakestKind(Object.values(ev.nodes).map((n) => n.kind)),
-            nodeEvidence: Object.fromEntries(Object.entries(ev.nodes).map(([n, v]) => [n, { y: Math.round(v.y * 100) / 100, kind: v.kind }])),
+            nodeEvidence,
+            skillEvidence,
           };
           // Cuaderno de errores: los pasos no superados dejan entrada; un ejercicio limpio (primer intento,
           // sin pistas ni pasos revelados) puede superar entradas abiertas de su mismo tipo.

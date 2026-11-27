@@ -5,7 +5,9 @@
  * - historial: unión por (ejercicio, instante); los intentos comunes (de una fusión anterior) no se duplican;
  * - dominio por apartado y por competencia: se parte de la copia actualizada más recientemente y se le
  *   aplican, con el mismo modelo 3PL, solo los intentos que esa copia NO tenía (los del otro dispositivo
- *   dentro de su ventana de historial). Así la evidencia de ambos cuenta una vez;
+ *   dentro de su ventana de historial). Así la evidencia de ambos cuenta una vez. Desde ATOM 5.2 cada intento
+ *   guarda su actualización exacta (resultado, peso final con el factor de repetición, y azar), y la fusión la
+ *   reproduce idéntica a la del dispositivo de origen;
  * - tarjetas de repaso: la de vencimiento más próximo (si en un dispositivo se falló, se repasa antes);
  * - campaña: por misión, el mayor avance (completada > en curso; estrellas y paso máximos);
  * - simulacros: unión por instante;
@@ -20,6 +22,7 @@ import { EVIDENCE_WEIGHT } from '../learning/evidence';
 import type { NotebookEntry } from '../learning/notebook';
 import type { Difficulty, SkillId } from '../learning/types';
 import type { Attempt, ExamRecord, MissionProgress } from './store';
+import { repetitionInfo } from './repetition';
 
 export interface ProgressData {
   mastery: Record<string, NodeMastery>;
@@ -57,26 +60,55 @@ function missingAttempts(baseHistory: Attempt[], other: Attempt[]): Attempt[] {
   return other.filter((a) => !have.has(attemptKey(a)) && a.at > from).sort((a, b) => a.at - b.at);
 }
 
-function replayNode(m: NodeMastery, node: string, extra: Attempt[]): { m: NodeMastery; changed: boolean } {
+/**
+ * Reproduce sobre `m` los intentos que faltaban. ATOM 5.2: si el intento guarda su actualización exacta
+ * (resultado sin redondear, peso final = tipo de evidencia × factor de repetición, y azar), se aplica tal
+ * cual: el resultado es idéntico al del dispositivo de origen. Los intentos antiguos (sin esos campos) se
+ * reconstruyen: el factor de repetición se recalcula con el historial unido anterior a ese intento, la
+ * evidencia repetida deja de contar como demostrada y el azar, que no se guardaba, se toma como 0.
+ */
+function legacyRepetition(all: Attempt[], a: Attempt): number {
+  return repetitionInfo(all.filter((h) => h.at < a.at), a.exerciseId, a.at).factor;
+}
+
+function replayNode(m: NodeMastery, node: string, extra: Attempt[], all: Attempt[]): { m: NodeMastery; changed: boolean } {
   let out = m;
   let changed = false;
   for (const a of extra) {
     const ev = a.nodeEvidence?.[node];
     if (!ev && !a.nodeIds.includes(node)) continue;
     const y = ev ? ev.y : a.score;
-    const kind = ev?.kind ?? a.evidence ?? 'asistida';
-    out = updateMasteryY(out, a.difficulty as Difficulty, y, a.hintsUsed, a.at, EVIDENCE_WEIGHT[kind]);
+    let w: number;
+    let g = 0;
+    if (ev && ev.w !== undefined) {
+      w = ev.w;
+      g = ev.g ?? 0;
+    } else {
+      const rep = legacyRepetition(all, a);
+      let kind = ev?.kind ?? a.evidence ?? 'asistida';
+      if (rep < 1 && (kind === 'demostrada' || kind === 'posible-azar')) kind = 'asistida';
+      w = EVIDENCE_WEIGHT[kind] * rep;
+    }
+    out = updateMasteryY(out, a.difficulty as Difficulty, y, a.hintsUsed, a.at, w, g);
     changed = true;
   }
   return { m: out, changed };
 }
 
-function replaySkill(m: NodeMastery, skill: SkillId, extra: Attempt[]): NodeMastery {
+function replaySkill(m: NodeMastery, skill: SkillId, extra: Attempt[], all: Attempt[]): NodeMastery {
   let out = m;
   for (const a of extra) {
+    const exact = a.skillEvidence?.[skill];
+    if (exact) {
+      out = updateMasteryY(out, 2, exact.y, a.hintsUsed, a.at, exact.w, exact.g);
+      continue;
+    }
     const y = a.skills?.[skill];
     if (y === undefined) continue;
-    out = updateMasteryY(out, 2, y, a.hintsUsed, a.at, 0.75 * EVIDENCE_WEIGHT[a.evidence ?? 'asistida']);
+    const rep = legacyRepetition(all, a);
+    let kind = a.evidence ?? 'asistida';
+    if (rep < 1 && (kind === 'demostrada' || kind === 'posible-azar')) kind = 'asistida';
+    out = updateMasteryY(out, 2, y, a.hintsUsed, a.at, 0.75 * EVIDENCE_WEIGHT[kind] * rep);
   }
   return out;
 }
@@ -92,7 +124,8 @@ export function mergeProgress(local: ProgressData, incoming: ProgressData): { da
     byKey.set(attemptKey(a), a);
     summary.addedAttempts++;
   }
-  const history = [...byKey.values()].sort((a, b) => a.at - b.at || a.exerciseId.localeCompare(b.exerciseId)).slice(-HISTORY_CAP);
+  const allHistory = [...byKey.values()].sort((a, b) => a.at - b.at || a.exerciseId.localeCompare(b.exerciseId));
+  const history = allHistory.slice(-HISTORY_CAP);
 
   // Dominio por apartado
   const mastery: Record<string, NodeMastery> = {};
@@ -104,7 +137,7 @@ export function mergeProgress(local: ProgressData, incoming: ProgressData): { da
     const b = incoming.mastery[n];
     const baseIsLocal = later(a, b);
     const base = (baseIsLocal ? a : b) ?? initialMastery();
-    const r = replayNode(base, n, baseIsLocal ? missLocal : missIncoming);
+    const r = replayNode(base, n, baseIsLocal ? missLocal : missIncoming, allHistory);
     mastery[n] = r.m;
     if (!a || r.m !== a) summary.nodesUpdated++;
   }
@@ -114,7 +147,7 @@ export function mergeProgress(local: ProgressData, incoming: ProgressData): { da
     const a = local.skills[k];
     const b = incoming.skills[k];
     const baseIsLocal = later(a, b);
-    skills[k] = replaySkill((baseIsLocal ? a : b) ?? initialMastery(), k, baseIsLocal ? missLocal : missIncoming);
+    skills[k] = replaySkill((baseIsLocal ? a : b) ?? initialMastery(), k, baseIsLocal ? missLocal : missIncoming, allHistory);
   }
   // Tarjetas de repaso
   const cards: Record<string, ReviewCard> = { ...local.cards };
