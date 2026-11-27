@@ -48,7 +48,7 @@ export const DEPTH: Record<string, SectionDepth> = {
     counter: 'El H⁺ es un caso límite: es un protón solo, sin ningún electrón. En agua no existe libre; se une a moléculas de agua (H₃O⁺).',
   },
   '1.5': {
-    why: 'Las especies isoelectrónicas tienen el mismo número de electrones repartidos de la misma forma. La repulsión entre ellos y el apantallamiento son parecidos, así que lo único que cambia es la carga del núcleo: con más protones, la nube se contrae más y cuesta más arrancar un electrón.',
+    why: 'Las especies isoelectrónicas tienen el mismo número de electrones; en las series de elementos representativos (como N³⁻ … Al³⁺) están además repartidos de la misma forma. Entonces la repulsión entre ellos y el apantallamiento son parecidos, así que lo único que cambia es la carga del núcleo: con más protones, la nube se contrae más y cuesta más arrancar un electrón.',
     exam: ['Ordenar por radio (o por energía de ionización) una serie como N³⁻, O²⁻, F⁻, Ne, Na⁺, Mg²⁺, Al³⁺.', 'Encontrar en una lista las especies isoelectrónicas con un gas noble.'],
     doubts: [{ q: '¿Mismo número de electrones implica siempre la misma configuración?', a: 'En los elementos representativos, sí. En los metales de transición no siempre: mira el contraejemplo.' }],
     counter: 'Ca y Ti²⁺ tienen 20 electrones cada uno, pero el Ca es [Ar] 4s² y el Ti²⁺ es [Ar] 3d². En los cationes de transición los electrones 3d quedan por debajo de los 4s.',
@@ -121,7 +121,7 @@ export const DEPTH: Record<string, SectionDepth> = {
     doubts: [{ q: '¿Hay un atajo para pasar de λ a energía?', a: 'Sí: h·c ≈ 1240 eV·nm, así que E(eV) ≈ 1240 / λ(nm). Por ejemplo, 620 nm → 2,0 eV. Sirve para comprobar el resultado, pero en el examen conviene mostrar el cálculo completo.' }],
   },
   '3.5': {
-    why: 'Un átomo solo puede tener ciertas energías. Al bajar de un nivel a otro emite un fotón con exactamente esa diferencia de energía, y para subir absorbe un fotón con esa misma energía. Por eso las líneas de absorción aparecen en las mismas longitudes de onda que las de emisión.',
+    why: 'Un átomo solo puede tener ciertas energías. Al bajar de un nivel a otro emite un fotón con exactamente esa diferencia de energía, y para subir absorbe un fotón con esa misma energía. Por eso cada línea de absorción coincide con una línea de emisión del mismo elemento. Lo contrario no es cierto: un gas frío solo absorbe los saltos que parten del estado fundamental, así que muestra muchas menos líneas oscuras que líneas brillantes tiene su emisión.',
     exam: ['Distinguir los espectros de emisión, de absorción y continuo, y cómo se obtiene cada uno.', 'Identificar un elemento comparando sus líneas con las de una muestra.'],
     doubts: [{ q: '¿Por qué el hidrógeno frío solo absorbe en el ultravioleta (serie de Lyman)?', a: 'A temperatura ambiente casi todos sus átomos están en n = 1, así que solo pueden absorber subiendo desde n = 1, y esas líneas son de Lyman, en el UV. Para ver Balmer en absorción hacen falta átomos en n = 2, como en la atmósfera de estrellas calientes.' }],
   },

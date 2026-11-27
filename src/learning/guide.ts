@@ -93,7 +93,7 @@ export const LESSONS: Lesson[] = [
         node: '1.5',
         title: 'Especies isoelectrónicas',
         body: [
-          'Son especies con el **mismo número de electrones** (y la misma configuración electrónica), aunque tengan distinto Z. Ejemplo con 10 e⁻: N³⁻, O²⁻, F⁻, Ne, Na⁺, Mg²⁺, Al³⁺.',
+          'Son especies con el **mismo número de electrones**, aunque tengan distinto Z. Ejemplo con 10 e⁻: N³⁻, O²⁻, F⁻, Ne, Na⁺, Mg²⁺, Al³⁺, que además comparten configuración (1s² 2s² 2p⁶, la del neón). Ojo: mismo número de electrones no garantiza la misma configuración en los metales de transición (Ca: [Ar] 4s²; Ti²⁺: [Ar] 3d²).',
           'Entre ellas, la que tiene **más protones** atrae más a la nube electrónica: es la más pequeña y la que tiene mayor energía de ionización.',
         ],
         tip: 'Para ordenar por tamaño una serie isoelectrónica no necesitas la tabla: ordena por Z (más protones, menor radio).',
@@ -152,7 +152,7 @@ export const LESSONS: Lesson[] = [
         ],
         tip: 'Respuesta modelo: «La mayoría pasa → el átomo es casi vacío. Algunas rebotan → hay un núcleo pequeño, positivo y con casi toda la masa. Thomson no lo explica porque su carga positiva está repartida».',
       },
-      { node: '2.5', title: 'Modelo de Rutherford', body: ['Núcleo pequeñísimo y positivo con casi toda la masa. Los electrones giran a su alrededor como planetas. El protón se identifica en 1919.'] },
+      { node: '2.5', title: 'Modelo de Rutherford', body: ['Núcleo pequeñísimo y positivo con casi toda la masa. En este modelo los electrones giran a su alrededor como planetas: es la imagen de 1911, que la mecánica cuántica sustituirá por los orbitales. El protón se identifica en 1919.'] },
       {
         node: '2.6',
         title: 'Limitaciones de Rutherford',
@@ -352,7 +352,7 @@ export const LESSONS: Lesson[] = [
         node: '4.4',
         title: 'Correcciones al modelo',
         body: [
-          '**Sommerfeld (1915)**: la estructura fina (líneas dobles) se explica con órbitas elípticas → número cuántico secundario **l**.',
+          '**Sommerfeld (1915)**: la estructura fina (líneas dobles) se explica con órbitas elípticas → número cuántico secundario **l**. La imagen de la elipse está superada: hoy l indica la forma del orbital.',
           '**Zeeman (1896)**: el desdoblamiento de las líneas en un campo magnético se explica con distintas orientaciones → número cuántico magnético **m**.',
           '**Uhlenbeck y Goudsmit (1925)**: proponen el espín del electrón → **s**.',
         ],

@@ -105,7 +105,7 @@ export const PROGRESSION: Record<string, Progression> = {
     ],
   },
   '2.5': {
-    intuition: 'Un sistema solar en miniatura: el núcleo en el centro y los electrones girando alrededor.',
+    intuition: 'Así lo imaginó Rutherford: un sistema solar en miniatura, con el núcleo en el centro y los electrones girando alrededor. Es un modelo histórico, no la imagen actual.',
     connections: [
       { to: '2.6', why: 'La física clásica predice que ese sistema colapsaría.' },
       { to: '4.1', why: 'Bohr lo corrige con la cuantización.' },

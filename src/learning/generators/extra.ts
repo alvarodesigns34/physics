@@ -624,9 +624,9 @@ export const E = (s: string) => ELEMENTS.find((e) => e.symbol === s)!;
 export const MISC_ITEMS: ConceptItem[] = [
   {
     q: 'Al iluminar un gas frío con luz blanca y analizar la luz que lo atraviesa se observa…',
-    options: [O('abs', 'un espectro continuo con líneas oscuras (absorción)'), O('emi', 'líneas brillantes sobre fondo negro', 'Eso es un espectro de emisión: lo produce el gas excitado, no la luz que lo atraviesa.'), O('cont', 'un espectro continuo sin huecos', 'Los átomos absorben justamente las frecuencias que pueden emitir: faltan esas líneas.')],
+    options: [O('abs', 'un espectro continuo con líneas oscuras (absorción)'), O('emi', 'líneas brillantes sobre fondo negro', 'Eso es un espectro de emisión: lo produce el gas excitado, no la luz que lo atraviesa.'), O('cont', 'un espectro continuo sin huecos', 'Los átomos absorben las frecuencias de los saltos que pueden dar desde su nivel: faltan esas líneas.')],
     correct: 'abs',
-    explanation: 'El gas absorbe solo las frecuencias que corresponden a sus saltos entre niveles: aparecen líneas oscuras en las mismas posiciones que las líneas brillantes de su espectro de emisión (TEO p.7).',
+    explanation: 'El gas absorbe solo las frecuencias de los saltos que sus átomos pueden dar: aparecen líneas oscuras, cada una en la posición de una línea brillante de su espectro de emisión (TEO p.7). Matiz: en un gas frío casi todos los átomos están en el estado fundamental y solo se ven las líneas que parten de él (en el hidrógeno, la serie de Lyman, en el ultravioleta), no todas las de emisión.',
     nodes: ['3.5'],
   },
   {

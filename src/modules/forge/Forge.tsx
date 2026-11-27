@@ -10,7 +10,7 @@ import { useStore } from '../../state/store';
 import { useQuality, useReducedMotion, useMediaQuery } from '../../app/hooks';
 import { sfx } from '../../app/sound';
 import { atomDensity } from '../../science/orbitals';
-import { speciesConfiguration, formatConfiguration, unpairedElectrons, valenceElectrons } from '../../science/configuration';
+import { speciesConfiguration, formatConfiguration, unpairedElectrons, valenceElectrons, sameConfiguration, groundState } from '../../science/configuration';
 import { mulberry32 } from '../../science/numbers';
 import { identify, KIND_LABEL, chargeLabel, loadNuclides, nuclideStatus, knownIsotopes, formatHalfLife, type NuclideTable, type Species } from '../../science/nucleus';
 import { ELEMENTS, CATEGORY_LABEL, elementBySymbol, displayWeight } from '../../science/elements';
@@ -500,7 +500,12 @@ export function ForgeOverlay() {
               <div className="row row--wrap" style={{ gap: 6 }}>
                 <span className="chip">{unpairedElectrons(conf)} e⁻ desapareados</span>
                 <span className="chip">{valenceElectrons(conf)} e⁻ en la capa externa</span>
-                {id.isoelectronicWith && id.charge !== 0 && <span className="chip" style={{ color: 'var(--electron)' }}>Isoelectrónico con {id.isoelectronicWith.symbol}</span>}
+                {id.isoelectronicWith && id.charge !== 0 && (
+                  <span className="chip" style={{ color: 'var(--electron)' }} title={sameConfiguration(conf, groundState(id.isoelectronicWith.z)) ? 'Mismo número de electrones y misma configuración' : 'Mismo número de electrones, pero distinta configuración (en los iones de transición se pierden antes los electrones ns)'}>
+                    Isoelectrónico con {id.isoelectronicWith.symbol}
+                    {!sameConfiguration(conf, groundState(id.isoelectronicWith.z)) && ' · distinta configuración'}
+                  </span>
+                )}
               </div>
             </section>
           )}
