@@ -1,6 +1,24 @@
 # ATOM 3.0 — Informe de la tercera generación
 
-> Documento vivo. Resumen ejecutivo al final de cada ciclo. Detalle de tareas en `ATOM3-PROGRESS.md`; criterios en `ATOM3-QUALITY-GATES.md`.
+> Rama `claude/proyecto-atom-interactive-830d7u`. **Nada publicado en producción**: `main` sigue en `cdce04f` (ATOM 2.0) hasta que se autorice. Detalle de tareas en `ATOM3-PROGRESS.md`; criterios en `ATOM3-QUALITY-GATES.md`; cifras vivas en `ESTADISTICAS.md`.
+
+## 0. Informe final (resumen de los 14 puntos pedidos)
+
+1. **Resumen de cambios.** Identidad visual clara y nueva tipografía; inicio para estudiar; raíl lateral y búsqueda global; los 10 defectos P0/P1 de la auditoría corregidos con pruebas; 12 familias de ejercicios de razonamiento más desarrollo con rúbrica; resoluciones explicadas con fórmulas renderizadas; modos guiado/autónomo/desafío/revisión; simulacros por perfil; ruta de estudio integrada; los siete laboratorios ampliados; campaña revisada (35 → 41 misiones); accesibilidad, contraste y regresión visual automatizados.
+2. **Comparación con ATOM 2.0.** Tema oscuro y serif → tema claro (oscuro opcional) y sans; inicio 3D a pantalla completa → página de estudio (la escena pasa a `#/campana`); 32 generadores → 48; 223 pruebas → 857; 23 comprobaciones e2e → 30; sin auditoría de accesibilidad → axe en CI (0 infracciones en 10 vistas).
+3. **Defectos corregidos.** §2 (P0.1–P1.6) y, además, defectos encontrados por la propia revisión: aviso falso de contexto gráfico, 4 incoherencias de atribución, 2 pistas que revelaban la respuesta, 2 tokens sin contraste AA, 4 problemas de accesibilidad, `\\qquad` y espaciados perdidos en fórmulas, n₂ ≈ 1,03 aceptado como entero, Cu indistinguible de Sc con pistas, cifra de e2e mal declarada en la documentación.
+4. **Mejoras científicas.** Umbral de probabilidad con empates; escala analítica de orbitales; comparación de orbitales con escala común; inversos de espectrometría con la media medida; excepciones periódicas detectadas en los datos; matriz histórica revisada; datos de EI sucesivas contrastados con NIST.
+5. **Mejoras pedagógicas.** Evidencia conceptual sin suelos injustificados; cifras significativas simétricas; informe de examen = diagnóstico; resoluciones por bloques; pistas que orientan sin revelar (prueba en todo el banco); desarrollo con rúbrica sin fingir corrección semántica; ruta comprender → consolidar; misiones que exigen predecir.
+6. **Nuevas familias.** §4 (tabla) + `espectro-problema` y `conversiones` (unidad obligatoria).
+7. **Mejoras por laboratorio.** §5.
+8. **Comparativas visuales.** `docs/capturas/antes/` (2.0, escritorio) frente a `docs/capturas/despues/` (3.0: escritorio, iPad horizontal y vertical); ejemplos en `c4/` (ejercicios), `c5/` (laboratorios) y `c8/` (tema oscuro, campaña).
+9. **Mediciones.** §6 (SwiftShader, solo comparativas; sin medición en GPU real ni iPad).
+10. **Pruebas ejecutadas.** `npm test` (857), `npm run e2e` (30), `npm run a11y` (10 vistas), `npm run visual` (12 vistas), prueba de contraste (2 temas).
+11. **Limitaciones.** FPS en hardware real sin medir; sin revisión con lector de pantalla; la autoevaluación del desarrollo depende de la honestidad del alumno; regresión visual ligada a este entorno (fuentes); `global.css` sigue siendo un archivo grande (se retiraron reglas muertas, no se partió en capas); el nivel pedagógico 1–5 se guarda pero no se muestra hasta validarlo con uso real; la ponderación de los simulacros es una propuesta.
+12. **Trabajo pendiente.** §8 y `ATOM3-PROGRESS.md`.
+13. **Estado de Git.** Commits incrementales en la rama de desarrollo, sin force push; `main` intacta.
+14. **Reproducción.** `npm ci && npm test && npm run build && npm run e2e && npm run a11y && npm run visual && npm run stats`; capturas: `node tools/shots.mjs <etiqueta> all`; rendimiento: `node tools/perf.mjs salida.json`.
+
 
 ## 1. Línea base (ATOM 2.0, commit cdce04f)
 - 112 archivos versionados · 223 pruebas vitest · 23 comprobaciones e2e · 129 ejercicios de documentos · 54 apartados · 35 misiones · 7 laboratorios.
@@ -100,5 +118,9 @@ Misma herramienta (`tools/perf.mjs`), misma máquina y mismo renderizador por so
 - **Regresión visual**: 12 vistas deterministas (hora y aleatoriedad fijadas) con umbral 0,5 %; local, porque el renderizado de fuentes depende del sistema.
 - **Pruebas**: 857 unitarias (223 en 2.0), 30 comprobaciones e2e (23 en 2.0).
 
-## 8. Pendiente
-Véase `ATOM3-PROGRESS.md`.
+## 8. Pendiente (priorizado)
+1. Medir en un ordenador con GPU y en un iPad (FPS, memoria de GPU, temperatura) y, con esos datos, decidir el render bajo demanda.
+2. Revisión con VoiceOver en iPad.
+3. Partir `global.css` en capas (tokens → base → componentes → módulos).
+4. Resoluciones por bloques en el resto de generadores antiguos (masa media, configuraciones, cuántica).
+5. Más familias (cifras significativas, inversos de Bohr) y validar con uso real si el nivel 1–5 discrimina antes de mostrarlo.
