@@ -123,7 +123,8 @@ export interface ExamBuild {
 export function buildExamDetailed(scope: string[], count: number, seed: number): ExamBuild {
   const rng = mulberry32(seed);
   const scopeSet = new Set(scope.length ? scope : COVERED_NODES);
-  const gens = [...new Map([...scopeSet].flatMap((n) => generatorsForNode(n)).filter((g) => within(g.nodeIds, scopeSet)).map((g) => [g.id, g])).values()].sort((a, b) => a.id.localeCompare(b.id));
+  // Las preguntas de desarrollo se autoevalúan después de verlas resueltas: no encajan en un examen cronometrado.
+  const gens = [...new Map([...scopeSet].flatMap((n) => generatorsForNode(n)).filter((g) => g.id !== 'desarrollo' && within(g.nodeIds, scopeSet)).map((g) => [g.id, g])).values()].sort((a, b) => a.id.localeCompare(b.id));
   const sources = SOURCE_EXERCISES.filter((s) => within(s.nodeIds, scopeSet));
   if (gens.length === 0 && sources.length === 0) throw new Error('No hay ejercicios para el ámbito elegido');
   const out: Exercise[] = [];

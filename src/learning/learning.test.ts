@@ -13,6 +13,9 @@ function canonicalInput(p: ExercisePart): string | string[] {
       return p.answer.correct;
     case 'order':
       return p.answer.correctOrder;
+    case 'essay':
+      // La respuesta modelo con todos los criterios marcados en la autoevaluación.
+      return [p.canonical, ...p.answer.criteria.map((c) => c.id)];
     default:
       return p.canonical;
   }

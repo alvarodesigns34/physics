@@ -67,7 +67,6 @@ textarea {
   font-family: var(--font-display);
   font-weight: 650;
   letter-spacing: var(--tracking-display);
-  font-weight: 400;
   font-size: clamp(2.75rem, 6vw, 4.75rem);
   line-height: 0.98;
   letter-spacing: -0.02em;
@@ -79,7 +78,6 @@ textarea {
   font-family: var(--font-display);
   font-weight: 650;
   letter-spacing: var(--tracking-display);
-  font-weight: 400;
   font-size: clamp(1.75rem, 3vw, 2.375rem);
   line-height: 1.08;
   letter-spacing: -0.015em;
@@ -598,10 +596,11 @@ p {
 }
 
 .segmented button[aria-selected='true'],
-.segmented button[aria-pressed='true'] {
-  background: var(--surface-raised-2);
+.segmented button[aria-pressed='true'],
+.segmented button[aria-checked='true'] {
+  background: var(--surface-raised);
   color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--hairline-strong);
+  box-shadow: var(--elev-1), inset 0 0 0 1px var(--hairline);
 }
 
 .field {
@@ -2774,10 +2773,7 @@ details.chapter + details.chapter {
 
 .guide-title,
 .training-title {
-  background: linear-gradient(180deg, var(--ink) 30%, var(--ink-muted));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--ink);
 }
 
 /* Tarjetas de ejercicios por nivel: franja de color */
@@ -3583,4 +3579,249 @@ kbd {
   .app[data-kind='laboratorio'] .side {
     margin: 0 var(--gutter) var(--gutter) var(--viewer-gap);
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ATOM 3.0 · Fórmulas, resoluciones, figuras y desarrollo
+   ══════════════════════════════════════════════════════════════════════════ */
+.mx {
+  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', var(--font-ui);
+  font-size: 1.05em;
+  white-space: nowrap;
+}
+.mx--block {
+  display: block;
+  padding: 10px 14px;
+  margin: 6px 0 0;
+  border-radius: var(--r-inner);
+  background: var(--surface-sunken);
+  overflow-x: auto;
+  font-size: 1.12em;
+  line-height: 2.1;
+}
+.mx-var {
+  font-style: italic;
+}
+.mx-word {
+  font-style: normal;
+}
+.mx-op {
+  padding: 0 0.18em;
+}
+.mx-frac {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  margin: 0 0.15em;
+  line-height: 1.15;
+}
+.mx-num {
+  padding: 0 0.25em 1px;
+  border-bottom: 1.2px solid currentColor;
+}
+.mx-den {
+  padding: 1px 0.25em 0;
+}
+.mx-sup,
+.mx-sub {
+  font-size: 0.72em;
+}
+.mx-sqrt__body {
+  border-top: 1.2px solid currentColor;
+  padding: 0 0.15em;
+}
+.resolution {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.resolution__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.res-step {
+  display: grid;
+  grid-template-columns: 148px 1fr;
+  gap: var(--s-4);
+  padding: 10px 0;
+  border-top: 1px solid var(--hairline);
+}
+.res-step:first-child {
+  border-top: 0;
+}
+.res-step__kind {
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding-top: 2px;
+}
+.res-step__body p {
+  margin: 0;
+  line-height: 1.6;
+}
+.res-step--resultado .res-step__kind,
+.res-step--resultado .res-step__body {
+  color: var(--accent);
+}
+.res-step--resultado .res-step__body {
+  font-weight: 600;
+}
+.res-step--errores .res-step__kind {
+  color: var(--bad);
+}
+.res-step--comprobacion .res-step__kind {
+  color: var(--ok);
+}
+.methods {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.method {
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-inner);
+  padding: 10px 14px;
+}
+.method summary {
+  cursor: pointer;
+}
+@media (max-width: 760px) {
+  .res-step {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+.ex-figure {
+  margin: 4px 0 0;
+  padding: 12px;
+  border-radius: var(--r-outer);
+  background: var(--surface-raised-2);
+  border: 1px solid var(--hairline);
+}
+.ex-figure svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.ex-figure figcaption {
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+  margin-top: 6px;
+}
+.fig-axis {
+  stroke: var(--ink-faint);
+  stroke-width: 1;
+}
+.fig-grid {
+  stroke: var(--hairline);
+}
+.fig-label {
+  font: 500 11px var(--font-ui);
+  fill: var(--ink-faint);
+}
+.fig-label--strong {
+  fill: var(--ink);
+  font-weight: 650;
+}
+.work-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: var(--fs-sm);
+}
+.work-lines li {
+  display: flex;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px dashed var(--hairline-strong);
+}
+.work-lines li:first-child {
+  border-top: 0;
+}
+.work-lines__n {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--surface-sunken);
+  font-weight: 650;
+  font-size: 12px;
+}
+.essay {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.essay__text {
+  width: 100%;
+  min-height: 132px;
+  resize: vertical;
+  padding: 12px 14px;
+  border-radius: var(--r-inner);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface-raised);
+  line-height: 1.6;
+}
+.essay__text:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--glow);
+}
+.essay__review {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.essay__model {
+  padding: 12px 14px;
+  border-radius: var(--r-inner);
+  background: var(--ok-quiet);
+  border: 1px solid color-mix(in srgb, var(--ok) 30%, transparent);
+}
+.essay__model p {
+  margin: 4px 0 0;
+  line-height: 1.6;
+}
+.rubric {
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-inner);
+  padding: 10px 14px 12px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rubric__item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  cursor: pointer;
+  line-height: 1.45;
+}
+.rubric__item input {
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+.rubric__hint {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  background: var(--accent-quiet);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.mx-sup .mx-op,
+.mx-sub .mx-op {
+  padding: 0;
 }

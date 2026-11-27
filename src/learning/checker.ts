@@ -59,7 +59,44 @@ export function checkAnswer(spec: AnswerSpec, input: string | string[], ctx: Che
       return checkOrder(spec, Array.isArray(input) ? input : String(input).split(','));
     case 'quantum':
       return checkQuantum(spec, String(input));
+    case 'essay':
+      return checkEssay(spec, Array.isArray(input) ? input : [String(input)]);
   }
+}
+
+type EssaySpec = Extract<AnswerSpec, { kind: 'essay' }>;
+
+const normEs = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+/** Criterios de la rúbrica que PARECEN presentes en el texto (coincidencia de palabras clave; solo orientativo). */
+export function suggestCriteria(spec: EssaySpec, text: string): string[] {
+  const t = normEs(text);
+  return spec.criteria.filter((c) => c.keywords.length > 0 && c.keywords.every((g) => g.some((k) => t.includes(normEs(k))))).map((c) => c.id);
+}
+
+/**
+ * Respuesta de desarrollo autoevaluada: input = [texto, ...ids de criterios que el alumno marca como
+ * cumplidos]. El crédito es la fracción ponderada de criterios cumplidos. No se finge comprender el texto.
+ */
+function checkEssay(spec: EssaySpec, input: string[]): CheckResult {
+  const [text = '', ...ticked] = input;
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  if (words === 0) return empty;
+  if (spec.minWords && words < spec.minWords) return format(`Desarrolla un poco más (al menos ${spec.minWords} palabras): una justificación de examen necesita causa y consecuencia.`);
+  const total = spec.criteria.reduce((a, c) => a + (c.weight ?? 1), 0);
+  const got = spec.criteria.filter((c) => ticked.includes(c.id)).reduce((a, c) => a + (c.weight ?? 1), 0);
+  const credit = total ? got / total : 0;
+  const missing = spec.criteria.filter((c) => !ticked.includes(c.id)).map((c) => c.text);
+  if (credit >= 0.999) return { status: 'correcto', correct: true, message: 'Según tu autoevaluación, la respuesta cubre todos los criterios.', warnings: [], credit: 1 };
+  return {
+    status: 'incorrecto',
+    correct: credit >= 0.7,
+    message: `Autoevaluación: ${Math.round(credit * 100)} % de la rúbrica. Te falta: ${missing.join(' · ')}.`,
+    warnings: [],
+    credit,
+    errorKind: credit < 0.4 ? 'concepto' : 'incompleto',
+    errorSkill: 'razonamiento',
+  };
 }
 
 type NumericSpec = Extract<AnswerSpec, { kind: 'numeric' }>;

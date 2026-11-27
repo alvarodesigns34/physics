@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../../state/store';
 import { BLOCKS, NODES, nodeTitle, NODE_BY_ID, type ModuleId } from '../../learning/syllabus';
-import { COVERED_NODES, SOURCE_EXERCISES, sourceLevel } from '../../learning/registry';
+import { COVERED_NODES, GENERATORS, SOURCE_EXERCISES, sourceLevel } from '../../learning/registry';
 import { buildExamDetailed, buildMockExam, MOCK_EXAM_PLAN, selectNext, type Selection } from '../../learning/session';
 import { guideAnchor } from '../../learning/guide';
 import { dueCards, EVIDENCE_LABEL, masteryEstimate, masteryLevel } from '../../learning/mastery';
@@ -9,7 +9,7 @@ import { SKILLS, ERROR_LABEL, buildEvidence, aggregateNodeEvidence } from '../..
 import { weakSkills, explainWeakSkill } from '../../learning/diagnosis';
 import type { ErrorKind, SkillId } from '../../learning/types';
 import type { Exercise } from '../../learning/types';
-import { ExercisePlayer, type ExerciseOutcome } from '../../ui/ExercisePlayer';
+import { ExercisePlayer, type ExerciseOutcome, type Variant } from '../../ui/ExercisePlayer';
 import { Feedback } from '../../ui/common';
 import { Icon } from '../../ui/Icon';
 import { navigate, useRoute } from '../../app/hooks';
@@ -67,8 +67,38 @@ function ScopePicker({ value, onChange }: { value: number[]; onChange: (v: numbe
 
 const scopeNodes = (blocks: number[]) => (blocks.length ? COVERED_NODES.filter((n) => blocks.includes(NODE_BY_ID.get(n)!.block)) : []);
 
+/** Enlace directo a una familia de ejercicios: #/entrenamiento?gen=<id> (desde la guía o la búsqueda). */
+function exerciseForGenerator(id: string | null): Exercise | null {
+  const g = id ? GENERATORS.find((x) => x.id === id) : undefined;
+  if (!g) return null;
+  const d = g.difficulties.includes(2) ? 2 : g.difficulties[g.difficulties.length - 1]!;
+  return g.create(Math.floor(Math.random() * 1e6), d);
+}
+
+const VARIANTS: { id: Variant; label: string; help: string }[] = [
+  { id: 'guiado', label: 'Guiado', help: 'Paso a paso, con la primera pista ya visible. Ideal para un tema nuevo.' },
+  { id: 'autonomo', label: 'Autónomo', help: 'Resuelves tú y pides pistas cuando las necesites.' },
+  { id: 'desafio', label: 'Desafío', help: 'Todo el problema a la vez; pistas y teoría solo tras dos intentos fallidos.' },
+  { id: 'revision', label: 'Revisión', help: 'Ves la resolución completa explicada sin responder. No cuenta para tu progreso.' },
+];
+
 function Practice({ initialScope, fixedExercise, onClearFixed }: { initialScope: string[]; fixedExercise: Exercise | null; onClearFixed: () => void }) {
   const [blocks, setBlocks] = useState<number[]>([]);
+  const [variant, setVariant] = useState<Variant>(() => {
+    try {
+      const v = localStorage.getItem('atom:variant');
+      return VARIANTS.some((x) => x.id === v) ? (v as Variant) : 'autonomo';
+    } catch {
+      return 'autonomo';
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('atom:variant', variant);
+    } catch {
+      /* sin almacenamiento: solo dura la sesión */
+    }
+  }, [variant]);
   const mastery = useStore((s) => s.mastery);
   const cards = useStore((s) => s.cards);
   const recordExercise = useStore((s) => s.recordExercise);
@@ -108,12 +138,29 @@ function Practice({ initialScope, fixedExercise, onClearFixed }: { initialScope:
   const node = sel?.nodeId;
   return (
     <div className="stack-16">
-      {!initialScope.length && !fixedExercise && (
+      <div className="row row--wrap" style={{ gap: 24, alignItems: 'flex-end' }}>
+        {!initialScope.length && !fixedExercise && (
+          <div className="stack-8">
+            <span className="small muted">Ámbito</span>
+            <ScopePicker value={blocks} onChange={setBlocks} />
+          </div>
+        )}
         <div className="stack-8">
-          <span className="small muted">Ámbito</span>
-          <ScopePicker value={blocks} onChange={setBlocks} />
+          <span className="small muted" id="variant-label">
+            Cómo quieres resolver
+          </span>
+          <div className="segmented" role="radiogroup" aria-labelledby="variant-label">
+            {VARIANTS.map((v) => (
+              <button key={v.id} type="button" role="radio" aria-checked={variant === v.id} onClick={() => setVariant(v.id)} title={v.help}>
+                {v.label}
+              </button>
+            ))}
+          </div>
         </div>
-      )}
+      </div>
+      <p className="small faint" style={{ margin: '-8px 0 0' }}>
+        {VARIANTS.find((v) => v.id === variant)!.help}
+      </p>
       {exercise && (
         <div className="card enter" style={{ padding: 24 }} key={exercise.id}>
           {!fixedExercise && sel && (
@@ -129,7 +176,8 @@ function Practice({ initialScope, fixedExercise, onClearFixed }: { initialScope:
           <ExercisePlayer
             exercise={exercise}
             mode="practica"
-            onFinish={onFinish}
+            variant={variant}
+            onFinish={variant === 'revision' ? undefined : onFinish}
             onNext={() => {
               if (fixedExercise) onClearFixed();
               setSel(pick());
@@ -798,7 +846,11 @@ export function TrainingOverlay() {
   useEffect(() => {
     if (nodesParam) setPracticeScope(nodesParam.split(',').filter((n) => COVERED_NODES.includes(n)));
   }, [nodesParam]);
-  const [fixed, setFixed] = useState<Exercise | null>(null);
+  const genParam = query.get('gen');
+  const [fixed, setFixed] = useState<Exercise | null>(() => exerciseForGenerator(genParam));
+  useEffect(() => {
+    if (genParam) setFixed(exerciseForGenerator(genParam));
+  }, [genParam]);
   const go = (v: View) => navigate(`/entrenamiento?v=${v}`);
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -860,7 +912,7 @@ export function TrainingOverlay() {
             />
           )}
           <button type="button" className="btn btn--ghost btn--sm" style={{ alignSelf: 'flex-start' }} onClick={() => navigate('/')}>
-            <Icon name="arrow-left" size={16} /> Volver al Atrio
+            <Icon name="arrow-left" size={16} /> Volver al inicio
           </button>
         </div>
       </div>

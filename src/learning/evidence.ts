@@ -61,6 +61,8 @@ export function partSkills(p: ExercisePart): SkillId[] {
       return ['notacion'];
     case 'order':
       return ['razonamiento'];
+    case 'essay':
+      return ['razonamiento', 'concepto'];
   }
 }
 

@@ -9,6 +9,7 @@ import { nodeTitle } from '../learning/syllabus';
 import { guideAnchorFor, SECTION_BY_NODE } from '../learning/guide';
 import { Feedback, Rich } from './common';
 import { Icon } from './Icon';
+import { EssayInput, FigureView, ResolutionView } from './Pedagogy';
 import { sfx } from '../app/sound';
 
 export interface ExerciseOutcome {
@@ -25,6 +26,15 @@ export interface ExerciseOutcome {
 }
 
 type Mode = 'practica' | 'examen' | 'campana';
+
+/**
+ * Cómo se acompaña la práctica (ATOM 3.0):
+ * - guiado: paso a paso siempre y la primera pista ya visible;
+ * - autonomo: el alumno resuelve y pide ayuda cuando la necesita (por defecto);
+ * - desafio: todo el problema a la vez; pistas y teoría solo tras dos intentos fallidos;
+ * - revision: se ve la resolución completa sin responder (no cuenta para el progreso).
+ */
+export type Variant = 'guiado' | 'autonomo' | 'desafio' | 'revision';
 
 /** Enlace a la sección de la guía que explica el apartado del ejercicio. */
 function TheoryLink({ nodeId, prominent, generatorId }: { nodeId: string | undefined; prominent: boolean; generatorId?: string }) {
@@ -60,6 +70,7 @@ function toRecords(ex: Exercise, parts: PartState[]): PartRecord[] {
 function initialValue(p: ExercisePart): string | string[] {
   if (p.answer.kind === 'choice') return [];
   if (p.answer.kind === 'order') return p.answer.items.map((i) => i.id);
+  if (p.answer.kind === 'essay') return [''];
   return '';
 }
 
@@ -79,6 +90,9 @@ function ConfigPreview({ text }: { text: string }) {
 
 function PartInput({ part, value, onChange, onSubmit, disabled, labelId }: { part: ExercisePart; value: string | string[]; onChange: (v: string | string[]) => void; onSubmit: () => void; disabled: boolean; labelId: string }) {
   const a = part.answer;
+  if (a.kind === 'essay') {
+    return <EssayInput spec={a} value={value as string[]} onChange={onChange} onSubmit={onSubmit} disabled={disabled} labelId={labelId} />;
+  }
   if (a.kind === 'choice') {
     const sel = value as string[];
     return (
@@ -172,22 +186,25 @@ function PartInput({ part, value, onChange, onSubmit, disabled, labelId }: { par
   );
 }
 
-export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = 'Siguiente', showMeta = true }: { exercise: Exercise; mode: Mode; onFinish?: (o: ExerciseOutcome) => void; onNext?: () => void; nextLabel?: string; showMeta?: boolean }) {
-  const [parts, setParts] = useState<PartState[]>(() => exercise.parts.map(freshPart));
-  const [hints, setHints] = useState(0);
-  const [showSolution, setShowSolution] = useState(false);
+export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = 'Siguiente', showMeta = true, variant = 'autonomo' }: { exercise: Exercise; mode: Mode; onFinish?: (o: ExerciseOutcome) => void; onNext?: () => void; nextLabel?: string; showMeta?: boolean; variant?: Variant }) {
+  const review = variant === 'revision' && mode !== 'examen';
+  const startParts = () => exercise.parts.map((p) => (review ? { ...freshPart(p), done: true, revealed: true } : freshPart(p)));
+  const [parts, setParts] = useState<PartState[]>(startParts);
+  const [hints, setHints] = useState(variant === 'guiado' ? 1 : 0);
+  const [showSolution, setShowSolution] = useState(review);
   const [submittedExam, setSubmittedExam] = useState(false);
   const finished = useRef(false);
   const baseId = useId();
   const exam = mode === 'examen';
 
   useEffect(() => {
-    setParts(exercise.parts.map(freshPart));
-    setHints(0);
-    setShowSolution(false);
+    setParts(startParts());
+    setHints(variant === 'guiado' ? 1 : 0);
+    setShowSolution(review);
     setSubmittedExam(false);
     finished.current = false;
-  }, [exercise]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exercise, variant]);
 
   const previousWrong = useMemo(() => {
     const out: Record<string, number> = {};
@@ -202,7 +219,7 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
   const allDone = parts.every((p) => p.done);
 
   useEffect(() => {
-    if (exam || !allDone || finished.current) return;
+    if (exam || review || !allDone || finished.current) return;
     finished.current = true;
     const score = parts.reduce((a, p) => a + p.credit, 0) / parts.length;
     const revealed = parts.filter((p) => p.revealed).length;
@@ -222,6 +239,12 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
       return;
     }
     const attempts = st.attempts + 1;
+    if (p.answer.kind === 'essay') {
+      // Desarrollo: un único envío autoevaluado; el crédito es la fracción de la rúbrica marcada.
+      (result.correct ? sfx.success : sfx.error)();
+      update(i, { result, attempts, done: true, credit: result.credit ?? (result.correct ? 1 : 0), errors: result.errorKind ? [{ kind: result.errorKind, skill: result.errorSkill }] : [] });
+      return;
+    }
     if (result.correct) {
       sfx.success();
       update(i, { result, attempts, done: true, credit: attempts === 1 ? 1 : 0.5, carried: result.status === 'correcto-arrastre', sigFigIssue: result.errorKind === 'cifras', sigFigsAssessed: result.sigFigsAssessed });
@@ -255,7 +278,10 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
 
   // En modo paso a paso, solo se muestran los pasos hasta el primero sin terminar.
   const firstOpen = parts.findIndex((p) => !p.done);
-  const visibleCount = exam || !exercise.stepwise ? parts.length : firstOpen === -1 ? parts.length : firstOpen + 1;
+  const stepwise = variant === 'guiado' ? exercise.parts.length > 1 : variant === 'desafio' ? false : exercise.stepwise;
+  const maxAttempts = Math.max(0, ...parts.map((p) => p.attempts));
+  const helpUnlocked = variant !== 'desafio' || maxAttempts >= 2;
+  const visibleCount = exam || !stepwise ? parts.length : firstOpen === -1 ? parts.length : firstOpen + 1;
 
   return (
     <article className="stack-16" aria-label={exercise.title}>
@@ -277,6 +303,7 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
         <p style={{ lineHeight: 1.6 }}>
           <Rich text={exercise.statement} />
         </p>
+        {exercise.figure && <FigureView fig={exercise.figure} />}
         {exercise.data && (
           <div className="row row--wrap" style={{ gap: 6 }} aria-label="Datos">
             {exercise.data.map((d) => (
@@ -340,7 +367,12 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
         })}
       </ol>
 
-      {!exam && !allDone && (
+      {!exam && !allDone && !helpUnlocked && (
+        <p className="small faint" style={{ margin: 0 }}>
+          Modo desafío: las pistas y la teoría se desbloquean tras dos intentos fallidos.
+        </p>
+      )}
+      {!exam && !allDone && helpUnlocked && (
         <section className="stack-8" aria-label="Pistas">
           {exercise.hints.slice(0, hints).map((h, i) => (
             <Feedback key={i} tone="warn">
@@ -369,7 +401,7 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
 
       {(allDone || submittedExam) && (
         <section className="stack-12 fade">
-          {!exam && (
+          {!exam && !review && (
             <Feedback tone={parts.every((p) => p.credit === 1) ? 'ok' : 'info'}>
               {parts.every((p) => p.credit === 1) ? 'Todo correcto al primer intento.' : `Completado. ${parts.filter((p) => p.credit === 1).length} de ${parts.length} pasos al primer intento.`}
             </Feedback>
@@ -385,13 +417,16 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
               </button>
             )}
           </div>
-          {showSolution && (
-            <ol className="stack-8 small" style={{ margin: 0, paddingLeft: 20, color: 'var(--ink-muted)' }}>
-              {exercise.solution.map((s, i) => (
-                <li key={i}>{s}</li>
-              ))}
-            </ol>
-          )}
+          {showSolution &&
+            (exercise.resolution ? (
+              <ResolutionView steps={exercise.resolution} methods={exercise.methods} />
+            ) : (
+              <ol className="stack-8 small" style={{ margin: 0, paddingLeft: 20, color: 'var(--ink-muted)' }}>
+                {exercise.solution.map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ol>
+            ))}
           {showSolution && exercise.originalSolution && (
             <p className="small" style={{ margin: 0 }}>
               <strong>Solución del documento original:</strong> {exercise.originalSolution}

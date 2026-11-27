@@ -62,7 +62,40 @@ export type AnswerSpec =
   | { kind: 'config'; electrons: number; z: number }
   | { kind: 'order'; items: ChoiceOption[]; correctOrder: string[] }
   /** Conjunto (n, l, m_l, m_s) válido que describa un electrón del subnivel indicado */
-  | { kind: 'quantum'; n: number; l: number };
+  | { kind: 'quantum'; n: number; l: number }
+  /**
+   * Respuesta de desarrollo. No hay corrección semántica automática: el alumno escribe, compara con la
+   * respuesta modelo y se autoevalúa con la rúbrica. ATOM solo SUGIERE qué criterios parecen presentes
+   * (palabras clave detectadas), y lo dice así.
+   */
+  | { kind: 'essay'; criteria: EssayCriterion[]; model: string; minWords?: number };
+
+export interface EssayCriterion {
+  id: string;
+  /** Lo que debe aparecer en una respuesta completa */
+  text: string;
+  /** Grupos de palabras clave: el criterio se sugiere si cada grupo tiene al menos una coincidencia */
+  keywords: string[][];
+  /** Peso relativo (por defecto 1) */
+  weight?: number;
+}
+
+/** Bloques de una resolución explicada (se usan los necesarios; una pregunta sencilla no lleva 12). */
+export type ResolutionKind = 'pregunta' | 'datos' | 'principio' | 'por-que' | 'despeje' | 'unidades' | 'sustitucion' | 'calculo' | 'resultado' | 'interpretacion' | 'comprobacion' | 'errores' | 'metodo';
+
+export interface ResolutionStep {
+  kind: ResolutionKind;
+  text: string;
+  /** Fórmula en el subconjunto de LaTeX de MathText */
+  math?: string;
+}
+
+/** Figuras que acompañan al enunciado (se dibujan en SVG; los datos son los del ejercicio). */
+export type ExerciseFigure =
+  | { kind: 'onda'; lambdaNm: number; windowNm: number; title: string }
+  | { kind: 'puntos'; title: string; xLabel: string; yLabel: string; points: { x: number; y: number; label: string }[]; highlight?: string[] }
+  | { kind: 'espectro'; title: string; linesNm: number[]; fromNm: number; toNm: number }
+  | { kind: 'resolucion'; title: string; lines: string[] };
 
 export interface ExercisePart {
   id: string;
@@ -100,6 +133,17 @@ export interface Exercise {
   solution: string[];
   /** Referencia a la fuente (p. ej. «AMP 7», «TEO ej. 1») */
   source?: string;
+  /** Resolución explicada por bloques (qué piden → datos → principio → … → comprobación) */
+  resolution?: ResolutionStep[];
+  /** Métodos alternativos válidos, con su ventaja */
+  methods?: { title: string; advantage: string; steps: ResolutionStep[] }[];
+  /** Figura del enunciado (gráfica, onda, espectro o resolución con un error) */
+  figure?: ExerciseFigure;
+  /**
+   * Nivel pedagógico 1–5 (comprender, aplicar, relacionar, razonar, examen exigente). Solo se declara en
+   * las familias en las que la diferencia es real; si falta, se deriva de la dificultad.
+   */
+  level?: 1 | 2 | 3 | 4 | 5;
   /**
    * Solución tal como figura en el documento original («Sol.: …»). Se guarda aparte del enunciado y solo
    * se muestra una vez resuelto el ejercicio y nunca durante un examen.
@@ -137,6 +181,8 @@ export interface CheckResult {
   valueCorrect?: boolean;
   /** La respuesta permitía evaluar las cifras significativas (hay criterio y el número no es ambiguo) */
   sigFigsAssessed?: boolean;
+  /** Crédito parcial 0–1 cuando la respuesta no es binaria (desarrollo autoevaluado) */
+  credit?: number;
   /** Errores secundarios detectados en la misma respuesta (p. ej., valor erróneo y además sin unidad) */
   secondary?: { kind: ErrorKind; skill?: SkillId }[];
 }

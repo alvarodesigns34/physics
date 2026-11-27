@@ -1,4 +1,5 @@
 import { annotateParts } from './attribution';
+import { REASONING_GENERATORS } from './generators/reasoning';
 /**
  * Registro de generadores y ejercicios de las fuentes (TEO y AMP), con su resolución verificada.
  */
@@ -79,6 +80,7 @@ const RAW_GENERATORS: ExerciseGenerator[] = [
   miscGenerator,
   ...EXAM_GENERATORS,
   ...EXAM2_GENERATORS,
+  ...REASONING_GENERATORS,
 ];
 
 /** Generadores con atribución granular por paso (véase attribution.ts). */
