@@ -1,4 +1,5 @@
 import { useContinuousRender } from '../../render/demand';
+import { ACC_LEN, ARC_ROTATION, arcArgs, arcPosition, ionPosition, MAGNET_ROTATION_X, MAGNET_SCALE, MAGNET_THETA } from './geometry';
 import { Prediction } from '../../ui/Prediction';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -81,7 +82,7 @@ function Spectrometer() {
   }, [isotopes]);
   const m4 = useMemo(() => new THREE.Matrix4(), []);
   const color = useMemo(() => new THREE.Color(), []);
-  const ACC_LEN = 2.2;
+  const tmp = useMemo(() => new THREE.Vector3(), []);
   useFrame((_, dt) => {
     const st = useMass.getState();
     if (!isotopes.length) return;
@@ -115,19 +116,8 @@ function Spectrometer() {
     const mm = mesh.current;
     if (!mm) return;
     ions.current.slice(0, 400).forEach((ion, i) => {
-      const r = radii[ion.iso]!;
-      // Fase 1 (0–0,35): aceleración en línea recta; fase 2 (0,35–1): semicircunferencia de radio r
-      let x: number;
-      let y: number;
-      if (ion.t < 0.35) {
-        x = -ACC_LEN + (ion.t / 0.35) * ACC_LEN;
-        y = 0;
-      } else {
-        const ang = ((ion.t - 0.35) / 0.65) * Math.PI;
-        x = r * Math.sin(ang);
-        y = r - r * Math.cos(ang);
-      }
-      m4.makeTranslation(x, 0, -y);
+      ionPosition(ion.t, radii[ion.iso]!, tmp);
+      m4.makeTranslation(tmp.x, tmp.y, tmp.z);
       mm.setMatrixAt(i, m4);
       mm.setColorAt(i, color.set(ISO_COLORS[ion.iso % ISO_COLORS.length]!).multiplyScalar(2.4));
     });
@@ -162,20 +152,20 @@ function Spectrometer() {
       ))}
       {/* Sector magnético: semidisco en x ≥ 0, el mismo semiplano que recorren los iones (x = r·sen φ ≥ 0).
           Antes estaba en x ≤ 0 y los iones se curvaban fuera del campo dibujado. */}
-      <mesh rotation-x={-Math.PI / 2} position={[0, -0.12, -rMean]}>
-        <circleGeometry args={[rMean * 1.35, 96, -Math.PI / 2, Math.PI]} />
+      <mesh rotation-x={MAGNET_ROTATION_X} position={[0, -0.12, -rMean]}>
+        <circleGeometry args={[rMean * MAGNET_SCALE, 96, MAGNET_THETA[0], MAGNET_THETA[1]]} />
         <meshStandardMaterial color="#3d5578" transparent opacity={0.45} roughness={0.5} />
       </mesh>
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.12, -rMean]}>
-        <circleGeometry args={[rMean * 1.35, 96, -Math.PI / 2, Math.PI]} />
+      <mesh rotation-x={MAGNET_ROTATION_X} position={[0, 0.12, -rMean]}>
+        <circleGeometry args={[rMean * MAGNET_SCALE, 96, MAGNET_THETA[0], MAGNET_THETA[1]]} />
         <meshStandardMaterial color="#3d5578" transparent opacity={0.2} roughness={0.5} side={THREE.DoubleSide} />
       </mesh>
       {/* trayectorias */}
       {radii.map((r, i) => (
         // Arco del toro de θ = −π/2 a π/2 (Rz) llevado al plano horizontal (Rx): (r·cosθ, 0, −r + r·senθ),
         // exactamente la trayectoria de los iones, de (0, 0, 0) a (0, 0, −2r) pasando por (r, 0, −r).
-        <mesh key={i} rotation={[Math.PI / 2, 0, -Math.PI / 2]} position={[0, 0, -r]}>
-          <torusGeometry args={[r, 0.006, 6, 160, Math.PI]} />
+        <mesh key={i} rotation={ARC_ROTATION} position={arcPosition(r)}>
+          <torusGeometry args={arcArgs(r)} />
           <meshBasicMaterial color={new THREE.Color(ISO_COLORS[i % ISO_COLORS.length]!).multiplyScalar(1.4)} transparent opacity={0.45} toneMapped={false} />
         </mesh>
       ))}
