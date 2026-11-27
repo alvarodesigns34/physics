@@ -1,4 +1,5 @@
 import { requestFrames } from '../../render/demand';
+import { GlassMaterial } from '../../render/Glass';
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -340,7 +341,7 @@ export function LampScene({ symbol, mode }: { symbol: string; mode: 'emision' | 
         <Tube color={col} flicker={!reduced} />
         <mesh>
           <cylinderGeometry args={[0.2, 0.2, 3.6, 32, 1, true]} />
-          <meshPhysicalMaterial color="#e8eef5" roughness={0.05} transmission={0.7} thickness={0.2} transparent opacity={0.25} side={THREE.DoubleSide} />
+          <GlassMaterial color="#e8eef5" roughness={0.05} transmission={0.7} thickness={0.2} opacity={0.25} side={THREE.DoubleSide} />
         </mesh>
         {[-1.85, 1.85].map((y) => (
           <mesh key={y} position-y={y}>
@@ -352,7 +353,7 @@ export function LampScene({ symbol, mode }: { symbol: string; mode: 'emision' | 
       {mode === 'absorcion' && (
         <mesh position={[0, -0.9, 0]}>
           <boxGeometry args={[1.4, 0.5, 0.5]} />
-          <meshPhysicalMaterial color={lampColor(symbol)} roughness={0.1} transmission={0.5} transparent opacity={0.35} />
+          <GlassMaterial color={lampColor(symbol)} roughness={0.1} transmission={0.5} opacity={0.35} />
         </mesh>
       )}
       <OrbitControls enablePan={false} enableDamping minDistance={4} maxDistance={10} />

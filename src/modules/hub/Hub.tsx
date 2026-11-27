@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { GlassMaterial } from '../../render/Glass';
 import { useFrame } from '@react-three/fiber';
 import { MeshReflectorMaterial, OrbitControls } from '@react-three/drei';
 import { create } from 'zustand';
@@ -66,6 +67,27 @@ function Floor({ reflective }: { reflective: boolean }) {
   );
 }
 
+const GOLD_LIT = new THREE.Color('#f2a93b').multiplyScalar(1.4);
+
+/** Una pieza de todas las columnas a la vez (malla instanciada). */
+function ColumnPart({ cols, y, args, material }: { cols: [number, number][]; y: number; args: [number, number, number, number]; material: React.ReactElement }) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const m = ref.current;
+    if (!m) return;
+    const t = new THREE.Matrix4();
+    cols.forEach(([x, z], i) => m.setMatrixAt(i, t.makeTranslation(x, y, z)));
+    m.instanceMatrix.needsUpdate = true;
+    m.computeBoundingSphere();
+  }, [cols, y]);
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, cols.length]}>
+      <cylinderGeometry args={args} />
+      {material}
+    </instancedMesh>
+  );
+}
+
 /** Columnata y anillo de luz: la arquitectura del Atrio. */
 function Architecture({ reduced }: { reduced: boolean }) {
   const cols = useMemo(() => {
@@ -82,26 +104,12 @@ function Architecture({ reduced }: { reduced: boolean }) {
   });
   return (
     <group>
-      {cols.map(([x, z], i) => (
-        <group key={i} position={[x, 0, z]}>
-          <mesh position-y={3.2}>
-            <cylinderGeometry args={[0.16, 0.2, 6.4, 24]} />
-            <meshStandardMaterial color="#1d1a17" roughness={0.42} metalness={0.3} envMapIntensity={0.7} />
-          </mesh>
-          <mesh position-y={6.45}>
-            <cylinderGeometry args={[0.3, 0.22, 0.1, 24]} />
-            <meshStandardMaterial color="#2a2622" roughness={0.35} metalness={0.5} />
-          </mesh>
-          <mesh position-y={6.52}>
-            <cylinderGeometry args={[0.26, 0.26, 0.02, 24]} />
-            <meshBasicMaterial color={new THREE.Color('#f2a93b').multiplyScalar(1.4)} toneMapped={false} />
-          </mesh>
-          <mesh position-y={0.06}>
-            <cylinderGeometry args={[0.32, 0.36, 0.12, 24]} />
-            <meshStandardMaterial color="#24211d" roughness={0.5} metalness={0.3} />
-          </mesh>
-        </group>
-      ))}
+      {/* ATOM 5.0: las 17 columnas × 4 piezas eran 68 mallas (68 geometrías y 68 llamadas de dibujo); ahora
+          son 4 mallas instanciadas que comparten geometría y material. */}
+      <ColumnPart cols={cols} y={3.2} args={[0.16, 0.2, 6.4, 24]} material={<meshStandardMaterial color="#1d1a17" roughness={0.42} metalness={0.3} envMapIntensity={0.7} />} />
+      <ColumnPart cols={cols} y={6.45} args={[0.3, 0.22, 0.1, 24]} material={<meshStandardMaterial color="#2a2622" roughness={0.35} metalness={0.5} />} />
+      <ColumnPart cols={cols} y={6.52} args={[0.26, 0.26, 0.02, 24]} material={<meshBasicMaterial color={GOLD_LIT} toneMapped={false} />} />
+      <ColumnPart cols={cols} y={0.06} args={[0.32, 0.36, 0.12, 24]} material={<meshStandardMaterial color="#24211d" roughness={0.5} metalness={0.3} />} />
       {/* Arquitrabe luminoso: solo el arco de la columnata (−110° a 110°), por detrás de las estaciones */}
       <mesh ref={ring} position={[0, 6.56, 1]} rotation={[-Math.PI / 2, 0, (-20 * Math.PI) / 180]}>
         <torusGeometry args={[13.5, 0.03, 8, 240, (220 * Math.PI) / 180]} />
@@ -184,7 +192,7 @@ function PhotonHologram({ reduced }: { reduced: boolean }) {
     <group ref={group} position-y={1.45}>
       <mesh rotation-x={Math.PI / 2}>
         <cylinderGeometry args={[0.38, 0.38, 0.32, 3]} />
-        <meshPhysicalMaterial color="#d9e4ee" roughness={0.05} metalness={0} transmission={0.6} thickness={0.4} transparent opacity={0.55} envMapIntensity={1.2} />
+        <GlassMaterial color="#d9e4ee" roughness={0.05} transmission={0.6} thickness={0.4} opacity={0.55} envMapIntensity={1.2} />
       </mesh>
       {lines.map((t, i) => {
         const [r, g, b] = wavelengthToLinearRGB(t.wavelength * 1e9);

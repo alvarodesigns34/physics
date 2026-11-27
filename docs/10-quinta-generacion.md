@@ -68,3 +68,41 @@ La geometría del espectrómetro vive en `masses/geometry.ts`, que usan a la vez
 - «Todos los alcalinos forman cationes +1».
 
 Revisé el resto de los absolutos de la guía y son correctos: A siempre es entero, las energías de ionización sucesivas siempre crecen y la energía del fotón siempre es positiva.
+
+## 2. Rendimiento: metodología corregida y cuellos de botella reales
+
+### 2.1 Qué se medía mal
+- **«fps» de la herramienta antigua.** Era la frecuencia de `requestAnimationFrame`, no la de la escena. Con renderizado bajo demanda, rAF sigue a 60 Hz aunque la escena no se dibuje.
+- **Memoria.** Se leía el heap sin forzar la recolección de basura, así que dependía del momento en que ocurriera.
+- **Llamadas de dibujo.** `gl.info` se reiniciaba en cada pase de posprocesado, de modo que solo se veía el último pase (1 llamada).
+
+`tools/perf.mjs` mide ahora, por separado:
+- **rafHz:** la frecuencia de `requestAnimationFrame`;
+- **idleFrames:** fotogramas 3D realmente dibujados en reposo;
+- **dragFps y dragP95Ms:** fotogramas dibujados por segundo, y su percentil 95, mientras se arrastra la cámara;
+- **calls, triangles y programs:** llamadas de dibujo, triángulos y programas del fotograma completo;
+- **heapMB:** memoria JS tras `gc()`;
+- **recursos de GPU vivos:** geometrías y texturas.
+
+También hace una prueba de estabilidad que recorre los 11 laboratorios cuatro veces seguidas.
+
+### 2.2 Resultados
+SwiftShader, calidad media, 1440×900. Datos: `docs/mediciones/perf-atom5-base.json` (antes de optimizar) → `perf-atom5.json`.
+
+| Escena | Llamadas de dibujo | fps al arrastrar | p95 (ms) |
+|---|---|---|---|
+| Campaña | 372 → 163 | 1,6 → 2,7 | 1 533 → 1 400 |
+| Espectroscopio | 46 → 38 | 3,0 → 5,6 | 383 → 217 |
+
+**Causas.**
+- **Transmisión de three.js.** Obliga a redibujar la escena opaca en cada fotograma. La usaban el prisma, la lámpara, la celda de gas y un holograma de la campaña. Ahora la aplica `render/Glass.tsx` solo en calidad alta; en media y baja, un vidrio con barniz sin pase extra.
+- **Columnata de la campaña.** Eran 68 mallas (17 columnas × 4 piezas), con sus 68 geometrías y 68 llamadas. Ahora son 4 mallas instanciadas.
+
+**Fuga de memoria: descartada.** La memoria JS tras `gc()` se mantiene en 27,6–28,3 MB en los cuatro ciclos por los 11 laboratorios. Las geometrías, texturas y programas de GPU son idénticos en cada ciclo, y nunca hay más de un lienzo. La subida observada en ATOM 4.0 era un artefacto de leer el heap sin forzar la recolección.
+
+**Reposo.** No se dibuja ningún fotograma en Forja, Fotones, Quantum, Arquitecto, Tabla ni Campaña. Historia deja de dibujar a los 9 s, cuando termina su animación de entrada. Masas y Geiger dibujan a propósito mientras la simulación está en marcha.
+
+**Pendiente.**
+- La campaña sigue costando unos 1,4 s por fotograma en SwiftShader. Con solo 163 llamadas y 49 000 triángulos, es rasterización por software de una escena grande; las partículas aportan unos 100 000 px por fotograma, así que no son la causa.
+- La tabla periódica dibuja 69 000 triángulos (cajas redondeadas).
+- Sin medir en una GPU real, en Safari ni en iPadOS: no están disponibles en este entorno.

@@ -3,6 +3,7 @@
  * Las trayectorias y la posición de cada línea en la pantalla se calculan con la ley de Snell y el
  * índice de refracción real del vidrio (Sellmeier); no son un dibujo.
  */
+import { GlassMaterial } from '../../render/Glass';
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -175,7 +176,7 @@ function Prism({ glassy }: { glassy: boolean }) {
     <group>
       <mesh geometry={geo}>
         {glassy ? (
-          <meshPhysicalMaterial color="#eef4fb" roughness={0.04} metalness={0} transmission={1} thickness={1.2} ior={1.785} attenuationColor="#dfe9f3" attenuationDistance={6} clearcoat={1} specularIntensity={1} envMapIntensity={1.4} />
+          <GlassMaterial color="#eef4fb" roughness={0.04} transmission={1} thickness={1.2} ior={1.785} attenuationColor="#dfe9f3" attenuationDistance={6} opacity={0.32} envMapIntensity={1.4} />
         ) : (
           <meshStandardMaterial color="#cfdbe7" roughness={0.1} transparent opacity={0.28} />
         )}

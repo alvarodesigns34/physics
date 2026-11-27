@@ -43,10 +43,27 @@ function DemandDriver() {
     };
   }, [invalidate]);
   const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
+  // El posprocesado hace varios pases por fotograma y three.js reinicia gl.info en cada uno: para medir el
+  // coste del fotograma completo, el reinicio se hace aquí una vez por fotograma.
+  useEffect(() => {
+    gl.info.autoReset = false;
+    return () => {
+      gl.info.autoReset = true;
+      // Referencia de diagnóstico: se suelta al desmontar para no retener la escena anterior en memoria.
+      const w = window as unknown as { __atomScene?: THREE.Scene };
+      if (w.__atomScene === scene) delete w.__atomScene;
+    };
+  }, [gl, scene]);
   useFrame(() => {
-    const w = window as unknown as { __atomFrames?: number; __atomGL?: { geometries: number; textures: number } };
+    // Instrumentación para tools/perf.mjs: fotogramas 3D REALMENTE dibujados (no ticks de rAF), recursos
+    // de GPU vivos y coste del último fotograma dibujado (llamadas de dibujo y triángulos; con autoReset,
+    // gl.info.render conserva aquí los valores del fotograma anterior).
+    const w = window as unknown as { __atomFrames?: number; __atomGL?: { geometries: number; textures: number; programs: number; calls: number; triangles: number } };
     w.__atomFrames = (w.__atomFrames ?? 0) + 1;
-    w.__atomGL = { geometries: gl.info.memory.geometries, textures: gl.info.memory.textures };
+    (window as unknown as { __atomScene?: THREE.Scene }).__atomScene = scene;
+    w.__atomGL = { geometries: gl.info.memory.geometries, textures: gl.info.memory.textures, programs: gl.info.programs?.length ?? 0, calls: gl.info.render.calls, triangles: gl.info.render.triangles };
+    gl.info.reset();
   });
   return null;
 }

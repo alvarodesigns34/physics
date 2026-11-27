@@ -1,0 +1,291 @@
+{
+  "date": "2026-11-27T14:36:05.098Z",
+  "renderer": "SwiftShader (software)",
+  "method": "ATOM 5.0: fotogramas dibujados, no rAF; heap tras gc()",
+  "results": [
+    {
+      "route": "/",
+      "readyMs": 391,
+      "rafHz": 60.3,
+      "idleFrames": 0,
+      "calls": null,
+      "triangles": null,
+      "programs": null,
+      "geometries": null,
+      "textures": null,
+      "heapMB": 7.6
+    },
+    {
+      "route": "/campana",
+      "readyMs": 197,
+      "rafHz": 60,
+      "idleFrames": 0,
+      "dragFps": 2.7,
+      "dragP95Ms": 1400,
+      "longTasks": 90,
+      "longMaxMs": 1586,
+      "calls": 163,
+      "triangles": 49093,
+      "programs": 19,
+      "geometries": 149,
+      "textures": 21,
+      "heapMB": 16
+    },
+    {
+      "route": "/forja",
+      "readyMs": 615,
+      "rafHz": 60.3,
+      "idleFrames": 0,
+      "dragFps": 7.5,
+      "dragP95Ms": 166.6,
+      "longTasks": 90,
+      "longMaxMs": 172,
+      "calls": 20,
+      "triangles": 625,
+      "programs": 11,
+      "geometries": 9,
+      "textures": 21,
+      "heapMB": 14.2
+    },
+    {
+      "route": "/historia",
+      "readyMs": 344,
+      "rafHz": 24.7,
+      "idleFrames": 12,
+      "dragFps": 6.6,
+      "dragP95Ms": 183.2,
+      "longTasks": 102,
+      "longMaxMs": 209,
+      "calls": 30,
+      "triangles": 12273,
+      "programs": 10,
+      "geometries": 18,
+      "textures": 21,
+      "heapMB": 15.3
+    },
+    {
+      "route": "/historia?tab=geiger",
+      "readyMs": 449,
+      "rafHz": 7.2,
+      "idleFrames": 22,
+      "dragFps": 6.6,
+      "dragP95Ms": 183.3,
+      "longTasks": 123,
+      "longMaxMs": 190,
+      "calls": 24,
+      "triangles": 51775,
+      "programs": 14,
+      "geometries": 11,
+      "textures": 21,
+      "heapMB": 16.3
+    },
+    {
+      "route": "/fotones",
+      "readyMs": 510,
+      "rafHz": 60.1,
+      "idleFrames": 0,
+      "dragFps": 6.7,
+      "dragP95Ms": 183.3,
+      "longTasks": 90,
+      "longMaxMs": 196,
+      "calls": 23,
+      "triangles": 85,
+      "programs": 7,
+      "geometries": 10,
+      "textures": 18,
+      "heapMB": 16.6
+    },
+    {
+      "route": "/fotones?tab=hidrogeno",
+      "readyMs": 378,
+      "rafHz": 60.1,
+      "idleFrames": 0,
+      "dragFps": 7.4,
+      "dragP95Ms": 166.7,
+      "longTasks": 90,
+      "longMaxMs": 169,
+      "calls": 33,
+      "triangles": 917,
+      "programs": 7,
+      "geometries": 20,
+      "textures": 18,
+      "heapMB": 17.7
+    },
+    {
+      "route": "/fotones?tab=espectroscopio",
+      "readyMs": 466,
+      "rafHz": 60.3,
+      "idleFrames": 0,
+      "dragFps": 5.6,
+      "dragP95Ms": 216.7,
+      "longTasks": 90,
+      "longMaxMs": 222,
+      "calls": 38,
+      "triangles": 665,
+      "programs": 17,
+      "geometries": 25,
+      "textures": 22,
+      "heapMB": 19
+    },
+    {
+      "route": "/masas",
+      "readyMs": 546,
+      "rafHz": 6.3,
+      "idleFrames": 20,
+      "dragFps": 5.9,
+      "dragP95Ms": 200,
+      "longTasks": 120,
+      "longMaxMs": 255,
+      "calls": 27,
+      "triangles": 8077,
+      "programs": 14,
+      "geometries": 14,
+      "textures": 21,
+      "heapMB": 20.5
+    },
+    {
+      "route": "/cuantico",
+      "readyMs": 451,
+      "rafHz": 60.2,
+      "idleFrames": 0,
+      "dragFps": 5.4,
+      "dragP95Ms": 216.7,
+      "longTasks": 90,
+      "longMaxMs": 220,
+      "calls": 23,
+      "triangles": 9769,
+      "programs": 11,
+      "geometries": 11,
+      "textures": 21,
+      "heapMB": 21.2
+    },
+    {
+      "route": "/arquitecto",
+      "readyMs": 569,
+      "rafHz": 60.1,
+      "idleFrames": 0,
+      "dragFps": 7.6,
+      "dragP95Ms": 166.6,
+      "longTasks": 90,
+      "longMaxMs": 160,
+      "calls": 29,
+      "triangles": 1817,
+      "programs": 10,
+      "geometries": 17,
+      "textures": 21,
+      "heapMB": 21.9
+    },
+    {
+      "route": "/periodico",
+      "readyMs": 303,
+      "rafHz": 60,
+      "idleFrames": 0,
+      "dragFps": 3.3,
+      "dragP95Ms": 366.6,
+      "longTasks": 91,
+      "longMaxMs": 494,
+      "calls": 19,
+      "triangles": 69403,
+      "programs": 10,
+      "geometries": 7,
+      "textures": 21,
+      "heapMB": 23.1
+    },
+    {
+      "route": "/guia?b=3",
+      "readyMs": 795,
+      "rafHz": 60.1,
+      "idleFrames": 0,
+      "dragFps": 0,
+      "dragP95Ms": null,
+      "longTasks": 0,
+      "longMaxMs": 0,
+      "calls": null,
+      "triangles": null,
+      "programs": null,
+      "geometries": null,
+      "textures": null,
+      "heapMB": 22.6
+    },
+    {
+      "route": "/entrenamiento",
+      "readyMs": 129,
+      "rafHz": 60.1,
+      "idleFrames": 0,
+      "calls": null,
+      "triangles": null,
+      "programs": null,
+      "geometries": null,
+      "textures": null,
+      "heapMB": 23.2
+    },
+    {
+      "route": "cuantico:n=3",
+      "interactionMs": 3935,
+      "longTasks": 16,
+      "longMaxMs": 1362
+    },
+    {
+      "route": "cuantico:l=2",
+      "interactionMs": 4416,
+      "longTasks": 15,
+      "longMaxMs": 1649
+    },
+    {
+      "route": "cuantico:subnivel",
+      "interactionMs": 3863,
+      "longTasks": 10,
+      "longMaxMs": 1516
+    }
+  ],
+  "stability": [
+    {
+      "ciclo": 1,
+      "heapMB": 27.6,
+      "gpu": {
+        "geometries": 9,
+        "textures": 21,
+        "programs": 11,
+        "calls": 62,
+        "triangles": 1129
+      },
+      "canvases": 1
+    },
+    {
+      "ciclo": 2,
+      "heapMB": 28.1,
+      "gpu": {
+        "geometries": 9,
+        "textures": 21,
+        "programs": 11,
+        "calls": 62,
+        "triangles": 1129
+      },
+      "canvases": 1
+    },
+    {
+      "ciclo": 3,
+      "heapMB": 28.3,
+      "gpu": {
+        "geometries": 9,
+        "textures": 21,
+        "programs": 11,
+        "calls": 62,
+        "triangles": 1129
+      },
+      "canvases": 1
+    },
+    {
+      "ciclo": 4,
+      "heapMB": 27.6,
+      "gpu": {
+        "geometries": 9,
+        "textures": 21,
+        "programs": 11,
+        "calls": 62,
+        "triangles": 1129
+      },
+      "canvases": 1
+    }
+  ]
+}

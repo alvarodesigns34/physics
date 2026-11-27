@@ -1,0 +1,291 @@
+{
+  "date": "2026-11-27T14:19:59.960Z",
+  "renderer": "SwiftShader (software)",
+  "method": "ATOM 5.0: fotogramas dibujados, no rAF; heap tras gc()",
+  "results": [
+    {
+      "route": "/",
+      "readyMs": 338,
+      "rafHz": 60.3,
+      "idleFrames": 0,
+      "calls": null,
+      "triangles": null,
+      "programs": null,
+      "geometries": null,
+      "textures": null,
+      "heapMB": 7.7
+    },
+    {
+      "route": "/campana",
+      "readyMs": 173,
+      "rafHz": 60.3,
+      "idleFrames": 0,
+      "dragFps": 1.6,
+      "dragP95Ms": 1599.9,
+      "longTasks": 89,
+      "longMaxMs": 1727,
+      "calls": 1,
+      "triangles": 1,
+      "programs": 17,
+      "geometries": 207,
+      "textures": 22,
+      "heapMB": 17.3
+    },
+    {
+      "route": "/forja",
+      "readyMs": 1130,
+      "rafHz": 60.3,
+      "idleFrames": 0,
+      "dragFps": 7.9,
+      "dragP95Ms": 150.1,
+      "longTasks": 90,
+      "longMaxMs": 168,
+      "calls": 1,
+      "triangles": 1,
+      "programs": 11,
+      "geometries": 9,
+      "textures": 21,
+      "heapMB": 22.4
+    },
+    {
+      "route": "/historia",
+      "readyMs": 391,
+      "rafHz": 17.6,
+      "idleFrames": 15,
+      "dragFps": 7.2,
+      "dragP95Ms": 166.6,
+      "longTasks": 105,
+      "longMaxMs": 219,
+      "calls": 1,
+      "triangles": 1,
+      "programs": 10,
+      "geometries": 18,
+      "textures": 21,
+      "heapMB": 15.3
+    },
+    {
+      "route": "/historia?tab=geiger",
+      "readyMs": 412,
+      "rafHz": 7.2,
+      "idleFrames": 22,
+      "dragFps": 7.4,
+      "dragP95Ms": 150.1,
+      "longTasks": 122,
+      "longMaxMs": 183,
+      "calls": 1,
+      "triangles": 1,
+      "programs": 14,
+      "geometries": 11,
+      "textures": 21,
+      "heapMB": 20.1
+    },
+    {
+      "route": "/fotones",
+      "readyMs": 411,
+      "rafHz": 60.3,
+      "idleFrames": 0,
+      "dragFps": 8.3,
+      "dragP95Ms": 150,
+      "longTasks": 90,
+      "longMaxMs": 153,
+      "calls": 1,
+      "triangles": 1,
+      "programs": 7,
+      "geometries": 10,
+      "textures": 18,
+      "heapMB": 16.6
+    },
+    {
+      "route": "/fotones?tab=hidrogeno",
+      "readyMs": 390,
+      "rafHz": 60,
+      "idleFrames": 0,
+      "dragFps": 8.3,
+      "dragP95Ms": 133.4,
+      "longTasks": 90,
+      "longMaxMs": 164,
+      "calls": 1,
+      "triangles": 1,
+      "programs": 7,
+      "geometries": 20,
+      "textures": 18,
+      "heapMB": 17.7
+    },
+    {
+      "route": "/fotones?tab=espectroscopio",
+      "readyMs": 368,
+      "rafHz": 60.1,
+      "idleFrames": 0,
+      "dragFps": 3,
+      "dragP95Ms": 383.4,
+      "longTasks": 90,
+      "longMaxMs": 431,
+      "calls": 1,
+      "triangles": 1,
+      "programs": 17,
+      "geometries": 25,
+      "textures": 23,
+      "heapMB": 19
+    },
+    {
+      "route": "/masas",
+      "readyMs": 690,
+      "rafHz": 6.3,
+      "idleFrames": 19,
+      "dragFps": 6.3,
+      "dragP95Ms": 183.4,
+      "longTasks": 120,
+      "longMaxMs": 198,
+      "calls": 1,
+      "triangles": 1,
+      "programs": 14,
+      "geometries": 14,
+      "textures": 21,
+      "heapMB": 20.5
+    },
+    {
+      "route": "/cuantico",
+      "readyMs": 438,
+      "rafHz": 60.3,
+      "idleFrames": 0,
+      "dragFps": 5.3,
+      "dragP95Ms": 216.7,
+      "longTasks": 89,
+      "longMaxMs": 233,
+      "calls": 1,
+      "triangles": 1,
+      "programs": 11,
+      "geometries": 11,
+      "textures": 21,
+      "heapMB": 21.2
+    },
+    {
+      "route": "/arquitecto",
+      "readyMs": 460,
+      "rafHz": 60.2,
+      "idleFrames": 0,
+      "dragFps": 8,
+      "dragP95Ms": 150,
+      "longTasks": 90,
+      "longMaxMs": 175,
+      "calls": 1,
+      "triangles": 1,
+      "programs": 10,
+      "geometries": 17,
+      "textures": 21,
+      "heapMB": 21.8
+    },
+    {
+      "route": "/periodico",
+      "readyMs": 390,
+      "rafHz": 60.2,
+      "idleFrames": 0,
+      "dragFps": 3.5,
+      "dragP95Ms": 333.3,
+      "longTasks": 91,
+      "longMaxMs": 382,
+      "calls": 1,
+      "triangles": 1,
+      "programs": 10,
+      "geometries": 7,
+      "textures": 21,
+      "heapMB": 23.1
+    },
+    {
+      "route": "/guia?b=3",
+      "readyMs": 612,
+      "rafHz": 60,
+      "idleFrames": 0,
+      "dragFps": 0,
+      "dragP95Ms": null,
+      "longTasks": 0,
+      "longMaxMs": 0,
+      "calls": null,
+      "triangles": null,
+      "programs": null,
+      "geometries": null,
+      "textures": null,
+      "heapMB": 22.5
+    },
+    {
+      "route": "/entrenamiento",
+      "readyMs": 123,
+      "rafHz": 60.2,
+      "idleFrames": 0,
+      "calls": null,
+      "triangles": null,
+      "programs": null,
+      "geometries": null,
+      "textures": null,
+      "heapMB": 23.1
+    },
+    {
+      "route": "cuantico:n=3",
+      "interactionMs": 3366,
+      "longTasks": 16,
+      "longMaxMs": 1210
+    },
+    {
+      "route": "cuantico:l=2",
+      "interactionMs": 3548,
+      "longTasks": 17,
+      "longMaxMs": 1301
+    },
+    {
+      "route": "cuantico:subnivel",
+      "interactionMs": 3789,
+      "longTasks": 13,
+      "longMaxMs": 1216
+    }
+  ],
+  "stability": [
+    {
+      "ciclo": 1,
+      "heapMB": 27.5,
+      "gpu": {
+        "geometries": 9,
+        "textures": 21,
+        "programs": 11,
+        "calls": 1,
+        "triangles": 1
+      },
+      "canvases": 1
+    },
+    {
+      "ciclo": 2,
+      "heapMB": 28,
+      "gpu": {
+        "geometries": 9,
+        "textures": 21,
+        "programs": 11,
+        "calls": 1,
+        "triangles": 1
+      },
+      "canvases": 1
+    },
+    {
+      "ciclo": 3,
+      "heapMB": 28.3,
+      "gpu": {
+        "geometries": 9,
+        "textures": 21,
+        "programs": 11,
+        "calls": 1,
+        "triangles": 1
+      },
+      "canvases": 1
+    },
+    {
+      "ciclo": 4,
+      "heapMB": 27.5,
+      "gpu": {
+        "geometries": 9,
+        "textures": 21,
+        "programs": 11,
+        "calls": 1,
+        "triangles": 1
+      },
+      "canvases": 1
+    }
+  ]
+}
