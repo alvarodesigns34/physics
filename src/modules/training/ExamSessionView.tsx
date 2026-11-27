@@ -3,6 +3,7 @@
  * navegador, temporizador, entrega con confirmación e informe detallado (crédito parcial, apartados,
  * competencias, preguntas sin responder y recomendaciones).
  */
+import { structuredResolution } from '../../learning/autoResolution';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { gradeSession, isValidSession, questionState, exerciseFromId, type ExamReport, type ExamSession, type PartValue } from '../../learning/examSession';
@@ -373,15 +374,7 @@ export function ExamReportView({ report, session, onNew }: { report: ExamReport;
                     <b>{p.part.prompt}.</b> {p.result.message}
                   </Feedback>
                 ))}
-              {q.exercise.resolution ? (
-                <ResolutionView steps={q.exercise.resolution} methods={q.exercise.methods} />
-              ) : (
-                <ol className="stack-8 small" style={{ margin: 0, paddingLeft: 20, color: 'var(--ink-muted)' }}>
-                  {q.exercise.solution.map((s, k) => (
-                    <li key={k}>{s}</li>
-                  ))}
-                </ol>
-              )}
+              <ResolutionView steps={q.exercise.resolution ?? structuredResolution(q.exercise)} methods={q.exercise.methods} />
             </div>
           </details>
         ))}

@@ -91,3 +91,9 @@ La auditoría señaló formas de escribir correctas que el comprobador rechazaba
 - Se etiquetan como **cálculo** y usan las constantes de la teoría de clase (`THEORY_DATA`).
 - Las combinaciones sin sentido físico (n₂ ≤ n₁, más carga positiva que protones) se explican en lugar de calcularse.
 - **Pruebas.** Unitarias en `liveFormulas.test.ts`: valores de referencia (Hα 656,3 nm, ³⁵Cl/³⁷Cl → 35,45 u, 620 nm → 2,00 eV…) y la ida y vuelta del deslizador logarítmico. En el navegador, la prueba e2e mueve n₂ con el teclado y comprueba Hβ (486,2 nm).
+
+## 6. Resoluciones para todas las familias
+- **Antes.** 35 de las 48 familias mostraban la solución como una lista plana de frases.
+- **Ahora.** `structuredResolution` (`autoResolution.ts`) da a esas familias una resolución por bloques: qué nos piden, datos, principio (fórmula de la guía del apartado), por qué, cada paso con su resultado y su razonamiento, resultado final y errores típicos del apartado.
+- **Sin cálculos nuevos.** Solo reorganiza contenido ya verificado: los pasos del propio ejercicio, generados con sus mismos números, y la guía. Se usa también en el informe del simulacro.
+- **Defecto encontrado y corregido.** La explicación de Slater citaba un subnivel inexistente, «(1s,1p)». Ahora dice «(1s)». Se añadió una prueba de regresión que recorre todas las familias con varias semillas y prohíbe mencionar 1p, 1d, 2d, 1f, 2f o 3f fuera de las preguntas de validez, que los citan a propósito.

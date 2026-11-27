@@ -10,6 +10,7 @@ import { guideAnchorFor, SECTION_BY_NODE } from '../learning/guide';
 import { Feedback, Rich } from './common';
 import { Icon } from './Icon';
 import { EssayInput, FigureView, ResolutionView } from './Pedagogy';
+import { structuredResolution } from '../learning/autoResolution';
 import { sfx } from '../app/sound';
 
 export interface ExerciseOutcome {
@@ -417,16 +418,7 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
               </button>
             )}
           </div>
-          {showSolution &&
-            (exercise.resolution ? (
-              <ResolutionView steps={exercise.resolution} methods={exercise.methods} />
-            ) : (
-              <ol className="stack-8 small" style={{ margin: 0, paddingLeft: 20, color: 'var(--ink-muted)' }}>
-                {exercise.solution.map((s, i) => (
-                  <li key={i}>{s}</li>
-                ))}
-              </ol>
-            ))}
+          {showSolution && <ResolutionView steps={exercise.resolution ?? structuredResolution(exercise)} methods={exercise.methods} />}
           {showSolution && exercise.originalSolution && (
             <p className="small" style={{ margin: 0 }}>
               <strong>Solución del documento original:</strong> {exercise.originalSolution}
