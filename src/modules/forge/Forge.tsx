@@ -18,7 +18,7 @@ import { MissionPanel } from '../../ui/MissionPanel';
 import { EpiTag, announce } from '../../ui/common';
 import { Icon } from '../../ui/Icon';
 import { RealScale } from './RealScale';
-import { NeutralIonCompare } from './Compare';
+import { NeutralIonCompare, SpeciesCompare } from './Compare';
 
 /** Unidades de escena por radio de Bohr para la nube (la escala del núcleo NO es real). */
 const CLOUD_SCALE = 1.15;
@@ -495,6 +495,7 @@ export function ForgeOverlay() {
           )}
 
           {sp.z > 0 && <NeutralIonCompare sp={sp} onPick={setSp} />}
+          {sp.z > 0 && <SpeciesCompare sp={sp} onPick={setSp} />}
           {sp.z > 0 && <RealScale z={sp.z} a={sp.z + sp.n} />}
 
           <section className="section">

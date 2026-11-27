@@ -4074,3 +4074,15 @@ kbd {
 .trends-chart .fig-label {
   font-size: 12px;
 }
+
+.species-table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+.species-table td.is-diff {
+  background: var(--accent-quiet);
+  color: var(--accent-strong);
+  font-weight: 650;
+}
