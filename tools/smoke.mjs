@@ -1,6 +1,6 @@
 /**
  * Prueba de humo de extremo a extremo (Playwright + Chromium preinstalado).
- * Arranca `vite preview` sobre dist/, recorre Atrio → Forja (¹²C y misión I-1) → Photon Lab (Hα) →
+ * Arranca `vite preview` sobre dist/, recorre Inicio (búsqueda) → Campaña → Forja (¹²C y misión I-1) → Photon Lab (Hα) →
  * Entrenamiento (AMP 6), comprueba el DOM y la ausencia de errores, y guarda capturas en test-results/.
  * Uso: npm run build && npm run e2e
  */
@@ -38,10 +38,21 @@ try {
   await page.waitForSelector('.intro', { timeout: T });
   check(await page.locator('.intro').isVisible(), 'Bienvenida visible en la primera visita');
   await page.click('.intro button:text-is("Cerrar")');
+  // ATOM 3.0: el inicio es una página de estudio (sin escena 3D) con los laboratorios a un clic.
+  await page.waitForSelector('.lab-card', { timeout: T });
+  check((await page.locator('.lab-card').count()) === 8, 'Inicio: siete laboratorios y la campaña a un clic');
+  check((await page.locator('.rail__item').count()) === 10, 'Raíl lateral: inicio, guía, práctica y siete laboratorios');
+  await page.keyboard.press('Control+k');
+  await page.waitForSelector('.palette input', { timeout: T });
+  await page.fill('.palette input', 'Rydberg');
+  await page.waitForSelector('.palette__hit', { timeout: T });
+  const kinds = await page.locator('.palette__kind').allInnerTexts();
+  check(kinds.some((k) => /teor/i.test(k)) && kinds.some((k) => /laborat/i.test(k)) && kinds.some((k) => /pr[aá]ctica/i.test(k)), 'Búsqueda «Rydberg»: teoría, laboratorio y práctica');
+  await page.keyboard.press('Escape');
+  await page.screenshot({ path: `${OUT}/01-inicio.png` });
+  await page.goto(base + '#/campana');
   await page.waitForFunction(() => document.querySelectorAll('.station-label').length >= 9, null, { timeout: T });
-  check((await page.locator('.station-label').count()) === 9, 'Atrio: nueve estaciones etiquetadas');
-  await page.screenshot({ path: `${OUT}/01-atrio.png` });
-
+  check((await page.locator('.station-label').count()) === 9, 'Campaña: atrio con nueve estaciones etiquetadas');
   await page.click('button:has-text("Empezar")');
   await page.waitForURL(/#\/forja/, { timeout: T });
   check(page.url().includes('#/forja'), 'La misión I-1 abre la Forja');

@@ -1,0 +1,165 @@
+/* ATOM 3.0 — tokens del sistema de diseño.
+   Concepto: «laboratorio a la luz del día». Superficies claras y cálidas, tinta casi negra, un único
+   acento de interfaz (cobalto) y color con significado: el color saturado se reserva para la física
+   (fases, líneas espectrales, bloques del temario) y para el estado de las respuestas.
+   El tema claro es el principal; el oscuro es opcional ([data-theme='oscuro']).
+   Las escenas 3D viven en un «visor» de tono pizarra: la legibilidad de nubes y espectros lo exige,
+   pero el resto de la interfaz no hereda ese fondo. */
+
+:root {
+  color-scheme: light;
+
+  /* ── Superficies ── */
+  --surface: #f5f4f1; /* lienzo de la aplicación */
+  --surface-sunken: #ecebe7;
+  --surface-raised: #ffffff; /* tarjetas y paneles */
+  --surface-raised-2: #f9f8f6;
+  --surface-tint: #eef2fb; /* zonas destacadas suaves (acento) */
+  --scrim: rgb(28 30 36 / 0.36);
+  --viewer: #121722; /* fondo de los visores 3D */
+  --viewer-2: #1b2232;
+
+  /* ── Tinta ── */
+  --ink: #17191e;
+  --ink-muted: #4f5562; /* 7,4:1 sobre --surface */
+  --ink-faint: #6e7482; /* 4,6:1 sobre --surface (AA texto) */
+  --ink-on-viewer: #e9ecf2;
+  --ink-on-viewer-muted: #a9b0bf;
+  --hairline: rgb(23 25 30 / 0.08);
+  --hairline-strong: rgb(23 25 30 / 0.15);
+
+  /* ── Acento de interfaz ── */
+  --accent: #2f5bd3;
+  --accent-strong: #2248b5;
+  --accent-ink: #ffffff;
+  --accent-quiet: rgb(47 91 211 / 0.08);
+  --accent-line: rgb(47 91 211 / 0.35);
+
+  /* ── Partículas (identidad física; legibles sobre claro y sobre el visor) ── */
+  --proton: #d4573a;
+  --neutron: #8a8f99;
+  --electron: #2f7fd8;
+
+  /* ── Estados ── */
+  --ok: #1d8a52;
+  --ok-quiet: rgb(29 138 82 / 0.09);
+  --bad: #c2412d;
+  --bad-quiet: rgb(194 65 45 / 0.08);
+  --warn: #a8670d;
+  --warn-quiet: rgb(168 103 13 / 0.09);
+
+  /* ── Bloques del temario (color funcional de navegación) ── */
+  --b1: #d4573a; /* identidad · protón */
+  --b2: #8a6a3d; /* modelos · historia */
+  --b3: #7b4fd6; /* espectros */
+  --b4: #c27a0e; /* Bohr · niveles */
+  --b5: #0f8a95; /* cuántica */
+  --b6: #2f7fd8; /* configuración */
+  --b7: #c2477f; /* periodicidad */
+
+  /* ── Tipografía ──
+     Una sola familia sans (Inter Tight, variable, autoalojada) para títulos y texto; JetBrains Mono solo
+     para magnitudes, datos y código. Instrument Serif retirada (ATOM 2.0). */
+  --font-display: 'Inter Tight Variable', 'Inter Tight', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-ui: 'Inter Tight Variable', 'Inter Tight', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  /* Escala (razón ≈ 1,25) */
+  --fs-xs: 0.8125rem; /* 13 */
+  --fs-sm: 0.875rem; /* 14 */
+  --fs-md: 1rem; /* 16 */
+  --fs-lg: 1.125rem; /* 18 */
+  --fs-xl: 1.375rem; /* 22 */
+  --fs-2xl: 1.75rem; /* 28 */
+  --fs-3xl: 2.25rem; /* 36 */
+  --fs-4xl: 3rem; /* 48 */
+  --tracking-tight: -0.022em;
+  --tracking-display: -0.035em;
+
+  /* ── Espaciado (base 4) ── */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+
+  /* ── Radios ── */
+  --r-outer: 16px;
+  --r-inner: 10px;
+  --r-pill: 999px;
+
+  /* ── Elevación (sombras cortas y suaves; nunca gigantes) ── */
+  --shadow-color: 220 20% 20%;
+  --elev-1: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 1px 1px hsl(var(--shadow-color) / 0.04);
+  --elev-2: 0 1px 2px hsl(var(--shadow-color) / 0.05), 0 4px 12px -2px hsl(var(--shadow-color) / 0.08);
+  --elev-3: 0 2px 4px hsl(var(--shadow-color) / 0.05), 0 12px 32px -8px hsl(var(--shadow-color) / 0.16);
+  --lift: var(--elev-2);
+  --glow: 0 0 0 3px var(--accent-quiet);
+
+  /* ── Movimiento ── */
+  --dur-instant: 120ms;
+  --dur-fast: 180ms;
+  --dur-base: 260ms;
+  --dur-slow: 440ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-std: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+
+  /* ── Disposición ── */
+  --panel-w: 420px;
+  --sidebar-w: 232px;
+  --topbar-h: 68px;
+  --gutter: 24px;
+  --text-scale: 1;
+  font-size: calc(16px * var(--text-scale));
+}
+
+/* Tema oscuro opcional, coherente con la misma identidad (no el negro de ATOM 2.0). */
+:root[data-theme='oscuro'] {
+  color-scheme: dark;
+  --surface: #14171d;
+  --surface-sunken: #0f1216;
+  --surface-raised: #1b1f27;
+  --surface-raised-2: #20252e;
+  --surface-tint: #1c2436;
+  --scrim: rgb(5 7 10 / 0.6);
+  --viewer: #0d1118;
+  --viewer-2: #151b26;
+  --ink: #e8eaef;
+  --ink-muted: #aab0bc;
+  --ink-faint: #8a91a0;
+  --hairline: rgb(232 234 239 / 0.08);
+  --hairline-strong: rgb(232 234 239 / 0.16);
+  --accent: #7a9cf5;
+  --accent-strong: #9ab4f8;
+  --accent-ink: #0d1118;
+  --accent-quiet: rgb(122 156 245 / 0.12);
+  --accent-line: rgb(122 156 245 / 0.4);
+  --proton: #ef7f63;
+  --neutron: #a9adb6;
+  --electron: #79b2f0;
+  --ok: #5cc28a;
+  --ok-quiet: rgb(92 194 138 / 0.12);
+  --bad: #f08a76;
+  --bad-quiet: rgb(240 138 118 / 0.12);
+  --warn: #e0b25a;
+  --warn-quiet: rgb(224 178 90 / 0.12);
+  --b1: #ef7f63;
+  --b2: #c9a77a;
+  --b3: #a98bf0;
+  --b4: #e5ad4a;
+  --b5: #4cc3cc;
+  --b6: #79b2f0;
+  --b7: #ec85b4;
+  --shadow-color: 220 40% 2%;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --gutter: 16px;
+  }
+}

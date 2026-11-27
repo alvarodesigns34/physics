@@ -553,7 +553,7 @@ function ModelsPanel() {
                 <span className="mono" style={{ width: 56, textAlign: 'left', color: 'var(--accent)' }}>
                   {m.year}
                 </span>
-                <span style={{ textAlign: 'left' }}>
+                <span style={{ textAlign: 'left', whiteSpace: 'normal', lineHeight: 1.3, minWidth: 0 }}>
                   {m.title} <span className="faint small">· {m.who}</span>
                 </span>
               </button>

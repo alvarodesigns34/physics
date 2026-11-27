@@ -61,7 +61,9 @@ function ViewOffset({ panel, fov }: { panel: number; fov: number }) {
   const { camera, size } = useThree();
   useLayoutEffect(() => {
     const cam = camera as THREE.PerspectiveCamera;
-    const mobile = size.width <= 760;
+    const mobile = window.innerWidth <= 760;
+    // ATOM 3.0: en escritorio el visor ya no queda bajo el panel (está a su izquierda): sin desplazamiento.
+    if (!mobile && document.querySelector('.app[data-kind="laboratorio"]')) panel = 0;
     // Área visible de la escena: a la izquierda del panel (escritorio) o encima de la hoja inferior (móvil).
     const visW = mobile ? size.width : size.width - panel;
     const visH = mobile ? size.height * 0.5 : size.height;
@@ -98,17 +100,22 @@ export function Stage({ children, camera = [0, 2.4, 9] as [number, number, numbe
         canvas.addEventListener('webglcontextlost', (e) => {
           // Permite al navegador restaurar el contexto; mientras tanto se reduce la carga gráfica.
           e.preventDefault();
-          degradeAutoTier();
-          toast('Se ha perdido el contexto gráfico; se recupera con menos calidad.');
+          // Al cambiar de laboratorio el lienzo se desmonta y libera su contexto a propósito
+          // (forceContextLoss): eso no es una pérdida real y no debe degradar ni avisar.
+          setTimeout(() => {
+            if (!canvas.isConnected) return;
+            degradeAutoTier();
+            toast('Se ha perdido el contexto gráfico; se recupera con menos calidad.');
+          }, 0);
         });
         canvas.addEventListener('webglcontextrestored', () => toast('Contexto gráfico recuperado.'));
         gl.toneMapping = q.bloom ? THREE.NoToneMapping : THREE.NeutralToneMapping;
-        gl.setClearColor('#0b0a09');
+        gl.setClearColor('#121722');
       }}
       frameloop={reduced ? 'demand' : 'always'}
       aria-hidden="true"
     >
-      <color attach="background" args={['#0b0a09']} />
+      <color attach="background" args={['#121722']} />
       <fog attach="fog" args={['#0b0a09', 14, 42]} />
       <ViewOffset panel={panel} fov={fov} />
       {auto && !reduced && <FrameMonitor />}

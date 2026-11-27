@@ -24,7 +24,11 @@ export interface Settings {
   seenIntro: boolean;
   textScale: number;
   configOrder: ConfigOrder;
+  /** Tema de la interfaz (ATOM 3.0: claro por defecto) */
+  theme: ThemeSetting;
 }
+
+export type ThemeSetting = 'claro' | 'oscuro' | 'sistema';
 
 export interface Attempt {
   exerciseId: string;
@@ -93,7 +97,7 @@ interface Actions {
 
 export type AppState = PersistedState & Actions;
 
-const DEFAULT_SETTINGS: Settings = { alias: '', quality: 'auto', motion: 'sistema', sound: false, ambient: true, volume: 0.8, seenIntro: false, textScale: 1, configOrder: 'llenado' };
+const DEFAULT_SETTINGS: Settings = { alias: '', quality: 'auto', motion: 'sistema', sound: false, ambient: true, volume: 0.8, seenIntro: false, textScale: 1, configOrder: 'llenado', theme: 'claro' };
 
 function probeStorage(): boolean {
   try {

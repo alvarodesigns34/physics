@@ -1,10 +1,12 @@
-import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
+import { NavRail, SearchPalette, useSearchShortcut } from './Navigation';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { navigate, notifySceneChange, useRoute, useReducedMotion, type Route } from './hooks';
-import { useStore, type QualitySetting, type MotionSetting } from '../state/store';
+import { useStore, type QualitySetting, type MotionSetting, type ThemeSetting } from '../state/store';
 import { Announcer, Toaster, toast } from '../ui/common';
 import { installUiSounds, setAmbient, sfx } from './sound';
 import { Icon } from '../ui/Icon';
 import { HubScene, HubOverlay } from '../modules/hub/Hub';
+import { HomeOverlay } from '../modules/hub/Home';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
 
 const ForgeScene = lazy(() => import('../modules/forge/Forge').then((m) => ({ default: m.ForgeScene })));
@@ -36,7 +38,7 @@ export const LABS: { route: Route; label: string; blurb: string }[] = [
 ];
 
 const CRUMB: Record<Route, string> = {
-  '/': 'The Matter Experience',
+  '/': 'Inicio',
   '/forja': 'Atomic Forge',
   '/fotones': 'Photon Lab',
   '/entrenamiento': 'Centro de entrenamiento',
@@ -49,49 +51,6 @@ const CRUMB: Record<Route, string> = {
   '/guia': 'Guía de estudio',
 };
 
-function LabsMenu({ route }: { route: Route }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
-    window.addEventListener('mousedown', close);
-    window.addEventListener('keydown', esc);
-    return () => {
-      window.removeEventListener('mousedown', close);
-      window.removeEventListener('keydown', esc);
-    };
-  }, [open]);
-  const active = LABS.some((l) => l.route === route);
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <a
-        href="#"
-        role="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-current={active ? 'page' : undefined}
-        onClick={(e) => {
-          e.preventDefault();
-          setOpen((o) => !o);
-        }}
-      >
-        {active ? CRUMB[route] : 'Laboratorios'} <span aria-hidden="true" style={{ opacity: 0.6 }}>▾</span>
-      </a>
-      {open && (
-        <div role="menu" className="labs-menu fade">
-          {LABS.map((l) => (
-            <a key={l.route} role="menuitem" href={`#${l.route}`} aria-current={route === l.route ? 'page' : undefined} onClick={() => setOpen(false)}>
-              <span style={{ display: 'block', color: 'var(--ink)', fontWeight: 550 }}>{l.label}</span>
-              <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-faint)' }}>{l.blurb}</span>
-            </a>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function hasWebGL(): boolean {
   try {
@@ -168,6 +127,7 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
             </div>
           </>
         )}
+        <SegmentedSetting<ThemeSetting> label="Tema" value={settings.theme ?? 'claro'} onChange={(v) => set({ theme: v })} options={[{ v: 'claro', label: 'Claro' }, { v: 'oscuro', label: 'Oscuro' }, { v: 'sistema', label: 'Sistema' }]} />
         <SegmentedSetting<number> label="Tamaño del texto" value={settings.textScale} onChange={(v) => set({ textScale: v })} options={[{ v: 0.9, label: '90 %' }, { v: 1, label: '100 %' }, { v: 1.15, label: '115 %' }, { v: 1.3, label: '130 %' }]} />
         <SegmentedSetting<'llenado' | 'capas'> label="Orden de las configuraciones" value={settings.configOrder} onChange={(v) => set({ configOrder: v })} options={[{ v: 'llenado', label: 'Orden de llenado (Möller)' }, { v: 'capas', label: 'Por capas' }]} />
         <hr className="divider" />
@@ -305,7 +265,7 @@ function MobileNav({ route }: { route: Route }) {
       <nav className="mobile-nav" aria-label="Secciones">
         <a href="#/" aria-current={route === '/' ? 'page' : undefined}>
           <Icon name="target" size={20} />
-          <span>Atrio</span>
+          <span>Inicio</span>
         </a>
         <a href="#/guia" aria-current={route === '/guia' ? 'page' : undefined}>
           <Icon name="info" size={20} />
@@ -324,28 +284,24 @@ function MobileNav({ route }: { route: Route }) {
   );
 }
 
-function TopBar({ route, onSettings }: { route: Route; onSettings: () => void }) {
+function TopBar({ route, onSettings, onSearch }: { route: Route; onSettings: () => void; onSearch: () => void }) {
   const sound = useStore((s) => s.settings.sound);
   const set = useStore((s) => s.setSettings);
   return (
     <header className="topbar">
-      <button type="button" className="brand" onClick={() => navigate('/')} aria-label="ATOM, volver al Atrio">
+      <button type="button" className="brand" onClick={() => navigate('/')} aria-label="ATOM, volver al inicio">
         <span className="brand__mark">ATOM</span>
         <span className="brand__crumb">{CRUMB[route]}</span>
       </button>
       <span className="topbar__spacer" />
-      <nav className="topnav" aria-label="Secciones">
-        <a href="#/" aria-current={route === '/' ? 'page' : undefined}>
-          Atrio
-        </a>
-        <a href="#/guia" aria-current={route === '/guia' ? 'page' : undefined}>
-          Estudiar
-        </a>
-        <LabsMenu route={route} />
-        <a href="#/entrenamiento" aria-current={route === '/entrenamiento' ? 'page' : undefined}>
-          Entrenamiento
-        </a>
-      </nav>
+      <button type="button" className="topbar__search interactive" onClick={onSearch} aria-label="Buscar un concepto (⌘K)">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="6.5" />
+          <path d="m16 16 4 4" />
+        </svg>
+        <span className="desktop-only">Buscar un concepto</span>
+        <kbd className="desktop-only">⌘K</kbd>
+      </button>
       <button type="button" className="btn btn--ghost btn--icon interactive" style={{ pointerEvents: 'auto' }} onClick={() => set({ sound: !sound })} aria-label={sound ? 'Desactivar sonido' : 'Activar sonido'} aria-pressed={sound}>
         <Icon name={sound ? 'sound' : 'mute'} />
       </button>
@@ -375,8 +331,11 @@ function SceneFor({ route }: { route: Route }) {
     case '/entrenamiento':
     case '/guia':
       return null;
-    default:
+    case '/campana':
       return <HubScene />;
+    default:
+      // ATOM 3.0: el inicio es una página de estudio (sin escena 3D a pantalla completa).
+      return null;
   }
 }
 
@@ -400,8 +359,10 @@ function OverlayFor({ route }: { route: Route }): ReactNode {
       return <TrainingOverlay />;
     case '/guia':
       return <GuideOverlay />;
-    default:
+    case '/campana':
       return <HubOverlay />;
+    default:
+      return <HomeOverlay />;
   }
 }
 
@@ -411,11 +372,27 @@ export function App() {
   const textScale = useStore((s) => s.settings.textScale);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [webgl] = useState(hasWebGL);
-  const effectiveRoute: Route = route === '/campana' ? '/' : route;
+  const effectiveRoute: Route = route;
 
   useEffect(() => {
     document.documentElement.style.setProperty('--text-scale', String(textScale));
   }, [textScale]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const openSearch = useCallback(() => setSearchOpen(true), []);
+  useSearchShortcut(openSearch);
+  const theme = useStore((s) => s.settings.theme ?? 'claro');
+  useEffect(() => {
+    const apply = () => {
+      const dark = theme === 'oscuro' || (theme === 'sistema' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.dataset.theme = dark ? 'oscuro' : 'claro';
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#14171d' : '#f5f4f1');
+    };
+    apply();
+    if (theme !== 'sistema') return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, [theme]);
   useEffect(() => {
     document.title = `ATOM · ${CRUMB[effectiveRoute]}`;
     notifySceneChange();
@@ -429,7 +406,7 @@ export function App() {
   }, [effectiveRoute, soundOn, ambientOn]);
 
   return (
-    <div className="app" data-motion={reduced ? 'reducido' : 'completo'}>
+    <div className="app" data-motion={reduced ? 'reducido' : 'completo'} data-kind={effectiveRoute === '/' ? 'inicio' : effectiveRoute === '/guia' || effectiveRoute === '/entrenamiento' ? 'pagina' : 'laboratorio'}>
       <a href="#contenido" className="sr-only">
         Saltar al contenido
       </a>
@@ -441,16 +418,16 @@ export function App() {
             </Suspense>
           </ErrorBoundary>
         ) : (
-          effectiveRoute !== '/entrenamiento' && effectiveRoute !== '/guia' && (
+          effectiveRoute !== '/entrenamiento' && effectiveRoute !== '/guia' && effectiveRoute !== '/' && (
             <div className="loading" style={{ padding: 32, textAlign: 'center' }}>
               Este dispositivo no ofrece WebGL: las escenas 3D no están disponibles, pero los paneles, cálculos y ejercicios funcionan.
             </div>
           )
         )}
-        {(effectiveRoute === '/entrenamiento' || effectiveRoute === '/guia') && <div aria-hidden="true" className="page-bg" />}
+        {(effectiveRoute === '/entrenamiento' || effectiveRoute === '/guia' || effectiveRoute === '/') && <div aria-hidden="true" className="page-bg" />}
       </div>
       <div className="overlay">
-        <TopBar route={effectiveRoute} onSettings={() => setSettingsOpen(true)} />
+        <TopBar route={effectiveRoute} onSettings={() => setSettingsOpen(true)} onSearch={openSearch} />
         <main id="contenido" style={{ minHeight: 0, display: 'grid' }}>
           <ErrorBoundary label="este panel" key={effectiveRoute}>
             <Suspense fallback={null}>
@@ -459,7 +436,9 @@ export function App() {
           </ErrorBoundary>
         </main>
       </div>
+      <NavRail route={effectiveRoute} onSearch={openSearch} />
       <MobileNav route={effectiveRoute} />
+      {searchOpen && <SearchPalette onClose={() => setSearchOpen(false)} />}
       {!seenIntro && <Intro />}
       {settingsOpen && <SettingsDrawer onClose={() => setSettingsOpen(false)} />}
       <Announcer />
