@@ -20,6 +20,6 @@
 | Secciones de la guía | 52 |
 | Apartados con trucos | 26 |
 | Notas de rigor | 14 |
-| Pruebas unitarias (vitest) | 997 superadas de 997 |
-| Llamadas a check() en tools/smoke.mjs (en ejecución pueden ser más: algunas están en bucles) | 44 |
-| Archivos versionados | 294 |
+| Pruebas unitarias (vitest) | 1217 superadas de 1217 |
+| Llamadas a check() en tools/smoke.mjs (en ejecución pueden ser más: algunas están en bucles) | 47 |
+| Archivos versionados | 319 |
