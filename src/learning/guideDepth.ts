@@ -134,7 +134,7 @@ export const DEPTH: Record<string, SectionDepth> = {
     ],
   },
   '3.7': {
-    why: 'Todos los saltos que acaban en el mismo nivel inferior tienen energías parecidas, porque la mayor parte de la diferencia la marca ese nivel. Por eso caen en la misma región del espectro y forman una serie.',
+    why: 'Todos los saltos que acaban en el mismo nivel inferior tienen energías del mismo orden (Lyman, de 10,2 a 13,6 eV; Balmer, de 1,9 a 3,4 eV), porque la mayor parte de la diferencia la marca ese nivel. Por eso caen en la misma región del espectro y forman una serie.',
     exam: ['Asociar cada serie con su nivel final y su región.', 'Calcular la primera línea o el límite de una serie (n₂ → ∞).'],
     doubts: [{ q: '¿La serie de Balmer está entera en el visible?', a: 'No. Solo cuatro líneas son visibles: Hα (656 nm), Hβ (486 nm), Hγ (434 nm) y Hδ (410 nm). Las demás y el límite de la serie (unos 365 nm) están en el ultravioleta cercano.' }],
   },

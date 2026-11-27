@@ -207,7 +207,7 @@ export const LESSONS: Lesson[] = [
         ],
         widget: 'onda',
         mistakes: ['No pasar nm a metros: 1 nm = 10⁻⁹ m (500 nm = 5·10⁻⁷ m).', 'Confundir periodo y frecuencia: T = 1/ν.', 'Pensar que a mayor λ, mayor frecuencia: son inversamente proporcionales (λ·ν = c es constante).'],
-        tip: 'Escribe siempre la fórmula, sustituye con unidades del SI y comprueba el orden de magnitud: la luz visible tiene ν ≈ 10¹⁴–10¹⁵ Hz.',
+        tip: 'Escribe siempre la fórmula, sustituye con unidades del SI y comprueba el orden de magnitud: la luz visible tiene ν ≈ 4–8·10¹⁴ Hz.',
       },
       {
         node: '3.3',
@@ -498,7 +498,7 @@ export const LESSONS: Lesson[] = [
         body: ['**s** (grupos 1–2): ns¹–². **p** (13–18): ns² npˣ. **d** (3–12): ns² (n−1)dˣ. **f** (lantánidos y actínidos): ns² (n−2)fˣ. El bloque lo indica el subnivel del último electrón según Möller.'],
       },
       { node: '7.4', title: 'Familias', body: ['Grupo 1: **alcalinos** (salvo el H); 2: **alcalinotérreos**; 3–12: **metales de transición**; 16: anfígenos; 17: **halógenos**; 18: **gases nobles**. Metales a la izquierda, no metales a la derecha y semimetales en la frontera.'] },
-      { node: '7.5', title: 'Iones estables', body: ['Los elementos representativos ganan o pierden electrones hasta alcanzar la configuración del gas noble: grupo 1 → +1, grupo 2 → +2, grupo 13 → +3, grupo 15 → −3, grupo 16 → −2, grupo 17 → −1.'] },
+      { node: '7.5', title: 'Iones estables', body: ['Los elementos representativos ganan o pierden electrones hasta alcanzar la configuración del gas noble: grupo 1 → +1, grupo 2 → +2, grupo 13 → +3, grupo 15 → −3, grupo 16 → −2, grupo 17 → −1. En los grupos 13–15 la regla sirve sobre todo para los casos típicos (Al³⁺, N³⁻): el boro o el carbono, por ejemplo, comparten electrones en lugar de formar iones simples.'] },
       {
         node: '7.6',
         title: 'Apantallamiento y carga nuclear efectiva',
