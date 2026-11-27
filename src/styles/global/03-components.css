@@ -144,7 +144,9 @@
   font-size: 0.75rem;
   line-height: 1.3;
   color: var(--ink-muted);
-  background: color-mix(in srgb, var(--surface-raised) 72%, transparent);
+  /* Opaco (ATOM 5.0): semitransparente sobre el visor, el contraste dependía de lo que la escena tuviera
+     detrás en cada momento (fallos intermitentes de contraste en CI). */
+  background: var(--surface-raised);
   border: 1px solid var(--hairline);
 }
 

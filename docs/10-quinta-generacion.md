@@ -209,3 +209,10 @@ El informe lo presenta como una deducción por posición, no como una certeza. C
 - **error conceptual:** tipo de error diagnosticado por el corrector, o planteamiento erróneo detectado en el procedimiento;
 - **error aritmético:** localizado línea a línea en el procedimiento;
 - **falta de tiempo:** preguntas sin responder al final.
+
+## 10. Accesibilidad: fallos intermitentes de CI resueltos de raíz
+La CI marcaba contrastes graves que en local no aparecían. Había dos causas, y ninguna se resolvió ocultando el aviso:
+1. **Animaciones de entrada.** axe auditaba a mitad de la aparición con opacidad y medía texto semitransparente. Ahora `tools/a11y.mjs` espera a que terminen las animaciones finitas, que es lo que ve el usuario.
+2. **Etiquetas sobre el visor 3D.** «ESQUEMA», «CÁLCULO» y similares tenían el fondo semitransparente, así que su contraste dependía de lo que la escena tuviera detrás. Al hacerlas opacas apareció el problema real: el ámbar del tema claro (#a8670d) daba 3,4:1 sobre la pizarra del visor. El visor tiene ahora sus propios colores de estado (ok, aviso, error, electrón, protón), por encima de 4,5:1. En móvil, donde la leyenda va sobre fondo claro, se mantienen los del tema.
+
+Además, el contenedor de la escena 3D es ahora una región etiquetada («Escena 3D del laboratorio»), que corrige la infracción moderada «region». Resultado: las 34 vistas auditadas, con 0 infracciones.

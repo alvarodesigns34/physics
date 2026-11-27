@@ -75,3 +75,24 @@
     background: var(--surface-raised);
   }
 }
+
+/* ATOM 5.0 · Colores de estado sobre el visor oscuro (en cualquier tema). Los del tema claro (p. ej. el
+   ámbar #a8670d de «ESQUEMA») daban 3,4:1 sobre la pizarra; estos superan 4,5:1 (comprobado con axe). */
+.label-layer {
+  --ok: #5fd39a;
+  --warn: #f2b45c;
+  --bad: #ff8f7d;
+  --electron: #8fbcff;
+  --proton: #ff9a7a;
+}
+/* En móvil la leyenda va debajo del visor, sobre fondo claro: allí se quedan los colores del tema. */
+@media (min-width: 761px) {
+  .stage-caption,
+  .app[data-kind='laboratorio'] .workspace > :not(.side):not(.label-layer) {
+    --ok: #5fd39a;
+    --warn: #f2b45c;
+    --bad: #ff8f7d;
+    --electron: #8fbcff;
+    --proton: #ff9a7a;
+  }
+}
