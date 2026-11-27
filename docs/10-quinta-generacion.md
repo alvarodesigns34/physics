@@ -121,3 +121,29 @@ SwiftShader, calidad media, 1440×900. Datos: `docs/mediciones/perf-atom5-base.j
 - **En práctica.** Panel «Escribe tu procedimiento», con cada línea marcada ✓/✗ y los resultados intermedios correctos.
 - **En los simulacros.** Hay procedimiento opcional por pregunta y se guarda con la sesión. Si un paso numérico está mal escrito, o en blanco, pero el procedimiento llega a su valor correcto, recibe un crédito de 0,75: es un error de transcripción, no de comprensión. El informe muestra el procedimiento con el error localizado.
 - **Pruebas.** `procedure.test.ts` (28), `examSession.test.ts` y un e2e que localiza el error en la línea 3.
+
+## 4. Didáctica: progresión completa en cada apartado
+Cada sección de la guía sigue ahora la progresión que pide la directiva:
+1. **Intuición**: la idea en una frase, antes de cualquier término técnico.
+2. **Fundamento**: el texto de la teoría.
+3. **Por qué**: la razón física.
+4. **Visual interactivo**: el widget va ahora antes de la fórmula.
+5. **Fórmula**: con su explorador manipulable.
+6. **Deducción**: de dónde sale la fórmula, en un desplegable.
+7. **Analogía y contraejemplo**.
+8. **Errores, trucos y cómo lo preguntan en el examen**.
+9. **Dudas frecuentes**.
+10. **Conexiones**: enlaces razonados a otros apartados.
+
+`learning/guideProgression.ts` aporta las capas nuevas:
+- intuición y conexiones para las 50 secciones;
+- deducciones en 12 apartados: A = Z + N, e⁻ = Z − q, media ponderada (y su problema inverso), v = λν, E = hc/λ, Rydberg a partir de Bohr, despeje de n₂, n(n − 1)/2, radios y energías de Bohr, λ = h/p, 2l + 1 y 2n², y Z_ef de Slater.
+
+**Las deducciones están verificadas con números.** `guideProgression.test.ts` comprueba que:
+- 13,6 eV/(h·c) da 1,097·10⁷ m⁻¹;
+- h·c ≈ 1240 eV·nm;
+- a₀ = ħ²/(m·k·e²) da 0,529 Å y ke²/(2a₀) da 13,6 eV;
+- Σ(2l + 1) = n²;
+- el ejemplo de Slater del Na da 2,2.
+
+También comprueba que todas las conexiones apuntan a secciones existentes y que todas las fórmulas se analizan sin error.

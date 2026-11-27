@@ -10,6 +10,8 @@ import { formatNumber } from '../../science/numbers';
 import { Icon } from '../../ui/Icon';
 import { GuideWidget } from './widgets';
 import { DEPTH } from '../../learning/guideDepth';
+import { PROGRESSION } from '../../learning/guideProgression';
+import { MathText } from '../../ui/MathText';
 import { LIVE, sliderToValue, valueToSlider, type LiveFormula } from '../../learning/liveFormulas';
 
 const covered = new Set(COVERED_NODES);
@@ -166,6 +168,7 @@ export function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) 
   const node = NODES.find((n) => n.id === s.node);
   const mastery = useStore((st) => st.mastery[s.node]);
   const depth = DEPTH[s.id ?? s.node];
+  const prog = PROGRESSION[s.id ?? s.node];
   return (
     <section id={`sec-${s.id ?? s.node}`} className="guide-sec" aria-labelledby={`h-${s.id ?? s.node}`} data-block={s.node.split('.')[0]}>
       <header className="guide-sec__head">
@@ -179,6 +182,12 @@ export function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) 
           </span>
         ) : null}
       </header>
+      {prog && (
+        <p className="guide-intuition">
+          <span className="guide-stage">Intuición</span>
+          {prog.intuition}
+        </p>
+      )}
       <div className="guide-sec__body">
         {s.body.map((p, i) => (
           <p key={i}>
@@ -192,6 +201,7 @@ export function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) 
           </p>
         )}
       </div>
+      {s.widget && <GuideWidget id={s.widget} />}
       {s.formulas && (
         <div className="formula-grid">
           {s.formulas.map((f) => (
@@ -199,7 +209,24 @@ export function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) 
           ))}
         </div>
       )}
-      {s.widget && <GuideWidget id={s.widget} />}
+      {prog?.derivation && (
+        <details className="derivation">
+          <summary>
+            <span className="guide-stage">Deducción</span> {prog.derivation.title}
+          </summary>
+          <ol className="derivation__steps">
+            {prog.derivation.steps.map((st, k) => (
+              <li key={k}>
+                <p>{st.text}</p>
+                {st.math && <MathText tex={st.math} block />}
+              </li>
+            ))}
+          </ol>
+          <p className="derivation__meaning">
+            <strong>Qué significa:</strong> {prog.derivation.meaning}
+          </p>
+        </details>
+      )}
       {(depth?.analogy || depth?.counter) && (
         <div className="guide-callouts">
           {depth.analogy && (
@@ -269,6 +296,16 @@ export function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) 
             </details>
           ))}
         </div>
+      ) : null}
+      {prog?.connections.length ? (
+        <nav className="connections" aria-label={`Conexiones de ${s.title}`}>
+          <span className="guide-stage">Conecta con</span>
+          {prog.connections.map((c) => (
+            <a key={c.to} className="connection" href={`#/guia?n=${c.to}`}>
+              <span className="nid">{c.to.replace('-inv', '')}</span> {c.why}
+            </a>
+          ))}
+        </nav>
       ) : null}
       {RIGOR_NOTES.filter((r) => r.node === s.node && !s.id).map((r) => (
         <details key={r.id} className="rigor">

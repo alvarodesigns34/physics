@@ -19,7 +19,7 @@ export type MathNode =
 const SYMBOLS: Record<string, string> = {
   cdot: '·', times: '×', approx: '≈', to: '→', rightarrow: '→', le: '≤', ge: '≥', pm: '±', neq: '≠',
   Delta: 'Δ', lambda: 'λ', nu: 'ν', mu: 'µ', psi: 'ψ', pi: 'π', infty: '∞', alpha: 'α', theta: 'θ', rho: 'ρ', sigma: 'σ',
-  ',': ' ', ';': ' ', quad: ' ', qquad: '  ', '%': '%', minus: '−',
+  ',': ' ', ';': ' ', quad: ' ', qquad: '  ', '%': '%', minus: '−', hbar: 'ħ', ldots: '…', cdots: '⋯', sum: 'Σ', Rightarrow: '⇒', ell: 'ℓ', varepsilon: 'ε', epsilon: 'ε',
 };
 
 /** Analiza una expresión. Lanza un Error con mensaje claro si está mal formada. */
