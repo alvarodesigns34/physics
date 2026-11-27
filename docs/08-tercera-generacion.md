@@ -72,7 +72,10 @@ Las pruebas de estas familias encontraron dos defectos propios antes de publicar
 - **Electron Architect**: 11 desafíos (construir, excepciones, iones, excitados con condiciones, reparar Pauli/Hund/Aufbau nombrando antes la regla). Durante el desafío se ocultan el objetivo y el llenado automático.
 - **Mass Spectrometry**: muestra desconocida X (siete elementos de dos isótopos): identificar por la masa media MEDIDA y deducir abundancias con la media fijada; se distinguen abundancia natural, medida e intensidad ilustrativa.
 - **Quantum Space**: dos orbitales a la vez con la misma escala (tamaños relativos reales) y P(r) superpuestas; parejas didácticas.
-- Pendientes: Forge (comparación simultánea de especies y experimentos guiados), Photon (identificación de elementos por espectro), Periodic (vistas por grupo/periodo y multiselección).
+- **Photon Lab**: identificar elementos y mezclas comparando con espectros NIST de referencia (familia `espectro-problema`, con prueba de identificabilidad para las 15 muestras posibles); acceso desde el espectroscopio.
+- **Periodic Universe**: vista de tendencias (radio, EI₁, χ, AE, Z_ef) por periodo o grupo; las excepciones se detectan EN LOS DATOS y se explican con el comparador razonado.
+- **Atomic Forge**: comparación de hasta tres especies con las diferencias resaltadas y su relación (isótopos, iones, isóbaros, isótonos, isoelectrónicas).
+- **Ruta de estudio integrada** (§11): comprender → observar (con predicción) → guiado → aplicar → nivel examen → consolidar con refuerzo de la competencia más fallada.
 
 ## 6. Ciclo 6 — Mediciones (SwiftShader; solo comparativas)
 Misma herramienta (`tools/perf.mjs`), misma máquina y mismo renderizador por software que en ATOM 2.0. Datos: `docs/mediciones/perf-final.json` (2.0) frente a `perf-atom3-ciclo6.json` (3.0).
@@ -91,5 +94,11 @@ Misma herramienta (`tools/perf.mjs`), misma máquina y mismo renderizador por so
 - Laboratorios: sin cambio significativo. **Interacción en Quantum** (cambiar n): tarea larga máxima 0,9 s → 1,9 s. Perfil de CPU (CDP): el JavaScript propio suma < 30 ms; 6,7 s son «(program)», rasterización síncrona de SwiftShader. No es atribuible a nuestro código ni extrapolable a una GPU real.
 - **No se afirma ninguna mejora de FPS en hardware real**: hace falta medir en un ordenador con GPU y en un iPad (pendiente).
 
-## 7. Pendiente
+## 7. Calidad verificable
+- **Accesibilidad**: axe-core en 10 vistas, en CI. Encontró 4 problemas (aria-pressed en radios, contraste de una etiqueta, región desplazable sin teclado, salto de encabezados); 0 tras corregir.
+- **Contraste**: prueba WCAG de los tokens en ambos temas; corrigió `--ink-faint` (4,26 → 5,0:1) y `--ok` (4,37 → 5,2:1).
+- **Regresión visual**: 12 vistas deterministas (hora y aleatoriedad fijadas) con umbral 0,5 %; local, porque el renderizado de fuentes depende del sistema.
+- **Pruebas**: 790 unitarias (223 en 2.0), 33 comprobaciones e2e (23 en 2.0).
+
+## 8. Pendiente
 Véase `ATOM3-PROGRESS.md`.

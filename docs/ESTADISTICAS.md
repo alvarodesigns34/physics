@@ -6,8 +6,8 @@
 |---|---|
 | Apartados del temario | 54 |
 | Apartados con ejercicios | 54 |
-| Generadores de ejercicios (familias) | 46 |
-| · de ellos, de razonamiento (ATOM 3.0) | 10 |
+| Generadores de ejercicios (familias) | 47 |
+| · de ellos, de razonamiento (ATOM 3.0) | 11 |
 | Preguntas de desarrollo con rúbrica | 9 |
 | Ejercicios de los documentos | 129 |
 | · AMP | 71 |
@@ -20,6 +20,6 @@
 | Secciones de la guía | 52 |
 | Apartados con trucos | 26 |
 | Notas de rigor | 14 |
-| Pruebas unitarias (vitest) | 709 superadas de 709 |
-| Comprobaciones e2e (tools/smoke.mjs) | 26 |
-| Archivos versionados | 210 |
+| Pruebas unitarias (vitest) | 790 superadas de 790 |
+| Comprobaciones e2e (tools/smoke.mjs) | 30 |
+| Archivos versionados | 309 |

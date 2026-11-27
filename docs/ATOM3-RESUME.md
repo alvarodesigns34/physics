@@ -31,6 +31,12 @@ El usuario pidió (26/11/2026) la «ATOM 3.0 — MASTER DIRECTIVE»: transformac
 - No inventar mediciones, fuentes ni resultados.
 - Commits con trailer `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` y `Claude-Session: https://claude.ai/code/session_01QDwEvNboyJCrCc3iFYyTjb`. Sin identificadores de modelo en el código.
 
+## Estado (27/11/2026, tras la reanudación de las 02:35)
+Hechos los ciclos 1–4, buena parte del 5–8 (ver ATOM3-PROGRESS.md). Siguiente: ciclo 9 (refinamiento) y la revisión de las 35 misiones. Nada publicado en `main`.
+
+## Herramientas
+`npm test` · `npm run build` · `npm run e2e` · `npm run a11y` · `npm run visual` (`--update` para nuevas referencias) · `npm run stats` · `node tools/shots.mjs <etiqueta> [desktop|ipad|ipadv]` · `node tools/perf.mjs <salida.json>`.
+
 ## Cómo retomar
 1. `git status && git log --oneline -15` en la rama.
 2. Leer `ATOM3-PROGRESS.md` → primera casilla sin marcar.

@@ -47,7 +47,7 @@ Rama: `claude/proyecto-atom-interactive-830d7u` · Producción (`main`) intacta 
 - [x] Enlace directo `#/entrenamiento?gen=<id>`.
 - [ ] Añadir `resolution` estructurada a los generadores antiguos más usados (Rydberg, ondas, masa media, configuración).
 - [ ] Más familias: interpretación de espectros de varios elementos, cifras significativas, conversiones encadenadas, problemas inversos de masa espectrométrica dentro del laboratorio.
-- [ ] Estudio integrado por concepto (comprender → observar → experimentar → practicar → error → consolidar).
+- [x] Ruta de estudio integrada por concepto (9ef1a33).
 - [ ] `level` 1–5 visible en la interfaz cuando se haya validado con datos de uso.
 
 ## Ciclo 5 — Laboratorios 3.0 ◐
@@ -55,9 +55,9 @@ Rama: `claude/proyecto-atom-interactive-830d7u` · Producción (`main`) intacta 
 - [x] Electron Architect: 11 desafíos (094515e).
 - [x] Mass Spectrometry: muestra desconocida, inversos (db56501).
 - [x] Quantum: comparación de dos orbitales con escala común (32114ca).
-- [ ] Forge: comparación simultánea átomo/ion/isótopo y experimentos guiados.
-- [ ] Photon: identificar un elemento desconocido por su espectro (líneas NIST).
-- [ ] Periodic: vistas por grupo/periodo (gráficos), multiselección y razonamiento.
+- [x] Forge: comparación simultánea de hasta tres especies con relaciones (8221f74). Pendiente: experimentos guiados nuevos.
+- [x] Photon: identificar elementos y mezclas por espectro NIST (c11dd99).
+- [x] Periodic: vista de tendencias por periodo/grupo con excepciones desde los datos (b049105). Pendiente: multiselección > 2.
 - [ ] Materiales/iluminación 3D coherentes con la nueva identidad (revisión visual de cada escena).
 
 ## Ciclo 6 — Medición ◐
@@ -65,8 +65,23 @@ Rama: `claude/proyecto-atom-interactive-830d7u` · Producción (`main`) intacta 
 - [ ] Render bajo demanda cuando la escena esté quieta (batería en iPad) sin romper simulaciones continuas.
 - [ ] Medición en GPU real y en iPad (no disponible en este entorno).
 
-## Ciclos 7–9 ⏳
-Inspección visual completa (todas las pestañas, escritorio + iPad) · revisión adversarial · refinamiento.
+## Ciclo 7 — Inspección visual ◐
+- [x] Capturas escritorio (`c3*`, `c4*`, `c5*`), iPad horizontal (`c3d`) y vertical (`c3e`), tema oscuro y campaña (`c8`).
+- [x] Regresión visual determinista: `npm run visual` (12 vistas, 0 % de diferencia).
+- [ ] Revisar cada pestaña interna de cada laboratorio en iPad vertical.
+
+## Ciclo 8 — Revisión adversarial ◐
+- [x] Accesibilidad axe: 4 problemas corregidos, 0 restantes en 10 vistas; en CI.
+- [x] Contraste AA de tokens (2 corregidos).
+- [x] Foco de la búsqueda; etiquetas de campaña; verificación de datos (EI₁ sucesivas frente a NIST, iones de transición, λ ionizante del H = límite de Lyman).
+- [ ] Revisión con lector de pantalla real (VoiceOver en iPad).
+
+## Ciclo 9 — Refinamiento ⏳ (siguiente)
+- [ ] Partir `global.css` en capas y retirar reglas muertas.
+- [ ] `resolution` estructurada en los generadores antiguos más usados.
+- [ ] Más familias (cifras significativas, conversiones encadenadas, inversos de Bohr).
+- [ ] Render bajo demanda cuando la escena está quieta (batería en iPad).
+- [ ] Revisión de las 35 misiones de la campaña (§23).
 
 ## Pruebas
-- Línea base: 223 vitest + 23 e2e. Actual: 709 vitest + 26 e2e (todas en verde). Cifras: `npm run stats` → docs/ESTADISTICAS.md.
+- Línea base: 223 vitest + 23 e2e. Actual: 790 vitest + 33 e2e + axe (10 vistas) + regresión visual (12), todo en verde. Cifras: `npm run stats` → docs/ESTADISTICAS.md.
