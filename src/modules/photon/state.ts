@@ -31,6 +31,8 @@ interface PhotonState {
   cascade: { n: number; stamp: number } | undefined;
   spectroElement: string;
   spectroMode: 'emision' | 'absorcion';
+  /** Estado del gas en absorción: frío (solo líneas de resonancia) o caliente (ilustrativo) */
+  spectroGas: 'frio' | 'caliente';
   spectroGuess: { symbol: string; stamp: number } | undefined;
   setTab: (t: PhotonTab) => void;
   setLambda: (nm: number) => void;
@@ -40,7 +42,7 @@ interface PhotonState {
   fire: () => Transition | null;
   runCascade: (n: number) => void;
   clearDetector: () => void;
-  setSpectro: (patch: Partial<Pick<PhotonState, 'spectroElement' | 'spectroMode'>>) => void;
+  setSpectro: (patch: Partial<Pick<PhotonState, 'spectroElement' | 'spectroMode' | 'spectroGas'>>) => void;
   guess: (symbol: string) => void;
 }
 
@@ -60,6 +62,7 @@ export const usePhoton = create<PhotonState>((set, get) => ({
   cascade: undefined,
   spectroElement: 'H',
   spectroMode: 'emision',
+  spectroGas: 'frio',
   spectroGuess: undefined,
   setTab: (tab) => set({ tab }),
   setLambda: (lambdaNm) => set({ lambdaNm }),

@@ -12,3 +12,27 @@ export const VISIBLE_SPECTRA: ElementSpectrum[] = [
   { symbol: 'Hg', name: 'Mercurio', lines: [{ lambdaNm: 404.66, intensity: 0.4 }, { lambdaNm: 433.92, intensity: 0.06 }, { lambdaNm: 434.75, intensity: 0.1 }, { lambdaNm: 435.83, intensity: 1.0 }, { lambdaNm: 546.07, intensity: 0.5 }, { lambdaNm: 576.96, intensity: 0.05 }, { lambdaNm: 579.07, intensity: 0.06 }, { lambdaNm: 708.19, intensity: 0.025 }] },
   { symbol: 'Ne', name: 'Neón', lines: [{ lambdaNm: 470.44, intensity: 0.15 }, { lambdaNm: 471.21, intensity: 0.15 }, { lambdaNm: 540.06, intensity: 0.2 }, { lambdaNm: 585.25, intensity: 0.2 }, { lambdaNm: 640.22, intensity: 0.2 }, { lambdaNm: 692.95, intensity: 1.0 }, { lambdaNm: 702.41, intensity: 0.3 }, { lambdaNm: 703.24, intensity: 0.8 }, { lambdaNm: 717.39, intensity: 0.8 }] },
 ];
+
+/**
+ * Líneas de RESONANCIA del visible: las que parten del estado fundamental del átomo neutro. Solo ellas
+ * aparecen en el espectro de absorción de un gas FRÍO (laboratorio, temperatura ambiente), porque casi
+ * todos sus átomos están en el estado fundamental. Fuente: NIST ASD (niveles inferiores de cada línea).
+ * - Na: doblete D, 3s ²S₁/₂ → 3p ²P°₁/₂,₃/₂ (589,59 y 589,00 nm).
+ * - H, He, Ne y Hg: ninguna línea visible parte del fundamental. Sus líneas de resonancia están en el UV
+ *   (H: serie de Lyman; He 58,4 nm; Ne 73,6 nm; Hg 253,7 nm). En el visible absorben solo si hay átomos en
+ *   niveles excitados (gas caliente, p. ej. una atmósfera estelar: las líneas de Balmer en estrellas A).
+ */
+export const VISIBLE_RESONANCE: Readonly<Record<string, readonly number[]>> = { Na: [589.0, 589.59] };
+
+export type GasCondition = 'frio' | 'caliente';
+
+/**
+ * Líneas oscuras de un espectro de absorción en el visible según el estado del gas. En el gas caliente se
+ * muestran todas las líneas de emisión como aproximación ilustrativa: las profundidades reales dependen de
+ * la temperatura (poblaciones de Boltzmann), que no se modela aquí.
+ */
+export function absorptionLines(spec: ElementSpectrum, gas: GasCondition): SpectralLine[] {
+  if (gas === 'caliente') return spec.lines;
+  const res = VISIBLE_RESONANCE[spec.symbol] ?? [];
+  return spec.lines.filter((l) => res.some((r) => Math.abs(r - l.lambdaNm) < 0.05));
+}

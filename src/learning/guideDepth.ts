@@ -262,7 +262,7 @@ export const DEPTH: Record<string, SectionDepth> = {
     doubts: [{ q: '¿Por qué el He está en el grupo 18 si es 1s²?', a: 'Por sus propiedades: es un gas noble, con la capa completa. Por configuración sería del bloque s, y la tabla prioriza el comportamiento químico.' }],
   },
   '7.4': {
-    why: 'Los elementos de una misma familia tienen la misma configuración de valencia y, por tanto, comportamientos químicos parecidos: todos los alcalinos forman cationes +1 y reaccionan con el agua.',
+    why: 'Los elementos de una misma familia tienen la misma configuración de valencia y, por tanto, comportamientos químicos parecidos: los alcalinos forman habitualmente cationes +1 y reaccionan con el agua, con una violencia que aumenta al bajar en el grupo.',
     exam: ['Nombrar la familia de un elemento.', 'Relacionar la familia con su configuración de valencia.'],
     doubts: [{ q: '¿El hidrógeno es un alcalino?', a: 'No, aunque se coloque en el grupo 1 por su configuración 1s¹. Es un no metal: forma moléculas H₂ y enlaces covalentes.' }],
   },

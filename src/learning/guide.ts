@@ -233,7 +233,7 @@ export const LESSONS: Lesson[] = [
         title: 'Espectros de emisión y absorción',
         body: [
           'Un gas **excitado** emite solo ciertas longitudes de onda: **espectro de emisión**, con líneas brillantes sobre fondo negro.',
-          'Si la luz blanca atraviesa un gas frío, faltan exactamente esas longitudes de onda: **espectro de absorción**, con líneas oscuras.',
+          'Si la luz blanca atraviesa un gas frío, faltan longitudes de onda de ese mismo conjunto: **espectro de absorción**, con líneas oscuras. Ojo: en un gas frío casi todos los átomos están en el estado fundamental, así que solo aparecen las líneas de los saltos que parten de él (en el hidrógeno, la serie de Lyman, en el UV). Cada línea de absorción coincide con una de emisión, pero no todas las de emisión aparecen en absorción.',
           'Cada elemento tiene un espectro **único**: sirve para identificarlo, incluso en las estrellas.',
         ],
       },
@@ -609,7 +609,7 @@ export const TRICKS: Record<string, string[]> = {
   '3.4': ['E = h·c/λ: λ va DIVIDIENDO. Si te sale E ≈ 10⁻⁴⁰ J, has multiplicado por λ.', 'J → eV: divide entre 1,602·10⁻¹⁹ (salen números «normales», 1–15 eV). eV → J: multiplica.'],
   '3.6': ['R en cm⁻¹ (109 740) → multiplica por 100 para tenerla en m⁻¹ (1,0974·10⁷). Si tu λ sale 100 veces grande, es eso.', 'n₁ es SIEMPRE el pequeño (el de abajo) y n₂ el grande: así el paréntesis es positivo.'],
   '3.7': ['Series de abajo arriba: «Le Bailo Pasodobles Bien Pronto» → Lyman (1), Balmer (2), Paschen (3), Brackett (4), Pfund (5).', 'Lyman = ultravioleta, Balmer = visible (y UV cercano), las demás = infrarrojo.', 'k-ésima línea de una serie: n₂ = n₁ + k. Tercera de Balmer → 5 → 2.'],
-  '3.7-inv': ['Cinco pasos y nunca falla: 1/λ → ÷R → resta de 1/n₁² → invierte → raíz.', 'Si n₂ sale 4,98 o 7,99, el nivel es 5 u 8 (redondeo de datos). Si sale 5,5, hay un error de cálculo.', 'Para n₁ (te dan n₂): el término 1/n₂² pasa SUMANDO.'],
+  '3.7-inv': ['Cinco pasos cortos, cada uno comprobable, evitan casi todos los errores: 1/λ → ÷R → resta de 1/n₁² → invierte → raíz.', 'Si n₂ sale 4,98 o 7,99, el nivel es 5 u 8 (redondeo de datos). Si sale 5,5, hay un error de cálculo.', 'Para n₁ (te dan n₂): el término 1/n₂² pasa SUMANDO.'],
   '3.8': ['Líneas desde el nivel n: n(n − 1)/2. Desde 4 → 6; desde 5 → 10; desde 6 → 15.'],
   '4.1': ['Sube = absorbe energía; baja = emite un fotón. El fotón siempre tiene E positiva.'],
   '4.2': ['Energías del H para memorizar: −13,6 / −3,40 / −1,51 / −0,85 eV (n = 1, 2, 3, 4).'],

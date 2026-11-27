@@ -68,3 +68,17 @@ describe('Datos de los elementos frente a referencias', () => {
     expect(Math.abs(elementBySymbol(sym as string)!.atomicWeight - (ref as number))).toBeLessThan(0.01);
   });
 });
+
+describe('Espectros de absorción: solo absorben en frío las líneas de resonancia (NIST ASD)', async () => {
+  const { VISIBLE_SPECTRA, absorptionLines } = await import('./data/spectralLines');
+  const spec = (s: string) => VISIBLE_SPECTRA.find((x) => x.symbol === s)!;
+  it('sodio frío: solo el doblete D (589,0 y 589,6 nm)', () => {
+    expect(absorptionLines(spec('Na'), 'frio').map((l) => l.lambdaNm)).toEqual([589.0, 589.59]);
+  });
+  it.each(['H', 'He', 'Ne', 'Hg'])('%s frío: ninguna línea visible parte del fundamental', (s) => {
+    expect(absorptionLines(spec(s), 'frio')).toEqual([]);
+  });
+  it('gas caliente: todas las líneas de emisión pueden aparecer en absorción', () => {
+    expect(absorptionLines(spec('H'), 'caliente')).toHaveLength(spec('H').lines.length);
+  });
+});

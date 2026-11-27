@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { absorptionLines } from '../../science/data/spectralLines';
 import { Prediction } from '../../ui/Prediction';
 import { usePhoton, type PhotonTab } from './state';
 import { WaveScene, HydrogenScene } from './scenes';
@@ -59,9 +60,10 @@ export function PhotonScene() {
   const tab = usePhoton((s) => s.tab);
   const el = usePhoton((s) => s.spectroElement);
   const mode = usePhoton((s) => s.spectroMode);
+  const gas = usePhoton((s) => s.spectroGas);
   useTabFromRoute();
   if (tab === 'ondas') return <WaveScene />;
-  if (tab === 'espectroscopio') return <SpectroscopeScene symbol={el} mode={mode} />;
+  if (tab === 'espectroscopio') return <SpectroscopeScene symbol={el} mode={mode} gas={gas} />;
   return <HydrogenScene />;
 }
 
@@ -335,7 +337,7 @@ function HydrogenPanel() {
 // ── Pestaña Espectroscopio ────────────────────────────────────────────────
 
 function SpectroPanel() {
-  const { spectroElement, spectroMode, setSpectro, guess } = usePhoton();
+  const { spectroElement, spectroMode, spectroGas, setSpectro, guess } = usePhoton();
   const sample = useSpectroSample();
   const [verdict, setVerdict] = useState<{ ok: boolean; msg: string } | null>(null);
   const ref = VISIBLE_SPECTRA.find((s) => s.symbol === spectroElement)!;
@@ -369,7 +371,17 @@ function SpectroPanel() {
             </button>
           ))}
         </div>
-        <VisibleSpectrum lines={ref.lines} mode={spectroMode} label={`Espectro de ${spectroMode} del ${ref.name.toLowerCase()}`} />
+        {spectroMode === 'absorcion' && (
+          <div className="segmented" role="radiogroup" aria-label="Estado del gas">
+            <button type="button" role="radio" aria-checked={spectroGas === 'frio'} onClick={() => setSpectro({ spectroGas: 'frio' })}>
+              Gas frío (laboratorio)
+            </button>
+            <button type="button" role="radio" aria-checked={spectroGas === 'caliente'} onClick={() => setSpectro({ spectroGas: 'caliente' })}>
+              Gas caliente (estrella)
+            </button>
+          </div>
+        )}
+        <VisibleSpectrum lines={spectroMode === 'absorcion' ? absorptionLines(ref, spectroGas) : ref.lines} mode={spectroMode} label={`Espectro de ${spectroMode} del ${ref.name.toLowerCase()}${spectroMode === 'absorcion' ? (spectroGas === 'frio' ? ', gas frío' : ', gas caliente') : ''}`} />
         <VisibleAxis />
         <a className="btn btn--sm btn--primary" style={{ alignSelf: 'flex-start' }} href="#/entrenamiento?gen=espectro-problema">
           Ponte a prueba: identifica una muestra desconocida
@@ -408,7 +420,13 @@ function SpectroPanel() {
           </p>
         </details>
         <p className="small faint">
-          {spectroMode === 'emision' ? 'Gas excitado: emite solo unas longitudes de onda (líneas brillantes).' : 'Luz blanca que atraviesa el gas: faltan exactamente las mismas longitudes de onda (líneas oscuras).'}
+          {spectroMode === 'emision'
+            ? 'Gas excitado: emite solo unas longitudes de onda (líneas brillantes).'
+            : spectroGas === 'frio'
+              ? absorptionLines(ref, 'frio').length
+                ? `Gas frío: casi todos los átomos están en el estado fundamental, así que solo absorben las líneas que parten de él (en el ${ref.name.toLowerCase()}, el doblete D). Las demás líneas de emisión no aparecen.`
+                : `Gas frío: ninguna línea visible del ${ref.name.toLowerCase()} parte del estado fundamental; sus líneas de absorción están en el ultravioleta. En el visible no se ve ninguna línea oscura.`
+              : 'Gas caliente (p. ej., la atmósfera de una estrella): hay átomos en niveles excitados y aparecen como líneas oscuras líneas que en el gas frío faltan. Cada línea de absorción coincide con una de emisión. Las profundidades dibujadas son ilustrativas: dependen de la temperatura.'}
         </p>
       </section>
       <section className="section">
@@ -420,7 +438,9 @@ function SpectroPanel() {
             </button>
           )}
         </div>
-        <VisibleSpectrum lines={sampleSpec.lines} mode={sampleMode} label="Muestra desconocida" />
+        {/* La muestra se compara en absorción como gas caliente (p. ej., una estrella): en frío, varios
+            elementos no tendrían ninguna línea visible que comparar. */}
+        <VisibleSpectrum lines={sampleMode === 'absorcion' ? absorptionLines(sampleSpec, 'caliente') : sampleSpec.lines} mode={sampleMode} label={sampleMode === 'absorcion' ? 'Muestra desconocida (gas caliente)' : 'Muestra desconocida'} />
         <VisibleAxis />
         <span className="small muted">¿Qué elemento produce este espectro?</span>
         <div className="row row--wrap" style={{ gap: 6 }}>

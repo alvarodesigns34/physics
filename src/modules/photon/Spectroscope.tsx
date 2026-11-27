@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { Stage } from '../../render/Stage';
 import { LabelProjector, type Anchor } from '../../render/labels';
 import { useQuality, useReducedMotion } from '../../app/hooks';
-import { VISIBLE_SPECTRA } from '../../science/data/spectralLines';
+import { absorptionLines, VISIBLE_SPECTRA, type GasCondition } from '../../science/data/spectralLines';
 import { prismGeometry, type PrismRay } from '../../science/prism';
 import { wavelengthToLinearRGB } from '../../science/photon';
 import { lampColor, lineColor } from './scenes';
@@ -54,7 +54,7 @@ function srgb(c: number) {
 }
 
 /** Textura de la pantalla: continuo (absorción) o líneas brillantes (emisión) en su posición exacta. */
-function screenTexture(symbol: string, mode: 'emision' | 'absorcion'): THREE.CanvasTexture {
+function screenTexture(symbol: string, mode: 'emision' | 'absorcion', gas: GasCondition = 'frio'): THREE.CanvasTexture {
   const W = 1024;
   const H = 64;
   const c = document.createElement('canvas');
@@ -64,7 +64,8 @@ function screenTexture(symbol: string, mode: 'emision' | 'absorcion'): THREE.Can
   ctx.fillStyle = '#050404';
   ctx.fillRect(0, 0, W, H);
   const xOfS = (s: number) => ((s - (S_CENTER - SCREEN_W / 2)) / SCREEN_W) * W;
-  const lines = VISIBLE_SPECTRA.find((x) => x.symbol === symbol)?.lines ?? [];
+  const spec = VISIBLE_SPECTRA.find((x) => x.symbol === symbol);
+  const lines = !spec ? [] : mode === 'absorcion' ? absorptionLines(spec, gas) : spec.lines;
   if (mode === 'absorcion') {
     for (let x = 0; x < W; x++) {
       const s = S_CENTER - SCREEN_W / 2 + (x / W) * SCREEN_W;
@@ -261,11 +262,11 @@ export const SPECTRO_ANCHORS: Anchor[] = (() => {
   ];
 })();
 
-export function SpectroscopeScene({ symbol, mode }: { symbol: string; mode: 'emision' | 'absorcion' }) {
+export function SpectroscopeScene({ symbol, mode, gas = 'frio' }: { symbol: string; mode: 'emision' | 'absorcion'; gas?: GasCondition }) {
   const reduced = useReducedMotion();
   const q = useQuality();
   const lamp = useMemo(() => (mode === 'emision' ? lampColor(symbol).multiplyScalar(3) : new THREE.Color('#fff4e6').multiplyScalar(3)), [symbol, mode]);
-  const tex = useMemo(() => screenTexture(symbol, mode), [symbol, mode]);
+  const tex = useMemo(() => screenTexture(symbol, mode, gas), [symbol, mode, gas]);
   useEffect(() => () => tex.dispose(), [tex]);
   const rays = useMemo(() => {
     if (mode === 'emision') {
