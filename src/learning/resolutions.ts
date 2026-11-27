@@ -52,3 +52,80 @@ export function waveResolution(value: number, unit: string, lambda: number, nu: 
     { kind: 'errores', text: 'No pasar nm a m (10⁻⁹), calcular λ/c en lugar de c/λ, o multiplicar h por λ en vez de por ν.' },
   ];
 }
+
+// ── ATOM 5.0 · Resoluciones específicas de más familias ─────────────────────
+
+export function inverseSeriesResolution(o: { n1: number; n2: number; seriesName: string; byLambda: boolean; lambdaNm?: number; nu?: number; c: number; R: number; w: number; x: number; inv1: number; invN2sq: number; n2sq: number; ord: number }): ResolutionStep[] {
+  return [
+    { kind: 'pregunta', text: `Encontrar desde qué nivel n₂ baja el electrón para producir esa línea de la serie de ${o.seriesName}, y qué número de línea es.` },
+    { kind: 'datos', text: `${o.byLambda ? `λ = ${sci(o.lambdaNm!, 4)} nm` : `ν = ${sci(o.nu!, 3)} Hz`}; serie de ${o.seriesName} → n₁ = ${o.n1}; R = ${sci(o.R, 5)} m⁻¹.` },
+    { kind: 'principio', text: 'Ecuación de Rydberg, ahora con n₂ como incógnita:', math: '\\frac{1}{\\lambda} = R\\left(\\frac{1}{n_1^2} - \\frac{1}{n_2^2}\\right)' },
+    { kind: 'por-que', text: 'La serie fija el nivel de llegada (n₁). La longitud de onda fija la energía del salto, y con ella el nivel de partida.' },
+    o.byLambda
+      ? { kind: 'unidades', text: 'λ al SI y su inverso:', math: `\\lambda = ${texNum(o.lambdaNm! * 1e-9)}\\;\\text{m} \\Rightarrow \\frac{1}{\\lambda} = ${texNum(o.w)}\\;\\text{m}^{-1}` }
+      : { kind: 'unidades', text: 'De la frecuencia al número de ondas (c = λν):', math: `\\frac{1}{\\lambda} = \\frac{\\nu}{c} = \\frac{${texNum(o.nu!)}}{${texNum(o.c)}} = ${texNum(o.w)}\\;\\text{m}^{-1}` },
+    { kind: 'despeje', text: 'Se divide entre R y se deja solo el término de n₂:', math: `\\frac{1}{n_2^2} = \\frac{1}{n_1^2} - \\frac{1}{\\lambda R} = ${texNum(o.inv1)} - ${texNum(o.x)} = ${texNum(o.invN2sq)}` },
+    { kind: 'calculo', text: 'Se invierte y se saca la raíz:', math: `n_2 = \\sqrt{${texNum(o.n2sq)}} = ${texNum(Math.sqrt(o.n2sq), 3)} \\approx ${o.n2}` },
+    { kind: 'resultado', text: `n₂ = ${o.n2}: el salto ${o.n2} → ${o.n1}, ${['primera', 'segunda', 'tercera', 'cuarta', 'quinta', 'sexta'][o.ord - 1] ?? `${o.ord}.ª`} línea de la serie de ${o.seriesName}.` },
+    { kind: 'comprobacion', text: `n₂ tiene que ser un entero mayor que n₁ = ${o.n1}. Si 1/n₂² sale negativo, la línea no pertenece a esa serie. Si n₂ sale lejos de un entero, revisa las unidades de λ o el valor de R.` },
+    { kind: 'errores', text: 'Olvidar pasar λ a metros, restar al revés (1/λR − 1/n₁²), no invertir antes de la raíz y redondear n₂ hacia arriba «por si acaso»: tiene que salir casi entero.' },
+  ];
+}
+
+export function cascadeResolution(n: number, total: number, visible: { from: number; to: number; nm: number }[] | null): ResolutionStep[] {
+  const steps: ResolutionStep[] = [
+    { kind: 'pregunta', text: `Cuántas líneas distintas puede emitir una muestra excitada hasta n = ${n}${visible ? ' y cuántas son visibles' : ''}.` },
+    { kind: 'principio', text: 'Cada línea es un salto entre dos niveles distintos, y una muestra con muchos átomos recorre todos los caminos posibles. Contar líneas es contar parejas de niveles:', math: '\\text{líneas} = \\frac{n(n-1)}{2}' },
+    { kind: 'calculo', text: '', math: `\\frac{${n} \\cdot ${n - 1}}{2} = ${total}` },
+    { kind: 'metodo', text: `Comprobación sumando: desde ${n} hay ${n - 1} saltos, desde ${n - 1} hay ${n - 2}… → ${Array.from({ length: n - 1 }, (_, i) => n - 1 - i).join(' + ')} = ${total}.` },
+  ];
+  if (visible) steps.push({ kind: 'interpretacion', text: `Solo pueden ser visibles los saltos que terminan en n = 2 (Balmer): ${visible.length ? visible.map((v) => `${v.from}→${v.to} (${sci(v.nm, 3)} nm)`).join(', ') : 'ninguno con estos niveles'}. Los que acaban en n = 1 son UV y los que acaban en n ≥ 3, IR.` });
+  steps.push(
+    { kind: 'resultado', text: `${total} líneas${visible ? `, ${visible.length} en el visible` : ''}.` },
+    { kind: 'errores', text: 'Contar solo los saltos directos al nivel 1 (n − 1), o contar dos veces cada pareja (n(n − 1) sin dividir entre 2).' },
+  );
+  return steps;
+}
+
+export function levelResolution(n: number, E: number, withIonization: boolean): ResolutionStep[] {
+  const steps: ResolutionStep[] = [
+    { kind: 'pregunta', text: `Energía del electrón del hidrógeno en el nivel n = ${n}${withIonization ? ', y la energía necesaria para arrancarlo desde ahí' : ''}.` },
+    { kind: 'principio', text: 'Niveles de Bohr del hidrógeno:', math: 'E_n = -\\frac{13,6\\;\\text{eV}}{n^2}' },
+    { kind: 'por-que', text: 'El cero de energía es el electrón libre. Ligado al núcleo tiene menos energía, así que es negativa; y es más negativa cuanto más cerca está del núcleo (n pequeño).' },
+    { kind: 'sustitucion', text: '', math: `E_{${n}} = -\\frac{13,6}{${n * n}} = ${texNum(E, 3)}\\;\\text{eV}` },
+  ];
+  if (withIonization) steps.push({ kind: 'calculo', text: 'Ionizar es llevarlo de Eₙ a E = 0:', math: `E_{ion} = 0 - (${texNum(E, 3)}) = ${texNum(-E, 3)}\\;\\text{eV}` });
+  steps.push(
+    { kind: 'resultado', text: `E(n = ${n}) = ${sci(E, 3)} eV${withIonization ? `; energía de ionización desde ese nivel: ${sci(-E, 3)} eV` : ''}.` },
+    { kind: 'comprobacion', text: 'Desde n = 1 hacen falta 13,6 eV, la energía de ionización del hidrógeno. Desde niveles altos cuesta mucho menos.' },
+    { kind: 'errores', text: 'Dividir entre n en lugar de entre n², dar la energía de ionización con signo negativo y confundir eV con J (1 eV = 1,602·10⁻¹⁹ J).' },
+  );
+  return steps;
+}
+
+export function averageMassResolution(symbol: string, iso: { a: number; mass: number; abundance: number }[], M: number): ResolutionStep[] {
+  const top = [...iso].sort((a, b) => b.abundance - a.abundance)[0]!;
+  return [
+    { kind: 'pregunta', text: `Masa atómica media del ${symbol} a partir de las masas y abundancias de sus isótopos.` },
+    { kind: 'datos', text: iso.map((i) => `${symbol}-${i.a}: ${sci(i.mass, 7)} u, ${sci(i.abundance, 4)} %`).join(' · ') },
+    { kind: 'principio', text: 'Media ponderada: cada isótopo pesa según su abundancia.', math: 'M = \\frac{m_1 \\cdot \\%_1 + m_2 \\cdot \\%_2 + \\ldots}{100}' },
+    { kind: 'por-que', text: 'Una muestra real contiene billones de átomos en esas proporciones. La masa que se mide es la media, no la de ningún átomo concreto.' },
+    { kind: 'sustitucion', text: '', math: `M = \\frac{${iso.map((i) => `${texNum(i.mass, 7)} \\cdot ${texNum(i.abundance, 4)}`).join(' + ')}}{100}` },
+    { kind: 'resultado', text: `M = ${sci(M, 6)} u.` },
+    { kind: 'comprobacion', text: `M queda entre la masa del isótopo más ligero y la del más pesado, y más cerca del más abundante (${symbol}-${top.a}, ${sci(top.abundance, 3)} %).` },
+    { kind: 'errores', text: 'Hacer la media aritmética (sin ponderar), olvidar dividir entre 100 y usar A (entero) en lugar de la masa isotópica cuando el enunciado da la masa exacta.' },
+  ];
+}
+
+export function abundanceResolution(symbol: string, l: { a: number; mass: number }, h: { a: number; mass: number }, M: number, x: number): ResolutionStep[] {
+  return [
+    { kind: 'pregunta', text: `Abundancia de cada isótopo del ${symbol} conocida la masa atómica media.` },
+    { kind: 'datos', text: `m₁ = ${sci(l.mass, 7)} u (${symbol}-${l.a}); m₂ = ${sci(h.mass, 7)} u (${symbol}-${h.a}); M = ${sci(M, 5)} u.` },
+    { kind: 'principio', text: 'Con dos isótopos, las abundancias son x y 100 − x:', math: 'M = \\frac{m_1 x + m_2 (100 - x)}{100}' },
+    { kind: 'despeje', text: 'Se agrupan los términos en x:', math: 'x = 100 \\cdot \\frac{M - m_2}{m_1 - m_2}' },
+    { kind: 'sustitucion', text: '', math: `x = 100 \\cdot \\frac{${texNum(M, 5)} - ${texNum(h.mass, 7)}}{${texNum(l.mass, 7)} - ${texNum(h.mass, 7)}} = ${texNum(x, 4)}\\;\\%` },
+    { kind: 'resultado', text: `${symbol}-${l.a}: ${sci(x, 4)} %; ${symbol}-${h.a}: ${sci(100 - x, 4)} %.` },
+    { kind: 'comprobacion', text: `Sustituyendo: (${sci(l.mass, 5)}·${sci(x, 3)} + ${sci(h.mass, 5)}·${sci(100 - x, 3)})/100 ≈ ${sci(M, 5)} u. Además, el isótopo más abundante es el más cercano a M.` },
+    { kind: 'errores', text: 'Plantear dos incógnitas sin usar que suman 100 % y equivocarse de signo al despejar: (M − m₂)/(m₁ − m₂) es positivo aunque numerador y denominador sean negativos.' },
+  ];
+}

@@ -147,3 +147,13 @@ Cada sección de la guía sigue ahora la progresión que pide la directiva:
 - el ejemplo de Slater del Na da 2,2.
 
 También comprueba que todas las conexiones apuntan a secciones existentes y que todas las fórmulas se analizan sin error.
+
+## 5. Resoluciones específicas por familia
+Cinco familias muy usadas dejan la plantilla genérica y pasan a tener una resolución escrita para ellas:
+- línea misteriosa (despejar n₂ en Rydberg, a partir de λ o de ν);
+- cascada de líneas, con la comprobación por suma y la identificación de las visibles;
+- niveles de Bohr y energía de ionización;
+- masa atómica media;
+- abundancias a partir de la masa media (problema inverso).
+
+Cada resolución se construye con los números del propio ejercicio y tiene comprobación de coherencia y errores típicos. Las pruebas de buena formación de fórmulas cubren ahora 10 familias con resolución propia.

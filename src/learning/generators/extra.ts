@@ -3,6 +3,7 @@
  * el núcleo científico o con datos de referencia; las preguntas conceptuales llevan retroalimentación
  * específica para cada distractor.
  */
+import { abundanceResolution, averageMassResolution } from '../resolutions';
 import { ELEMENTS, elementByZ, familyName, type ElementRecord } from '../../science/elements';
 import { NATURAL_ISOTOPES } from '../../science/data/naturalIsotopes';
 import { averageAtomicMass, twoIsotopeAbundance } from '../../science/massSpec';
@@ -221,6 +222,7 @@ export function buildAverageMassExercise(z: number, difficulty: Difficulty, seed
       stepwise: true,
       hints: ['Las dos abundancias suman 100 %: llama x a una y 100 − x a la otra.', 'M = [m₁·x + m₂·(100 − x)] / 100. Despeja x.', `x = 100·(M − m₂)/(m₁ − m₂) con m₁ = ${fmt(l.mass, 7)} u y m₂ = ${fmt(h.mass, 7)} u.`],
       solution: [`x = 100·(${fmt(M, 5)} − ${fmt(h.mass, 7)})/(${fmt(l.mass, 7)} − ${fmt(h.mass, 7)}) = ${fmt(x, 4)} %.`, `Comprobación: la masa media queda más cerca del isótopo más abundante.`],
+      resolution: abundanceResolution(el.symbol, l, h, M, x),
       source,
     };
   }
@@ -256,6 +258,7 @@ export function buildAverageMassExercise(z: number, difficulty: Difficulty, seed
     stepwise: true,
     hints: ['La masa atómica es un promedio ponderado: cada isótopo pesa según su abundancia.', 'M = (m₁·%₁ + m₂·%₂ + …)/100.', `Multiplica ${fmt(iso[0]!.mass, 7)} por ${fmt(iso[0]!.abundance, 4)} y suma el resto de términos.`],
     solution: [`M = ${fmt(res.value, 6)} u (valor tabulado: ${fmt(el.atomicWeight, 5)} u).`],
+    resolution: averageMassResolution(el.symbol, iso, res.value),
     source,
   };
 }

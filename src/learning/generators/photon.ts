@@ -1,4 +1,4 @@
-import { rydbergResolution, waveResolution } from '../resolutions';
+import { cascadeResolution, inverseSeriesResolution, levelResolution, rydbergResolution, waveResolution } from '../resolutions';
 /**
  * Bloques 3 y 4 · Radiación electromagnética, espectro del hidrógeno y Bohr (Photon Lab). Orientado por AMP 6–10.
  */
@@ -401,6 +401,7 @@ export function buildInverseSeriesExercise(n1: number, n2: number, difficulty: D
     data: constantsData(k, byLambda ? 'm' : 'cm'),
     parts,
     stepwise: true,
+    resolution: inverseSeriesResolution({ n1, n2, seriesName: s.name, byLambda, lambdaNm: opts.lambdaNm, nu, c: k.c, R: k.R, w, x, inv1, invN2sq, n2sq, ord }),
     hints: [
       `En la serie de ${s.name}, el nivel inferior es siempre n₁ = ${n1}. La incógnita es n₂.`,
       byLambda ? 'Calcula 1/λ, divide entre R y despeja 1/n₂² = 1/n₁² − 1/(λ·R).' : 'Convierte la frecuencia en número de ondas (1/λ = ν/c), divide entre R y despeja 1/n₂².',
@@ -478,6 +479,7 @@ export function buildCascadeExercise(n: number, difficulty: Difficulty, seedId: 
     parts,
     stepwise: true,
     hints: ['Cada línea corresponde a un salto entre dos niveles distintos.', `Cuenta las parejas de niveles posibles entre 1 y ${n}.`, `Desde ${n} hay ${n - 1} saltos posibles; desde ${n - 1}, ${n - 2}…`],
+    resolution: cascadeResolution(n, lines.length, difficulty >= 2 ? lines.filter((l) => l.region.id === 'visible').map((l) => ({ from: l.from, to: l.to, nm: l.wavelength * 1e9 })) : null),
     solution: parts.map((p) => p.explanation),
     source,
   };
@@ -529,6 +531,7 @@ export const levelEnergyGenerator: ExerciseGenerator = {
       parts,
       stepwise: true,
       hints: ['El signo negativo significa que el electrón está ligado: hay que darle energía para liberarlo.', 'Sustituye n en Eₙ = −13,6/n².', 'Liberar el electrón es llevarlo a E = 0.'],
+      resolution: levelResolution(n, E, difficulty === 2),
       solution: parts.map((p) => p.explanation),
     };
   },

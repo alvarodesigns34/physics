@@ -122,7 +122,7 @@ describe('espectro problema: la identificación es unívoca', async () => {
 describe('resoluciones estructuradas de los generadores clásicos', async () => {
   const { GENERATOR_BY_ID } = await import('./registry');
   const { parseMath } = await import('../ui/MathText');
-  it.each(['rydberg', 'onda-lambda', ...['error-rydberg', 'linea-desconocida', 'luz-ionizante', 'bohr-proporciones']])('%s: resolución con fórmulas bien formadas', (id) => {
+  it.each(['rydberg', 'onda-lambda', 'serie-inversa', 'cascada', 'nivel-energia', 'masa-media', ...['error-rydberg', 'linea-desconocida', 'luz-ionizante', 'bohr-proporciones']])('%s: resolución con fórmulas bien formadas', (id) => {
     const g = GENERATOR_BY_ID.get(id)!;
     for (const d of g.difficulties) for (const seed of [1, 2, 3, 4]) {
       const ex = g.create(seed, d);
