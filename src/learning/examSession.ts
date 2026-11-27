@@ -151,6 +151,22 @@ export interface ExamReport {
   unanswered: number;
   /** Apartado → evidencia de lo RESPONDIDO (ok/total) y número de pasos sin responder */
   byNode: Record<string, { ok: number; total: number; unanswered: number }>;
+  /**
+   * Causa probable de cada pregunta sin responder (ATOM 5.0), según su posición:
+   * - 'tiempo': está después de la última pregunta con respuesta, el patrón de quedarse sin tiempo;
+   * - 'omitida': hay preguntas respondidas después, así que se saltó (posible desconocimiento o bloqueo).
+   * Es una inferencia por posición, no una certeza, y así se presenta.
+   */
+  unansweredCause: Record<number, 'tiempo' | 'omitida'>;
+}
+
+export function unansweredCauses(states: QuestionState[]): Record<number, 'tiempo' | 'omitida'> {
+  const lastAnswered = states.reduce((a, st, i) => (st !== 'sin-responder' ? i : a), -1);
+  const out: Record<number, 'tiempo' | 'omitida'> = {};
+  states.forEach((st, i) => {
+    if (st === 'sin-responder') out[i] = i > lastAnswered ? 'tiempo' : 'omitida';
+  });
+  return out;
 }
 
 export function gradeSession(session: ExamSession, exercises: Exercise[]): ExamReport {
@@ -186,6 +202,7 @@ export function gradeSession(session: ExamSession, exercises: Exercise[]): ExamR
     partial: questions.filter((q) => q.state === 'parcial').length,
     unanswered: questions.filter((q) => q.state === 'sin-responder').length,
     byNode,
+    unansweredCause: unansweredCauses(questions.map((q) => q.state)),
   };
 }
 

@@ -349,7 +349,13 @@ export function ExamReportView({ report, session, onNew }: { report: ExamReport;
           {unansweredNodes.length > 0 && (
             <li>
               <span className="small">
-                Sin responder (sin evidencia aún): {unansweredNodes.slice(0, 5).map(nodeTitle).join(', ')}. Si fue por tiempo, entrena el ritmo con un simulacro cronometrado; si fue por no saber cómo empezar, abre la guía.
+                Sin responder (sin evidencia aún): {unansweredNodes.slice(0, 5).map(nodeTitle).join(', ')}.{' '}
+                {(() => {
+                  const causes = Object.values(report.unansweredCause);
+                  const t = causes.filter((c) => c === 'tiempo').length;
+                  const o = causes.length - t;
+                  return `${t ? `${t} quedaron al final, después de tu última respuesta: lo más probable es que faltara tiempo, así que entrena el ritmo con un simulacro cronometrado. ` : ''}${o ? `${o} las saltaste y respondiste otras después: suele indicar que no sabías cómo empezar, así que abre la guía de ese apartado. ` : ''}Es una deducción por la posición de las preguntas, no una certeza.`;
+                })()}
               </span>
               <a className="btn btn--ghost btn--sm" href={`#/guia?n=${guideAnchor(unansweredNodes[0]!)}`}>
                 Ir a la guía

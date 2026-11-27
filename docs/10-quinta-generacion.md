@@ -198,3 +198,14 @@ Seguí el método de criterio de diseño: primero fijar el sujeto y el gesto, de
 - cuaderno: unión por id, conservando la resolución si existe en cualquiera de las dos copias.
 
 La D solo tendría sentido con la autorización expresa del centro y del usuario.
+
+## 9. Simulacros: falta de tiempo frente a desconocimiento
+El informe ya separaba los pasos sin responder de los errores (no se usan como evidencia de no saber). Ahora además infiere la causa probable a partir de la posición de cada pregunta (`unansweredCauses`):
+- **«Tiempo»:** la pregunta está después de la última que tiene respuesta. La recomendación es entrenar el ritmo con un simulacro cronometrado.
+- **«Omitida»:** se respondieron preguntas posteriores, así que se saltó. La recomendación es abrir la guía de ese apartado.
+
+El informe lo presenta como una deducción por posición, no como una certeza. Con el crédito por procedimiento (§3), el diagnóstico del simulacro distingue ya cuatro casos:
+- **desconocimiento:** preguntas omitidas;
+- **error conceptual:** tipo de error diagnosticado por el corrector, o planteamiento erróneo detectado en el procedimiento;
+- **error aritmético:** localizado línea a línea en el procedimiento;
+- **falta de tiempo:** preguntas sin responder al final.

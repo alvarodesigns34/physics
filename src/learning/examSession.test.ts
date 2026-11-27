@@ -84,3 +84,13 @@ describe('Crédito por procedimiento en el simulacro (ATOM 5.0)', async () => {
     expect(gradeQuestion(ex, { [nu.id]: '6·10^13 Hz' }, 1).parts.find((x) => x.part.id === nu.id)!.credit).toBe(0);
   });
 });
+
+describe('Causa probable de las preguntas sin responder (ATOM 5.0)', async () => {
+  const { unansweredCauses } = await import('./examSession');
+  it('al final → tiempo; intercaladas → omitida', () => {
+    expect(unansweredCauses(['respondida', 'sin-responder', 'parcial', 'sin-responder', 'sin-responder'])).toEqual({ 1: 'omitida', 3: 'tiempo', 4: 'tiempo' });
+  });
+  it('nada respondido → todo «tiempo» (no hay evidencia de que se saltara nada)', () => {
+    expect(unansweredCauses(['sin-responder', 'sin-responder'])).toEqual({ 0: 'tiempo', 1: 'tiempo' });
+  });
+});
