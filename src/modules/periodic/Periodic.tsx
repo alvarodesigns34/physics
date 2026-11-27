@@ -9,8 +9,8 @@ import { Stage } from '../../render/Stage';
 import { AnchoredLabel, LabelLayer, LabelProjector, type Anchor } from '../../render/labels';
 import { BLOCK_COLOR, CATEGORY_COLOR, RAMP_GRADIENT, rampColor } from '../../render/palette';
 import { STATE_LABEL, standardState, isRadioactive } from '../../science/data/elementState';
-import { ELEMENTS, CATEGORY_LABEL, elementByZ, familyName, displayWeight, ieKJPerMol, type ElementRecord, type Category } from '../../science/elements';
-import { PROPERTIES, compare, commonIon, type PropertyId } from '../../science/trends';
+import { ELEMENTS, CATEGORY_LABEL, elementByZ, familyName, displayWeight, ieKJPerMol, affinityStatus, type ElementRecord, type Category } from '../../science/elements';
+import { PROPERTIES, compare, commonIon, propertyText, type PropertyId } from '../../science/trends';
 import { groundState, formatConfiguration, valenceElectrons, unpairedElectrons } from '../../science/configuration';
 import { outerZeff } from '../../science/slater';
 import { ionSymbol } from '../../science/nucleus';
@@ -61,7 +61,7 @@ function useTargets(prop: PropSel, color: ColorMode) {
       const t = range && v !== null ? (v - range[0]) / (range[1] - range[0] || 1) : 0;
       const height = prop === 'ninguna' ? 0.22 : v === null ? 0.05 : 0.12 + 3.6 * t;
       let c: THREE.Color;
-      if (color === 'propiedad' && prop !== 'ninguna') c = v === null ? new THREE.Color('#2a2622') : rampColor(t, tmp).clone();
+      if (color === 'propiedad' && prop !== 'ninguna') c = v === null ? new THREE.Color('#3a4252') : rampColor(t, tmp).clone();
       else if (color === 'bloque') c = new THREE.Color(BLOCK_COLOR[el.block]);
       else c = new THREE.Color(CATEGORY_COLOR[el.category]);
       if (prop !== 'ninguna' && v === null) c.multiplyScalar(0.35);
@@ -261,7 +261,7 @@ function ElementLabels() {
             <span style={{ display: 'block', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 11, lineHeight: 1.05, color: on ? 'var(--ink)' : 'rgb(236 230 220 / 0.78)', textShadow: '0 1px 6px rgb(0 0 0 / 0.9)', pointerEvents: 'none', fontWeight: on ? 700 : 500 }}>
               {el.symbol}
               {prop !== 'ninguna' && on && (
-                <span style={{ display: 'block', fontSize: 10, color: 'var(--accent)' }}>{PROPERTIES[prop].get(el) === null ? 'sin dato' : fmt(PROPERTIES[prop].get(el)!, 3)}</span>
+                <span style={{ display: 'block', fontSize: 10, color: 'var(--accent)' }}>{prop === 'ae' && affinityStatus(el) === 'no-ligado' ? '≤ 0' : PROPERTIES[prop].get(el) === null ? 'sin dato' : fmt(PROPERTIES[prop].get(el)!, 3)}</span>
               )}
             </span>
           </AnchoredLabel>
@@ -461,7 +461,7 @@ export function PeriodicOverlay() {
                 <span className="small" style={{ fontWeight: 600 }}>
                   {hov.name} <span className="faint mono">Z = {hov.z}</span>
                 </span>
-                <span className="small muted">{st.prop === 'ninguna' ? CATEGORY_LABEL[hov.category] : `${PROPERTIES[st.prop].short}: ${PROPERTIES[st.prop].get(hov) === null ? 'sin dato' : fmt(PROPERTIES[st.prop].get(hov)!, 4) + ' ' + PROPERTIES[st.prop].unit}`}</span>
+                <span className="small muted">{st.prop === 'ninguna' ? CATEGORY_LABEL[hov.category] : `${PROPERTIES[st.prop].short}: ${propertyText(st.prop, hov)}`}</span>
               </span>
             </div>
           </div>

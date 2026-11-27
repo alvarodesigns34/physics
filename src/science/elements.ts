@@ -68,6 +68,21 @@ export const ELEMENTS: readonly ElementRecord[] = RAW_ELEMENTS.map((r) => ({
 
 const BY_SYMBOL = new Map(ELEMENTS.map((e) => [e.symbol.toLowerCase(), e]));
 
+/**
+ * Afinidad electrónica: tres estados que NO deben confundirse (hallazgo de la auditoría de ATOM 3.0).
+ * - «medida»: valor positivo tabulado.
+ * - «no-ligado»: el anión no es estable (AE ≤ 0 medida o calculada con fiabilidad): gases nobles, N, Be, Mg,
+ *   Mn, Zn, Cd y Hg (NIST/CRC; Rienstra-Kiracofe et al., Chem. Rev. 102, 231, 2002). Se representa como 0.
+ * - «sin-datos»: la fuente no da valor (varios lantánidos, actínidos y transactínidos). NO es 0.
+ */
+export type AffinityStatus = 'medida' | 'no-ligado' | 'sin-datos';
+const UNBOUND_ANION = new Set([2, 4, 7, 10, 12, 18, 25, 30, 36, 48, 54, 80, 86]);
+
+export function affinityStatus(el: ElementRecord): AffinityStatus {
+  if (el.electronAffinity !== null) return 'medida';
+  return UNBOUND_ANION.has(el.z) ? 'no-ligado' : 'sin-datos';
+}
+
 export function elementByZ(z: number): ElementRecord | undefined {
   return ELEMENTS[z - 1];
 }

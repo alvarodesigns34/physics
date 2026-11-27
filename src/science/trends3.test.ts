@@ -15,3 +15,25 @@ describe('Periodic Universe 3.0: tendencias y excepciones desde los datos', () =
     expect(els.map((e) => e.symbol)).toContain('Ga');
   });
 });
+
+describe('datos ausentes ≠ cero (auditoría de ATOM 3.0)', async () => {
+  const { affinityStatus, elementByZ } = await import('./elements');
+  const { PROPERTIES, propertyText } = await import('./trends');
+  it('anión no ligado → 0; sin datos → null', () => {
+    for (const z of [7, 10, 12, 30, 80]) {
+      expect(affinityStatus(elementByZ(z)!)).toBe('no-ligado');
+      expect(PROPERTIES.ae.get(elementByZ(z)!)).toBe(0);
+    }
+    for (const z of [61, 62, 90, 92, 95]) {
+      expect(affinityStatus(elementByZ(z)!), String(z)).toBe('sin-datos');
+      expect(PROPERTIES.ae.get(elementByZ(z)!)).toBeNull();
+      expect(propertyText('ae', elementByZ(z)!)).toBe('sin datos');
+    }
+    expect(propertyText('ae', elementByZ(7)!)).toMatch(/no estable/);
+    expect(affinityStatus(elementByZ(17)!)).toBe('medida');
+  });
+  it('las tendencias no fabrican excepciones con datos ausentes', () => {
+    const els = seriesElements({ kind: 'periodo', n: 4 });
+    for (const a of anomalies('ae', { kind: 'periodo', n: 4 }, els)) expect(PROPERTIES.ae.get(a.el)).not.toBeNull();
+  });
+});
