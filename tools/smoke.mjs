@@ -149,6 +149,10 @@ try {
   await page.waitForFunction(() => /\d+,\d+ u/.test(document.querySelector('aside')?.textContent ?? ''), null, { timeout: 60000 }).catch(() => {});
   check(/\d+,\d+ u/.test(await page.locator('aside').innerText()), 'Mass Spectrometry: masa media medida');
   await page.screenshot({ path: `${OUT}/10-masas.png` });
+  await page.click('button:has-text("Analizar una muestra desconocida")');
+  await page.waitForSelector('text=Muestra desconocida X', { timeout: T });
+  const massSide = await page.locator('aside').innerText();
+  check(massSide.includes('X-') && massSide.includes('oculto'), 'Mass Spectrometry: muestra desconocida con nombre y tabla ocultos');
 
   const stored = await page.evaluate(() => localStorage.getItem('atom:v1'));
   check(!!stored && stored.includes('"I-1"'), 'Progreso persistido en localStorage');

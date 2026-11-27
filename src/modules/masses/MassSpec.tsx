@@ -15,6 +15,8 @@ import { MissionPanel } from '../../ui/MissionPanel';
 import { sfx } from '../../app/sound';
 import { EpiTag, Feedback } from '../../ui/common';
 import { Icon } from '../../ui/Icon';
+import { UNKNOWN_POOL, identifyByMean, checkAbundance } from '../../learning/massInverse';
+import { checkAnswer } from '../../learning/checker';
 
 interface Iso {
   a: number;
@@ -30,10 +32,12 @@ interface MState {
   total: number;
   running: boolean;
   isotopes: Iso[];
+  /** Problema inverso: la muestra es desconocida (se ocultan nombre, símbolo y valores de tabla) */
+  unknown: boolean;
   set: (p: Partial<Omit<MState, 'set'>>) => void;
 }
 
-export const useMass = create<MState>((set) => ({ z: 17, accel: 2000, B: 0.3, counts: {}, total: 0, running: true, isotopes: [], set: (p) => set(p) }));
+export const useMass = create<MState>((set) => ({ z: 17, accel: 2000, B: 0.3, counts: {}, total: 0, running: true, isotopes: [], unknown: false, set: (p) => set(p) }));
 
 const fmt = (v: number, sig = 4) => formatNumber(v, { sig });
 const SCALE = 14; // unidades de escena por metro (radio de la trayectoria)
@@ -216,8 +220,96 @@ function SpectrumChart({ isotopes, counts, total }: { isotopes: Iso[]; counts: R
 
 const CANDIDATES = ELEMENTS.filter((e) => e.z <= 83 && e.hasStandardWeight).map((e) => e.z);
 
+/** Problema inverso: identificar la muestra y deducir abundancias con los datos medidos. */
+function InverseProblem({ measured, isotopes }: { measured: number | null; isotopes: Iso[] }) {
+  const st = useMass();
+  const [guess, setGuess] = useState('');
+  const [elMsg, setElMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [abund, setAbund] = useState('');
+  const [abMsg, setAbMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [frozen, setFrozen] = useState<number | null>(null);
+  const start = () => {
+    const pool = UNKNOWN_POOL.filter((z) => z !== st.z);
+    st.set({ z: pool[Math.floor(Math.random() * pool.length)]!, unknown: true, counts: {}, total: 0, running: true });
+    setGuess('');
+    setElMsg(null);
+    setAbund('');
+    setAbMsg(null);
+    setFrozen(null);
+  };
+  if (!st.unknown) {
+    return (
+      <section className="section">
+        <span className="eyebrow eyebrow--accent">Problema inverso</span>
+        <p className="small muted" style={{ margin: 0 }}>
+          Analiza una muestra desconocida: identifica el elemento con su masa media medida y deduce la abundancia de cada isótopo a partir de los picos.
+        </p>
+        <button type="button" className="btn btn--primary btn--sm" style={{ alignSelf: 'flex-start' }} onClick={start}>
+          Analizar una muestra desconocida
+        </button>
+      </section>
+    );
+  }
+  const [light, heavy] = [...isotopes].sort((a, b) => a.mass - b.mass);
+  return (
+    <section className="section challenge-card">
+      <span className="eyebrow eyebrow--accent">Muestra desconocida X</span>
+      <p className="small" style={{ margin: 0 }}>
+        1. Deja que el detector cuente al menos 2 000 iones ({st.total.toLocaleString('es-ES')} ahora). 2. Con la masa media medida, ¿qué elemento es? 3. ¿Qué porcentaje de la muestra es el isótopo más ligero?
+      </p>
+      <div className="row" style={{ gap: 6 }}>
+        <input className="input" placeholder="símbolo o nombre" value={guess} onChange={(e) => setGuess(e.target.value)} aria-label="Elemento de la muestra" />
+        <button
+          type="button"
+          className="btn btn--sm"
+          disabled={!measured || st.total < 2000}
+          onClick={() => {
+            const r = checkAnswer({ kind: 'element', z: st.z }, guess);
+            const id = identifyByMean(measured!);
+            setElMsg({ ok: r.correct, text: r.correct ? `Correcto: masa media ${fmt(measured!, 5)} u → ${elementByZ(st.z)!.name}.` : `No. Compara ${fmt(measured!, 4)} u con las masas atómicas de la tabla: el más cercano está a ${fmt(id.delta, 2)} u.` });
+          }}
+        >
+          Comprobar
+        </button>
+      </div>
+      {elMsg && <Feedback tone={elMsg.ok ? 'ok' : 'bad'}>{elMsg.text}</Feedback>}
+      {light && heavy && (
+        <>
+          <div className="row row--wrap" style={{ gap: 6 }}>
+            <button type="button" className="btn btn--ghost btn--sm" disabled={!measured} onClick={() => setFrozen(measured)}>
+              {frozen ? `Media fijada: ${fmt(frozen, 5)} u` : 'Fijar la media medida'}
+            </button>
+          </div>
+          <div className="row" style={{ gap: 6 }}>
+            <input className="input" placeholder={`% de X-${light.a}`} value={abund} onChange={(e) => setAbund(e.target.value)} aria-label={`Abundancia de X-${light.a} en %`} disabled={!frozen} />
+            <button
+              type="button"
+              className="btn btn--sm"
+              disabled={!frozen}
+              onClick={() => {
+                const v = Number(abund.replace(',', '.').replace('%', ''));
+                if (!Number.isFinite(v)) return setAbMsg({ ok: false, text: 'Escribe un porcentaje, p. ej. 75,8.' });
+                const r = checkAbundance(v, light.mass, heavy.mass, frozen!);
+                setAbMsg({ ok: r.ok, text: r.ok ? `Correcto: x = (M − m₂)/(m₁ − m₂) = ${fmt(r.expectedPct, 3)} %. Valor natural tabulado: ${fmt(light.abundance, 4)} %; la diferencia es ruido estadístico de la medida.` : `Plantea M = x·m₁ + (1 − x)·m₂ con m₁ = ${fmt(light.mass, 6)} u, m₂ = ${fmt(heavy.mass, 6)} u y despeja x.` });
+              }}
+            >
+              Comprobar
+            </button>
+          </div>
+          {abMsg && <Feedback tone={abMsg.ok ? 'ok' : 'bad'}>{abMsg.text}</Feedback>}
+        </>
+      )}
+      <button type="button" className="btn btn--ghost btn--sm" style={{ alignSelf: 'flex-start' }} onClick={() => st.set({ unknown: false })}>
+        Terminar y revelar la muestra
+      </button>
+    </section>
+  );
+}
+
 export function MassOverlay() {
   const st = useMass();
+  // Al salir del laboratorio se abandona el problema inverso (la muestra no queda oculta para siempre).
+  useEffect(() => () => useMass.getState().set({ unknown: false }), []);
   const isotopes = useIsotopes(st.z);
   const mobile = useMediaQuery('(max-width: 760px)');
   const [collapsed, setCollapsed] = useState(false);
@@ -241,14 +333,14 @@ export function MassOverlay() {
         {isotopes.map((iso, i) => (
           <AnchoredLabel key={iso.a} id={`iso-${iso.a}`} align="left">
             <span className="scene-label" style={{ color: ISO_COLORS[i % ISO_COLORS.length] }}>
-              {el.symbol}-{iso.a}
+              {st.unknown ? 'X' : el.symbol}-{iso.a}
             </span>
           </AnchoredLabel>
         ))}
       </LabelLayer>
       <div style={{ position: 'relative' }}>
         <div className="desktop-only" style={{ position: 'absolute', left: 'var(--gutter)', top: 8 }}>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: '3.25rem', lineHeight: 1 }}>{el.name}</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: '3.25rem', lineHeight: 1 }}>{st.unknown ? 'Muestra X' : el.name}</span>
           <p className="small muted" style={{ marginTop: 6 }}>
             {isotopes.length} isótopo{isotopes.length === 1 ? '' : 's'} natural{isotopes.length === 1 ? '' : 'es'} · {st.total.toLocaleString('es-ES')} iones detectados
           </p>
@@ -260,11 +352,13 @@ export function MassOverlay() {
       </div>
       <aside className={`side interactive enter${mobile && collapsed ? ' side--collapsed' : ''}`} aria-label="Mass Spectrometry Lab">
         <button type="button" className="side__toggle" onClick={() => setCollapsed((c) => !c)} aria-expanded={!collapsed}>
-          <span className="h3">Espectrómetro · {el.symbol}</span>
+          <span className="h3">Espectrómetro · {st.unknown ? 'X' : el.symbol}</span>
           <Icon name={collapsed ? 'chevron-up' : 'chevron-down'} />
         </button>
         <div className="side__scroll">
           <MissionPanel lab="masas" signal={signal} />
+          <InverseProblem measured={measured} isotopes={isotopes} />
+          {!st.unknown && (
           <section className="section">
             <span className="eyebrow">Muestra</span>
             <select className="input" value={st.z} onChange={(e) => st.set({ z: Number(e.target.value) })} aria-label="Elemento de la muestra">
@@ -298,6 +392,7 @@ export function MassOverlay() {
               </button>
             </div>
           </section>
+          )}
           <section className="section" aria-live="off">
             <span className="eyebrow">Espectro de masas</span>
             <SpectrumChart isotopes={isotopes} counts={st.counts} total={st.total} />
@@ -307,8 +402,8 @@ export function MassOverlay() {
                 <dd>{measured ? `${fmt(measured, 5)} u` : '—'}</dd>
               </div>
               <div>
-                <dt>valor de referencia</dt>
-                <dd>{reference ? `${fmt(reference, 5)} u` : '—'}</dd>
+                <dt>valor de referencia (tabla)</dt>
+                <dd>{st.unknown ? 'oculto' : reference ? `${fmt(reference, 5)} u` : '—'}</dd>
               </div>
             </dl>
             {sigma && <p className="small muted">Incertidumbre estadística ≈ ±{fmt(sigma, 2)} u con {st.total.toLocaleString('es-ES')} iones: se reduce como 1/√N. Deja que el detector cuente más para afinar la medida.</p>}
@@ -317,18 +412,18 @@ export function MassOverlay() {
                 <tr className="faint" style={{ textAlign: 'right' }}>
                   <th style={{ textAlign: 'left', fontWeight: 500 }}>isótopo</th>
                   <th style={{ fontWeight: 500 }}>masa (u)</th>
-                  <th style={{ fontWeight: 500 }}>natural</th>
-                  <th style={{ fontWeight: 500 }}>medida</th>
+                  <th style={{ fontWeight: 500 }} title="Abundancia natural tabulada (IUPAC)">natural</th>
+                  <th style={{ fontWeight: 500 }} title="Fracción de iones contados por el detector: incluye ruido estadístico">medida</th>
                 </tr>
               </thead>
               <tbody>
                 {isotopes.map((i, k) => (
                   <tr key={i.a} style={{ textAlign: 'right', borderTop: '1px solid var(--hairline)' }}>
                     <td style={{ textAlign: 'left', color: ISO_COLORS[k % ISO_COLORS.length], padding: '4px 0' }}>
-                      {el.symbol}-{i.a}
+                      {st.unknown ? 'X' : el.symbol}-{i.a}
                     </td>
                     <td>{fmt(i.mass, 7)}</td>
-                    <td>{fmt(i.abundance, 4)} %</td>
+                    <td>{st.unknown ? '?' : `${fmt(i.abundance, 4)} %`}</td>
                     <td>{st.total ? `${fmt(((st.counts[i.a] ?? 0) / st.total) * 100, 3)} %` : '—'}</td>
                   </tr>
                 ))}
@@ -336,7 +431,10 @@ export function MassOverlay() {
             </table>
             {isotopes.length === 1 && <Feedback tone="info">El {el.name.toLowerCase()} tiene un único isótopo natural: su masa atómica es la masa de ese isótopo.</Feedback>}
           </section>
-          {st.z === 17 && (
+          <p className="small faint" style={{ margin: 0 }}>
+            «Natural»: abundancia tabulada. «Medida»: iones contados por este detector simulado (fluctúa como 1/√N). La altura de las barras es la fracción medida; el brillo de los haces en la escena es solo ilustrativo.
+          </p>
+          {st.z === 17 && !st.unknown && (
             <section className="section">
               <span className="eyebrow eyebrow--accent">El ejemplo del cloro (TEO p.5)</span>
               <p className="small muted">
