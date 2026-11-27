@@ -1,4 +1,6 @@
 import { CalmOrbitControls } from '../../render/CalmControls';
+import { AnchoredLabel, LabelLayer, LabelProjector } from '../../render/labels';
+import { flashPosition, SCREEN_H, SCREEN_R, SCREEN_TICKS, tickPosition } from './geigerGeometry';
 import { useContinuousRender } from '../../render/demand';
 import { ModelStoryView, ModelMatrix } from './Story';
 import type { ModelKey } from '../../learning/history';
@@ -342,8 +344,14 @@ function TubeScene() {
 
 // ── Geiger–Marsden ────────────────────────────────────────────────────────
 
-const RING_R = 2.6;
 const MAX_FLASH = 600;
+
+const GEIGER_ANCHORS = [
+  ...SCREEN_TICKS.map((d) => ({ id: `gm-${d}`, position: tickPosition(d, 1).map((v, i) => (i === 2 ? SCREEN_H / 2 + 0.15 : v * 1.08)) as [number, number, number] })),
+  { id: 'gm-src', position: [-4.3, 0.6, 0] as [number, number, number] },
+  { id: 'gm-foil', position: [0, -0.75, 0] as [number, number, number] },
+  { id: 'gm-screen', position: [0, -SCREEN_R - 0.25, SCREEN_H / 2] as [number, number, number] },
+];
 
 function GeigerContent() {
   const reduced = useReducedMotion();
@@ -374,8 +382,8 @@ function GeigerContent() {
         if (deg > 2 || rng() < 0.012) {
           sfx.geiger();
           const phi = rng() * Math.PI * 2;
-          const dir = new THREE.Vector3(Math.cos(th), Math.sin(th) * Math.cos(phi), Math.sin(th) * Math.sin(phi));
-          S.pos[S.i]!.copy(dir).multiplyScalar(RING_R);
+          flashPosition(th, phi, S.pos[S.i]!);
+          const dir = S.pos[S.i]!.clone().normalize();
           S.life[S.i] = 1;
           S.i = (S.i + 1) % MAX_FLASH;
           if (deg > 10) {
@@ -402,7 +410,7 @@ function GeigerContent() {
       for (let i = 0; i < 40; i++) {
         S.tlife[i] = Math.max(0, S.tlife[i]! - dt * 0.5);
         const d = S.tdir[i]!;
-        const len = RING_R * (S.tlife[i]! > 0 ? 1 : 0);
+        const len = SCREEN_R * (S.tlife[i]! > 0 ? 1 : 0);
         q.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.lengthSq() ? d.clone().normalize() : new THREE.Vector3(0, 1, 0));
         m4.compose(d.clone().multiplyScalar(len / 2), q, new THREE.Vector3(S.tlife[i]!, len, S.tlife[i]!));
         tm.setMatrixAt(i, m4);
@@ -424,9 +432,15 @@ function GeigerContent() {
     <>
       <ambientLight intensity={0.35} />
       <directionalLight position={[3, 6, 5]} intensity={2} color="#ffe6c8" />
+      <LabelProjector anchors={GEIGER_ANCHORS} />
       <mesh position={[-4.3, 0, 0]}>
         <boxGeometry args={[0.6, 0.6, 0.6]} />
-        <meshStandardMaterial color="#3a3a40" metalness={0.6} roughness={0.5} />
+        <meshStandardMaterial color="#8a8f9a" metalness={0.5} roughness={0.4} />
+      </mesh>
+      {/* Colimador: el haz sale por una rendija */}
+      <mesh position={[-3.9, 0, 0]} rotation-z={Math.PI / 2}>
+        <cylinderGeometry args={[0.09, 0.09, 0.25, 24]} />
+        <meshStandardMaterial color="#5a5f6a" metalness={0.6} roughness={0.35} />
       </mesh>
       <instancedMesh ref={beam} args={[undefined, undefined, 30]}>
         <sphereGeometry args={[0.025, 8, 6]} />
@@ -436,10 +450,26 @@ function GeigerContent() {
         <planeGeometry args={[1.1, 1.1]} />
         <meshStandardMaterial color="#d4a641" metalness={1} roughness={0.25} side={THREE.DoubleSide} />
       </mesh>
+      {/* Pantalla de ZnS: banda cilíndrica de eje z, graduada en ángulo de desviación */}
       <mesh rotation-x={Math.PI / 2}>
-        <cylinderGeometry args={[RING_R + 0.02, RING_R + 0.02, 1.2, 96, 1, true]} />
-        <meshBasicMaterial color="#5a8f6a" transparent opacity={0.07} side={THREE.DoubleSide} depthWrite={false} />
+        <cylinderGeometry args={[SCREEN_R + 0.02, SCREEN_R + 0.02, SCREEN_H, 128, 1, true]} />
+        <meshBasicMaterial color="#5a8f6a" transparent opacity={0.1} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
+      {[-SCREEN_H / 2, SCREEN_H / 2].map((z) => (
+        <mesh key={z} position-z={z}>
+          <torusGeometry args={[SCREEN_R + 0.02, 0.006, 6, 192]} />
+          <meshBasicMaterial color="#8fd0a5" transparent opacity={0.5} />
+        </mesh>
+      ))}
+      {SCREEN_TICKS.flatMap((d) => (d === 0 || d === 180 ? [1] : [1, -1]).map((side) => ({ d, side }))).map(({ d, side }) => {
+        const [x, y] = tickPosition(d, side);
+        return (
+          <mesh key={`${d}-${side}`} position={[x, y, 0]}>
+            <boxGeometry args={[0.02, 0.02, SCREEN_H]} />
+            <meshBasicMaterial color="#8fd0a5" transparent opacity={0.55} />
+          </mesh>
+        );
+      })}
       <instancedMesh ref={flashes} args={[undefined, undefined, MAX_FLASH]} frustumCulled={false}>
         <sphereGeometry args={[1, 8, 6]} />
         <meshBasicMaterial color={new THREE.Color('#b5ffcf').multiplyScalar(3)} toneMapped={false} />
@@ -544,7 +574,7 @@ function Histogram() {
           <span style={{ color: '#a497db' }}>■</span> Thomson
         </span>
         <span className="muted">
-          <span style={{ color: 'var(--accent)' }}>■</span> núcleo
+          <span style={{ color: '#f2a93b' }}>■</span> núcleo
         </span>
         <span className="muted">┄ fórmula de Rutherford</span>
         <span className="faint">escala logarítmica</span>
@@ -779,6 +809,24 @@ export function HistoryOverlay() {
   const info = MODELS.find((m) => m.id === st.model)!;
   return (
     <div className="workspace">
+      {st.tab === 'geiger' && (
+        <LabelLayer>
+          {SCREEN_TICKS.map((d) => (
+            <AnchoredLabel key={d} id={`gm-${d}`}>
+              <span className="scene-label">{d}°</span>
+            </AnchoredLabel>
+          ))}
+          {[
+            ['gm-src', 'Fuente de partículas α'],
+            ['gm-foil', 'Lámina de oro'],
+            ['gm-screen', 'Pantalla de ZnS: cada destello es una α detectada'],
+          ].map(([id, text]) => (
+            <AnchoredLabel key={id} id={id!}>
+              <span className="scene-label scene-label--part">{text}</span>
+            </AnchoredLabel>
+          ))}
+        </LabelLayer>
+      )}
       <div style={{ position: 'relative' }}>
         {st.tab === 'modelos' && (
           <div className="desktop-only" style={{ position: 'absolute', left: 'var(--gutter)', top: 8 }}>

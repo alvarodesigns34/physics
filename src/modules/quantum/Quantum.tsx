@@ -116,7 +116,8 @@ const vertex = /* glsl */ `
     vKeep = (uSlice > 0.0 && abs(p.z) > uSlice) ? 0.0 : 1.0;
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
-    gl_PointSize = min(uSize * uPixelRatio / -mv.z, 14.0 * uPixelRatio);
+    // Límite bajo: los puntos cercanos a la cámara eran manchas de 14 px que tapaban la estructura.
+    gl_PointSize = min(uSize * uPixelRatio / -mv.z, 7.0 * uPixelRatio);
   }
 `;
 const fragment = /* glsl */ `
@@ -333,10 +334,13 @@ export function QuantumScene() {
   const scale = 3.2 / radius90(n, l);
   // Las coordenadas químicas (z hacia arriba) se dibujan con el eje y de la escena hacia arriba.
   return (
-    <Stage camera={slice ? [0, 9, 0.01] : [5.2, 3.4, 6.2]} fov={40} key={slice ? 'corte' : 'libre'}>
+    // La nube incluye también el 10 % exterior de la probabilidad (llega a ~2 veces el radio del 90 %): la
+    // cámara se aleja un 25 % en esa vista, sin cambiar la escala del mundo, para que nube y superficie
+    // sigan siendo comparables.
+    <Stage camera={slice ? (view === 'nube' ? [0, 11.5, 0.01] : [0, 9, 0.01]) : view === 'nube' ? [6.5, 4.25, 7.75] : [5.2, 3.4, 6.2]} fov={40} key={`${slice ? 'corte' : 'libre'}-${view}`}>
       <group rotation={[-Math.PI / 2, 0, 0]}>
         {view === 'nube' ? (
-          <CloudView n={n} l={l} m={m} subshell={subshell} count={Math.min(60000, Math.round(q.points * 2.2))} scale={scale} slice={slice} reduced={reduced} size={q.tier === 'baja' ? 60 : 42} />
+          <CloudView n={n} l={l} m={m} subshell={subshell} count={Math.min(60000, Math.round(q.points * 2.2))} scale={scale} slice={slice} reduced={reduced} size={q.tier === 'baja' ? 44 : 30} />
         ) : (
           <OrbitalSurface n={n} l={l} m={m} subshell={subshell} scale={scale} slice={slice} res={res} p={fraction} onInfo={setInfo} />
         )}
