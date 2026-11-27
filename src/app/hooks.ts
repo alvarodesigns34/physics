@@ -6,11 +6,33 @@ import { useStore, type QualitySetting } from '../state/store';
 export type Route = '/' | '/forja' | '/fotones' | '/entrenamiento' | '/campana' | '/periodico' | '/cuantico' | '/arquitecto' | '/historia' | '/masas' | '/guia';
 const ROUTES: Route[] = ['/guia', '/', '/forja', '/fotones', '/entrenamiento', '/campana', '/periodico', '/cuantico', '/arquitecto', '/historia', '/masas'];
 
+/**
+ * Analiza el hash de forma defensiva (ATOM 5.1): ruta desconocida → inicio; el hash se limita a 2 kB; solo
+ * se conservan parámetros con nombre corto y alfanumérico y valor de hasta 200 caracteres sin caracteres de
+ * control. Cada vista valida además el SIGNIFICADO de sus parámetros (apartado existente, Z entero…).
+ */
+export function parseHash(hash: string): { route: Route; query: URLSearchParams } {
+  const raw = (hash.replace(/^#/, '') || '/').slice(0, 2048);
+  const k = raw.indexOf('?');
+  const path = k < 0 ? raw : raw.slice(0, k);
+  const qs = k < 0 ? '' : raw.slice(k + 1);
+  const route = (ROUTES as string[]).includes(path) ? (path as Route) : '/';
+  const query = new URLSearchParams();
+  let parsed: URLSearchParams;
+  try {
+    parsed = new URLSearchParams(qs);
+  } catch {
+    parsed = new URLSearchParams();
+  }
+  for (const [key, value] of parsed) {
+    if (!/^[a-z]{1,12}$/i.test(key) || value.length > 200 || /[\u0000-\u001f\u007f<>]/.test(value) || query.has(key)) continue;
+    query.set(key, value);
+  }
+  return { route, query };
+}
+
 function readRoute(): { route: Route; query: URLSearchParams } {
-  const raw = window.location.hash.replace(/^#/, '') || '/';
-  const [path, qs] = raw.split('?');
-  const route = (ROUTES as string[]).includes(path ?? '') ? (path as Route) : '/';
-  return { route, query: new URLSearchParams(qs ?? '') };
+  return parseHash(window.location.hash);
 }
 
 function subscribeHash(cb: () => void) {

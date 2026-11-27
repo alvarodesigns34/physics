@@ -10,6 +10,7 @@ import type { Difficulty, ErrorKind, Exercise, SkillId } from '../learning/types
 import { buildEvidence, EVIDENCE_WEIGHT, type EvidenceKind, type PartRecord } from '../learning/evidence';
 import { addMiss, registerClean, type NotebookEntry } from '../learning/notebook';
 import { parseExport, PROGRESS_VERSION, validateProgress } from './validate';
+import { mergeProgress, type MergeSummary } from './merge';
 import type { ConfigOrder } from '../science/configuration';
 
 export type QualitySetting = 'auto' | 'alta' | 'media' | 'baja';
@@ -129,7 +130,7 @@ interface Actions {
   updateMission: (id: string, patch: Partial<MissionProgress>) => void;
   resetProgress: () => void;
   /** Importa un archivo: si no es válido, el progreso actual no cambia. */
-  importProgress: (json: string) => { ok: boolean; issues: string[] };
+  importProgress: (json: string, mode?: 'reemplazar' | 'fusionar') => { ok: boolean; issues: string[]; summary?: MergeSummary };
   /** Deshace la última importación (restaura la copia previa). */
   undoImport: () => boolean;
   exportProgress: () => string;
@@ -288,12 +289,20 @@ export const useStore = create<AppState>()(
         const { settings, mastery, skills, cards, history, campaign, exams, notebook } = get();
         return JSON.stringify({ app: 'ATOM', version: PROGRESS_VERSION, exportedAt: new Date().toISOString(), settings, mastery, skills, cards, history, campaign, exams, notebook }, null, 2);
       },
-      importProgress: (json) => {
+      importProgress: (json, mode = 'reemplazar') => {
         const res = parseExport(json);
         if (!res.ok || !res.data) return { ok: false, issues: res.issues };
         const cur = get();
         importBackup = JSON.stringify({ settings: cur.settings, mastery: cur.mastery, skills: cur.skills, cards: cur.cards, history: cur.history, campaign: cur.campaign, exams: cur.exams, notebook: cur.notebook });
         const d = res.data;
+        if (mode === 'fusionar') {
+          const { data, summary } = mergeProgress(
+            { mastery: cur.mastery, skills: cur.skills, cards: cur.cards, history: cur.history, campaign: cur.campaign, exams: cur.exams, notebook: cur.notebook },
+            { mastery: d.mastery as AppState['mastery'], skills: d.skills as AppState['skills'], cards: d.cards as AppState['cards'], history: d.history as Attempt[], campaign: d.campaign as AppState['campaign'], exams: d.exams as ExamRecord[], notebook: d.notebook as NotebookEntry[] },
+          );
+          set({ ...data });
+          return { ok: true, issues: res.issues, summary };
+        }
         set({ settings: { ...DEFAULT_SETTINGS, ...d.settings } as Settings, mastery: d.mastery as AppState['mastery'], skills: d.skills as AppState['skills'], cards: d.cards as AppState['cards'], history: d.history as Attempt[], campaign: d.campaign as AppState['campaign'], exams: d.exams as ExamRecord[], notebook: d.notebook as NotebookEntry[], activeMission: null });
         return { ok: true, issues: res.issues };
       },

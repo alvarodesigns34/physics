@@ -5,13 +5,14 @@ import { NavRail, SearchPalette, useSearchShortcut } from './Navigation';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { navigate, notifySceneChange, useRoute, useReducedMotion, type Route } from './hooks';
 import { useStore, type QualitySetting, type MotionSetting, type ThemeSetting } from '../state/store';
-import { Announcer, Toaster, toast } from '../ui/common';
+import { Announcer, Toaster } from '../ui/common';
 import { installUiSounds, setAmbient, sfx } from './sound';
 import { Icon } from '../ui/Icon';
 import { HubScene, HubOverlay } from '../modules/hub/Hub';
 import { HomeOverlay } from '../modules/hub/Home';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { OfflinePanel, UpdateBanner } from '../ui/OfflinePanel';
+import { ProgressTransfer } from '../ui/ProgressTransfer';
 
 const ForgeScene = lazy(() => import('../modules/forge/Forge').then((m) => ({ default: m.ForgeScene })));
 const ForgeOverlay = lazy(() => import('../modules/forge/Forge').then((m) => ({ default: m.ForgeOverlay })));
@@ -83,13 +84,6 @@ function SegmentedSetting<T extends string | number | boolean>({ label, value, o
 function SettingsDrawer({ onClose }: { onClose: () => void }) {
   const settings = useStore((s) => s.settings);
   const set = useStore((s) => s.setSettings);
-  const exportProgress = useStore((s) => s.exportProgress);
-  const importProgress = useStore((s) => s.importProgress);
-  const resetProgress = useStore((s) => s.resetProgress);
-  const undoImport = useStore((s) => s.undoImport);
-  const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const storageOk = useStore((s) => s.storageAvailable);
-  const fileRef = useRef<HTMLInputElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     closeRef.current?.focus();
@@ -97,14 +91,6 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
-  const download = () => {
-    const blob = new Blob([exportProgress()], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `atom-progreso-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
   return (
     <>
       <div className="drawer-backdrop" onClick={onClose} />
@@ -136,58 +122,8 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
         <SegmentedSetting<'llenado' | 'capas'> label="Orden de las configuraciones" value={settings.configOrder} onChange={(v) => set({ configOrder: v })} options={[{ v: 'llenado', label: 'Orden de llenado (Möller)' }, { v: 'capas', label: 'Por capas' }]} />
         <hr className="divider" />
         <div className="stack-12">
-          <span className="h3">Progreso</span>
-          {importMsg && (
-            <p className="small" role="status" style={{ color: importMsg.ok ? 'var(--ok)' : 'var(--bad)' }}>
-              {importMsg.text}
-            </p>
-          )}
-          {!storageOk && <p className="small" style={{ color: 'var(--warn)' }}>Este navegador no permite guardar datos: el progreso solo durará mientras la página esté abierta. Exporta un archivo para conservarlo.</p>}
-          <div className="row row--wrap">
-            <button type="button" className="btn btn--sm" onClick={download}>
-              Exportar
-            </button>
-            <button type="button" className="btn btn--sm" onClick={() => fileRef.current?.click()}>
-              Importar
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="application/json"
-              hidden
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                if (!f) return;
-                const res = importProgress(await f.text());
-                setImportMsg(res.ok ? { ok: true, text: 'Progreso importado. Tu progreso anterior se ha guardado por si quieres deshacerlo.' } : { ok: false, text: `No se ha importado nada: ${res.issues.slice(0, 3).join(' ')}${res.issues.length > 3 ? ` (y ${res.issues.length - 3} problema(s) más)` : ''} Tu progreso actual no ha cambiado.` });
-                e.target.value = '';
-              }}
-            />
-            {importMsg?.ok && (
-              <button
-                type="button"
-                className="btn btn--sm"
-                onClick={() => {
-                  if (undoImport()) toast('Importación deshecha');
-                  setImportMsg(null);
-                }}
-              >
-                Deshacer importación
-              </button>
-            )}
-            <button
-              type="button"
-              className="btn btn--ghost btn--sm"
-              onClick={() => {
-                if (window.confirm('¿Borrar todo el progreso (dominio, repasos, misiones y exámenes)? No se puede deshacer.')) {
-                  resetProgress();
-                  toast('Progreso borrado');
-                }
-              }}
-            >
-              Borrar progreso
-            </button>
-          </div>
+          <span className="h3">Progreso entre dispositivos</span>
+          <ProgressTransfer />
         </div>
         <hr className="divider" />
         <div className="stack-12">

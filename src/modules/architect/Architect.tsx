@@ -277,7 +277,7 @@ export function ArchitectOverlay() {
   const timer = useRef<number | null>(null);
   useEffect(() => {
     const z = Number(query.get('z'));
-    if (z >= 1 && z <= 118) st.set({ z, charge: 0, boxes: {} });
+    if (Number.isInteger(z) && z >= 1 && z <= 118) st.set({ z, charge: 0, boxes: {} });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.get('z')]);
   useEffect(() => () => {

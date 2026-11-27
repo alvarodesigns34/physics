@@ -47,8 +47,9 @@ let sourceById: Map<string, () => Exercise> | null = null;
 
 /** Reconstruye un ejercicio a partir de su id (generador:dificultad:semilla o id de un ejercicio de los documentos). */
 export function exerciseFromId(id: string): Exercise | null {
-  const m = id.match(/^([a-z0-9-]+):([123]):(\d+)$/);
-  if (m) {
+  if (typeof id !== 'string' || id.length > 120) return null;
+  const m = id.match(/^([a-z0-9-]+):([123]):(\d{1,10})$/);
+  if (m && Number(m[3]) <= 0x7fffffff) {
     const g = GENERATOR_BY_ID.get(m[1]!);
     if (g) {
       const d = Number(m[2]) as 1 | 2 | 3;
