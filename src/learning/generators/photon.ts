@@ -1,3 +1,4 @@
+import { rydbergResolution, waveResolution } from '../resolutions';
 /**
  * Bloques 3 y 4 · Radiación electromagnética, espectro del hidrógeno y Bohr (Photon Lab). Orientado por AMP 6–10.
  */
@@ -118,6 +119,7 @@ export function buildWaveExercise(w: WaveSpec, difficulty: Difficulty, seedId: s
       `λ = ${fmt(lambda, 3)} m → ν = ${fmt(K.c, 1)} / ${fmt(lambda, 3)} …`,
     ],
     solution: parts.map((x) => x.explanation),
+    resolution: waveResolution(w.value, w.unit, lambda, p.frequency, p.energyJ, K, difficulty >= 2),
     source,
     constants: K,
   };
@@ -292,6 +294,7 @@ export function buildRydbergExercise(o: RydbergOptions): Exercise {
       `Aquí n₁ = ${n1} y n₂ = ${n2}: (1/${n1}² − 1/${n2}²) = ${fmt(factor, 4)}.`,
     ],
     solution: parts.map((p) => p.explanation),
+    resolution: rydbergResolution(t, k, rUnit as 'm' | 'cm'),
     source: o.source,
     constants: k,
   };

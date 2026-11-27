@@ -118,3 +118,30 @@ describe('espectro problema: la identificación es unívoca', async () => {
     }
   });
 });
+
+describe('resoluciones estructuradas de los generadores clásicos', async () => {
+  const { GENERATOR_BY_ID } = await import('./registry');
+  const { parseMath } = await import('../ui/MathText');
+  it.each(['rydberg', 'onda-lambda', ...['error-rydberg', 'linea-desconocida', 'luz-ionizante', 'bohr-proporciones']])('%s: resolución con fórmulas bien formadas', (id) => {
+    const g = GENERATOR_BY_ID.get(id)!;
+    for (const d of g.difficulties) for (const seed of [1, 2, 3, 4]) {
+      const ex = g.create(seed, d);
+      expect(ex.resolution?.length, id).toBeGreaterThan(3);
+      for (const st of ex.resolution!) if (st.math) expect(() => parseMath(st.math!), `${id}: ${st.math}`).not.toThrow();
+      expect(ex.resolution!.some((s) => s.kind === 'comprobacion' || s.kind === 'errores')).toBe(true);
+    }
+  });
+});
+
+describe('las fórmulas no pierden sus espacios ni muestran «^» en texto', async () => {
+  const { GENERATORS } = await import('./registry');
+  it('ningún bloque de texto de resolución contiene «^» y ninguna fórmula contiene «;\\text» sin barra', () => {
+    for (const g of GENERATORS) for (const d of g.difficulties) {
+      const ex = g.create(2, d);
+      for (const st of ex.resolution ?? []) {
+        expect(st.text, `${g.id}: ${st.text}`).not.toMatch(/\^/);
+        if (st.math) expect(st.math, `${g.id}: ${st.math}`).not.toMatch(/(^|[^\\]);\\text/);
+      }
+    }
+  });
+});

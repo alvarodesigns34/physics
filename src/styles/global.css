@@ -3522,6 +3522,8 @@ kbd {
 }
 .mx--block {
   display: block;
+  white-space: normal;
+  row-gap: 6px;
   padding: 10px 14px;
   margin: 6px 0 0;
   border-radius: var(--r-inner);
