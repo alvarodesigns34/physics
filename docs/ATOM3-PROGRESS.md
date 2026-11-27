@@ -84,4 +84,4 @@ Rama: `claude/proyecto-atom-interactive-830d7u` · Producción (`main`) intacta 
 - [ ] Revisión de las 35 misiones de la campaña (§23).
 
 ## Pruebas
-- Línea base: 223 vitest + 23 e2e. Actual: 790 vitest + 33 e2e + axe (10 vistas) + regresión visual (12), todo en verde. Cifras: `npm run stats` → docs/ESTADISTICAS.md.
+- Línea base: 223 vitest + 23 e2e. Actual: 857 vitest + 30 e2e + axe (10 vistas) + regresión visual (12), todo en verde. Cifras: `npm run stats` → docs/ESTADISTICAS.md.

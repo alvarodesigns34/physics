@@ -4,9 +4,9 @@ Cada criterio indica cómo verificarlo. Estado: ✅ cumple · ⏳ pendiente · �
 
 | # | Área | Criterio | Verificación | Estado |
 |---|---|---|---|---|
-| G1 | Corrección | `npx vitest run` sin fallos; ninguna prueba debilitada (las modificadas se justifican en el commit) | CI job `check` | ✅ 788 |
+| G1 | Corrección | `npx vitest run` sin fallos; ninguna prueba debilitada (las modificadas se justifican en el commit) | CI job `check` | ✅ 857 |
 | G2 | Tipos | `tsc --noEmit` limpio | `npm run typecheck` | ✅ |
-| G3 | E2E | `node tools/smoke.mjs` todas las comprobaciones | CI job `e2e` | ✅ 33 (local) |
+| G3 | E2E | `node tools/smoke.mjs` todas las comprobaciones | CI job `e2e` | ✅ 30 (local) |
 | G4 | Auditoría | P0.1–P1.6 con prueba de regresión en `src/learning/audit3.test.ts` | vitest | ✅ |
 | G5 | Exámenes | Ningún enunciado contiene «Sol.»/«Solución:» ni el resultado (≥ 4 cifras) | audit3 P0.2 | ✅ |
 | G6 | Diagnóstico | Informe de examen = evidencia de `buildEvidence` (misma fuente) | audit3 P0.3 | ✅ |

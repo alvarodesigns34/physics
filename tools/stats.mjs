@@ -41,7 +41,7 @@ try {
     ['Apartados con trucos', Object.keys(guide.TRICKS).length],
     ['Notas de rigor', guide.RIGOR_NOTES.length],
     ['Pruebas unitarias (vitest)', `${res.numPassedTests} superadas de ${res.numTotalTests}`],
-    ['Comprobaciones e2e (tools/smoke.mjs)', smoke],
+    ['Llamadas a check() en tools/smoke.mjs (en ejecución pueden ser más: algunas están en bucles)', smoke],
     ['Archivos versionados', files],
   ];
   const md = `# Estadísticas de ATOM (generadas)\n\n> Generado por \`npm run stats\` el ${new Date().toISOString().slice(0, 10)}. No editar a mano.\n\n| Métrica | Valor |\n|---|---|\n${rows.map(([k, v]) => `| ${k} | ${v} |`).join('\n')}\n`;

@@ -98,7 +98,7 @@ Misma herramienta (`tools/perf.mjs`), misma máquina y mismo renderizador por so
 - **Accesibilidad**: axe-core en 10 vistas, en CI. Encontró 4 problemas (aria-pressed en radios, contraste de una etiqueta, región desplazable sin teclado, salto de encabezados); 0 tras corregir.
 - **Contraste**: prueba WCAG de los tokens en ambos temas; corrigió `--ink-faint` (4,26 → 5,0:1) y `--ok` (4,37 → 5,2:1).
 - **Regresión visual**: 12 vistas deterministas (hora y aleatoriedad fijadas) con umbral 0,5 %; local, porque el renderizado de fuentes depende del sistema.
-- **Pruebas**: 790 unitarias (223 en 2.0), 33 comprobaciones e2e (23 en 2.0).
+- **Pruebas**: 857 unitarias (223 en 2.0), 30 comprobaciones e2e (23 en 2.0).
 
 ## 8. Pendiente
 Véase `ATOM3-PROGRESS.md`.

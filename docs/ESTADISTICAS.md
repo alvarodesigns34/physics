@@ -21,5 +21,5 @@
 | Apartados con trucos | 26 |
 | Notas de rigor | 14 |
 | Pruebas unitarias (vitest) | 857 superadas de 857 |
-| Comprobaciones e2e (tools/smoke.mjs) | 30 |
+| Llamadas a check() en tools/smoke.mjs (en ejecución pueden ser más: algunas están en bucles) | 30 |
 | Archivos versionados | 314 |
