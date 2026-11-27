@@ -143,6 +143,17 @@ export function ForgeScene() {
 function NuclideNotation({ sp }: { sp: Species }) {
   const id = identify(sp);
   const sym = id.element?.symbol ?? '—';
+  // Crisol vacío: en lugar de «0 0 —», la plantilla de la notación (ᴬ_Z X) en gris, que ya enseña algo.
+  if (!id.element)
+    return (
+      <div className="row" style={{ alignItems: 'center', gap: 6, color: 'var(--ink-faint)' }} aria-label="Notación nuclear: número másico A arriba, número atómico Z abajo, símbolo X">
+        <span className="mono" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.05, fontSize: '1rem' }}>
+          <span>A</span>
+          <span>Z</span>
+        </span>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: '4.25rem', lineHeight: 0.9 }}>X</span>
+      </div>
+    );
   return (
     <div className="row" style={{ alignItems: 'center', gap: 6 }} aria-label={`Notación: ${sym}, Z ${sp.z}, A ${id.massNumber}, carga ${id.charge}`}>
       <span className="mono" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.05, fontSize: '1rem' }}>
