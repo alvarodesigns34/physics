@@ -6,6 +6,7 @@
  */
 import { NODES, type ModuleId } from './syllabus';
 import { LESSONS, TRICKS, guideAnchor } from './guide';
+import { GENERATORS } from './registry';
 
 export type HitKind = 'teoria' | 'laboratorio' | 'practica' | 'formula' | 'truco' | 'pagina';
 
@@ -124,6 +125,10 @@ function buildIndex(): Doc[] {
       for (const f of s.formulas ?? []) docs.push({ nodeIds: [s.node], kind: 'formula', title: f.expr, detail: `Fórmula · ${s.title}`, href: `/guia?n=${s.id ?? s.node}`, text: normalize(`${f.expr} ${s.title}`) });
     }
   }
+  // Familias de ejercicios: «ion misterioso», «conversiones», «desarrollo», «espectro problema»…
+  for (const g of GENERATORS) {
+    docs.push({ nodeIds: g.nodeIds, kind: 'practica', title: `Ejercicios: ${g.title}`, detail: `Familia de ejercicios · ${g.nodeIds.slice(0, 3).join(', ')}`, href: `/entrenamiento?gen=${g.id}`, text: normalize(`${g.title} ${g.id.replace(/-/g, ' ')}`) });
+  }
   for (const [node, list] of Object.entries(TRICKS)) {
     docs.push({ nodeIds: [node], kind: 'truco', title: `Trucos: ${nodeTitle(node)}`, detail: list[0]!.slice(0, 90), href: '/guia?v=trucos', text: normalize(`${nodeTitle(node)} ${list.join(' ')}`) });
   }
@@ -153,6 +158,10 @@ export function search(query: string, limit = 12): SearchHit[] {
     if (d.text.includes(q)) sc += 4;
     for (const t of terms) if (d.text.includes(t)) sc += d.kind === 'formula' ? 0.5 : 1;
     if (d.nodeIds.some((n) => nodeScore.has(n))) sc += 3;
+    // Una familia de ejercicios cuyo nombre contiene la consulta es una respuesta directa: se prioriza.
+    if (d.kind === 'practica' && d.text.includes(q)) sc += 3;
+    // Palabra completa en el título («espectro» ≠ «espectrometría»).
+    if (new RegExp(`(^|\\s)${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s|$)`).test(normalize(d.title))) sc += 5;
     if (sc >= 4 || (terms.length > 1 && sc >= terms.length)) {
       hits.push({ kind: d.kind, title: d.title, detail: d.detail, href: d.href, score: sc + (d.kind === 'teoria' ? 0.5 : 0) });
       for (const n of d.nodeIds) bump(n, sc / 4);

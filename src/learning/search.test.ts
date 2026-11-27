@@ -28,3 +28,14 @@ describe('búsqueda global de conceptos (G11)', () => {
     expect(new Set(r.map((h) => h.href + h.title)).size).toBe(r.length);
   });
 });
+
+describe('búsqueda de familias de ejercicios', () => {
+  it.each([
+    ['ion misterioso', 'ion-misterioso'],
+    ['conversiones', 'conversiones'],
+    ['desarrollo', 'desarrollo'],
+    ['espectro', 'espectro-problema'],
+  ])('«%s» enlaza con la familia %s', (q, id) => {
+    expect(search(q, 14).some((h) => h.href === `/entrenamiento?gen=${id}`)).toBe(true);
+  });
+});
