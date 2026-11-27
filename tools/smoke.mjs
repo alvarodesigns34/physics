@@ -97,6 +97,12 @@ try {
   const ph = await page.locator('aside').innerText();
   check(ph.includes('656,47') && ph.includes('Balmer'), 'Photon Lab: Hα a 656,47 nm en la serie de Balmer');
   await page.screenshot({ path: `${OUT}/03-fotones-halpha.png` });
+  // ATOM 4.0: predicción antes del experimento (el cálculo se oculta hasta comprobar).
+  await page.check('text=Predecir antes de ver');
+  check(!(await page.locator('aside').innerText()).includes('656,47'), 'Predicción: el resultado no se muestra antes de comprometerse');
+  await page.click('.prediction [role=radio]:text-is("Visible")');
+  await page.click('.prediction button:has-text("comprobar")');
+  check((await page.locator('aside').innerText()).includes('Predicción correcta'), 'Predicción: Hα en el visible, comprobada en la escena');
 
   await page.goto(base + '#/entrenamiento?v=fuentes');
   await page.waitForSelector('.source-card', { timeout: T });
@@ -182,6 +188,10 @@ try {
   check((await page.locator('aside').innerText()).includes('Encierra realmente'), 'Quantum Space: superficie calculada en el Worker');
   check((await page.locator('aside').innerText()).includes('nodos angulares'), 'Quantum Space: orbital 3d con sus nodos');
   await page.screenshot({ path: `${OUT}/07-cuantico.png` });
+  await page.check('text=Predecir los nodos antes de verlos');
+  await page.click('.prediction [role=radio]:text-is("2")');
+  await page.click('.prediction button:has-text("comprobar")');
+  check((await page.locator('aside').innerText()).includes('Predicción correcta'), 'Predicción: el 3d tiene 2 nodos (n − 1)');
 
   await page.goto(base + '#/arquitecto?z=8');
   await page.waitForSelector('button:has-text("Estado fundamental real")', { timeout: T });
@@ -207,6 +217,10 @@ try {
   await page.waitForFunction(() => /\d+,\d+ u/.test(document.querySelector('aside')?.textContent ?? ''), null, { timeout: 60000 }).catch(() => {});
   check(/\d+,\d+ u/.test(await page.locator('aside').innerText()), 'Mass Spectrometry: masa media medida');
   await page.screenshot({ path: `${OUT}/10-masas.png` });
+  await page.click('.prediction [role=radio]:text-is("Se reduce a la mitad")');
+  await page.click('.prediction button:has-text("comprobar")');
+  const msPred = await page.locator('aside').innerText();
+  check(msPred.includes('Predicción correcta') && msPred.includes('0,600 T'), 'Predicción: duplicar B reduce el radio a la mitad (B pasa a 0,600 T)');
   await page.click('button:has-text("Analizar una muestra desconocida")');
   await page.waitForSelector('text=Muestra desconocida X', { timeout: T });
   const massSide = await page.locator('aside').innerText();

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Prediction } from '../../ui/Prediction';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
@@ -616,6 +617,8 @@ export function QuantumOverlay() {
   const [collapsed, setCollapsed] = useState(false);
   const [tuple, setTuple] = useState('');
   const [tupleMsg, setTupleMsg] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [predictNodes, setPredictNodes] = useState(false);
+  const [nodesRevealed, setNodesRevealed] = useState<string | null>(null);
   useEffect(() => {
     const t = query.get('tab');
     if (t === 'orbitales' || t === 'incertidumbre') st.set({ tab: t });
@@ -709,6 +712,25 @@ export function QuantumOverlay() {
               </section>
               <CompareSection />
               <section className="section">
+                <label className="row small" style={{ gap: 8 }}>
+                  <input type="checkbox" checked={predictNodes} onChange={(e) => setPredictNodes(e.target.checked)} />
+                  Predecir los nodos antes de verlos
+                </label>
+                {predictNodes && (
+                  <Prediction
+                    resetKey={`${n}-${l}`}
+                    question={`¿Cuántos nodos en total (radiales + angulares) tiene un orbital ${n}${lLetter(l)}?`}
+                    options={[0, 1, 2, 3, 4].map((k) => ({ id: String(k), label: String(k) }))}
+                    correct={String(n - 1)}
+                    explanation={`Nodos totales = n − 1 = ${n - 1}: ${l} angular${l === 1 ? '' : 'es'} (= l) y ${n - l - 1} radial${n - l - 1 === 1 ? '' : 'es'} (= n − l − 1). Con el corte activado se ven ${n - l - 1 > 0 ? 'las capas concéntricas (radiales)' : 'que no hay capas concéntricas'}${l > 0 ? ' y los planos o conos donde ψ cambia de signo (angulares)' : ''}.`}
+                    onRun={() => {
+                      st.set({ slice: true });
+                      setNodesRevealed(`${n}-${l}`);
+                    }}
+                    runLabel="Ver el corte y comprobar"
+                  />
+                )}
+                {(!predictNodes || nodesRevealed === `${n}-${l}`) && (
                 <dl className="kv" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
                   <div>
                     <dt>nodos radiales</dt>
@@ -723,6 +745,7 @@ export function QuantumOverlay() {
                     <dd>{2 * l + 1}</dd>
                   </div>
                 </dl>
+                )}
                 <span className="small muted">Distribución radial de probabilidad P(r) = r²·R²(r)</span>
                 <RadialPlot n={n} l={l} scaleBohr={st.bohr} other={st.compare} />
                 {n === 1 && st.bohr && <Feedback tone="info">En el 1s el radio más probable coincide con el radio de Bohr (a₀ = 52,9 pm), pero el electrón no está «en» la órbita: puede encontrarse más cerca o más lejos.</Feedback>}

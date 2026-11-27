@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Prediction } from '../../ui/Prediction';
 import { usePhoton, type PhotonTab } from './state';
 import { WaveScene, HydrogenScene } from './scenes';
 import { SpectroscopeScene, PRISM } from './Spectroscope';
@@ -192,7 +193,11 @@ function LevelPicker({ label, value, onChange, disabled }: { label: string; valu
 function HydrogenPanel() {
   const { mode, from, to, setMode, setFrom, setTo, fire, runCascade, detected, clearDetector } = usePhoton();
   const [cascadeN, setCascadeN] = useState(4);
+  const [predict, setPredict] = useState(false);
+  const [revealed, setRevealed] = useState<string | null>(null);
   const t = from !== to ? transition(from, to, SIM_CONSTANTS) : null;
+  const key = `${mode}-${from}-${to}`;
+  const hideCalc = predict && revealed !== key;
   const doFire = () => {
     const r = fire();
     if (r) announce(`${r.type === 'emision' ? 'Emitido' : 'Absorbido'} un fotón de ${fmt(r.wavelength * 1e9, 4)} nanómetros, serie de ${r.series?.name ?? '—'}, región ${r.region.name}.`);
@@ -211,13 +216,36 @@ function HydrogenPanel() {
         </div>
         <LevelPicker label="Nivel inicial" value={from} onChange={(n) => { setFrom(n); if (mode === 'emision' && to >= n) setTo(Math.max(1, n - 1)); if (mode === 'absorcion' && to <= n) setTo(Math.min(7, n + 1)); }} disabled={(n) => (mode === 'emision' ? n === 1 : n === 7)} />
         <LevelPicker label="Nivel final" value={to} onChange={setTo} disabled={(n) => (mode === 'emision' ? n >= from : n <= from)} />
-        <button type="button" className="btn btn--primary" onClick={doFire} disabled={!t}>
-          {mode === 'emision' ? `Emitir fotón ${from} → ${to}` : `Absorber fotón ${from} → ${to}`}
-        </button>
+        <label className="row small" style={{ gap: 8 }}>
+          <input type="checkbox" checked={predict} onChange={(e) => setPredict(e.target.checked)} />
+          Predecir antes de ver (oculta el cálculo hasta comprobarlo)
+        </label>
+        {predict && t ? (
+          <Prediction
+            resetKey={key}
+            question={`¿En qué región del espectro estará el fotón ${mode === 'emision' ? 'emitido' : 'absorbido'} en el salto ${from} → ${to}?`}
+            options={[
+              { id: 'uv', label: 'Ultravioleta' },
+              { id: 'visible', label: 'Visible' },
+              { id: 'ir', label: 'Infrarrojo' },
+            ]}
+            correct={t.region.id === 'visible' || t.region.id === 'uv' || t.region.id === 'ir' ? t.region.id : 'uv'}
+            explanation={`El salto termina (o empieza) en n = ${t.n1}: serie de ${t.series?.name ?? '—'}. ${t.n1 === 1 ? 'Todos los saltos a n = 1 llevan al menos 10,2 eV: ultravioleta.' : t.n1 === 2 ? 'Los saltos a n = 2 llevan entre 1,9 y 3,4 eV: las primeras líneas son visibles y las más altas pasan al ultravioleta cercano.' : 'Los saltos que terminan en n ≥ 3 llevan menos de 1,6 eV: infrarrojo.'} Aquí: E = ${fmt(t.energyEV, 3)} eV → λ = ${fmt(t.wavelength * 1e9, 4)} nm.`}
+            onRun={() => {
+              doFire();
+              setRevealed(key);
+            }}
+            runLabel={mode === 'emision' ? `Emitir y comprobar` : 'Absorber y comprobar'}
+          />
+        ) : (
+          <button type="button" className="btn btn--primary" onClick={doFire} disabled={!t}>
+            {mode === 'emision' ? `Emitir fotón ${from} → ${to}` : `Absorber fotón ${from} → ${to}`}
+          </button>
+        )}
         <span className="small faint">También puedes tocar los niveles en la escena.</span>
       </section>
 
-      {t && (
+      {t && !hideCalc && (
         <section className="section" aria-label="Cálculo de Rydberg">
           <div className="row row--between">
             <span className="h3">

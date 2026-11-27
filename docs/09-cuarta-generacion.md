@@ -160,3 +160,10 @@ Medido con la misma herramienta (`tools/perf.mjs`) y el mismo renderizador por s
 - **Excepciones del temario.** Se comprueban con los datos: Be > B, Mg > Al, N > O y P > S en energía de ionización; Cl > F en afinidad electrónica; y N y los gases nobles sin anión estable.
 
 Todas pasaron a la primera: no fue necesario corregir ningún dato.
+
+## 12. Predecir antes de ver (laboratorios)
+- **Componente.** `ui/Prediction.tsx` funciona así: primero se elige una predicción y después el laboratorio ejecuta el experimento y la compara, con la explicación del porqué. El resultado nunca se muestra antes de comprometerse con una respuesta: en el hidrógeno, el cálculo de Rydberg queda oculto hasta comprobar.
+- **Photon Lab, hidrógeno.** ¿En qué región estará el fotón del salto elegido? La explicación es por series: n₁ = 1 → UV; n₁ = 2 → visible y UV cercano; n₁ ≥ 3 → IR.
+- **Quantum.** ¿Cuántos nodos tiene el orbital? Es n − 1, desglosado en angulares (l) y radiales (n − l − 1). Al comprobar se activa el corte que los muestra.
+- **Masas.** ¿Qué le pasa al radio si duplicas o reduces a la mitad el campo B? Como r ∝ 1/B, el laboratorio cambia B al comprobar y se ven las nuevas trayectorias. El planteamiento se fija al empezar cada ronda, para que no cambie al modificarse B.
+- **Pruebas.** Comprobaciones e2e en las tres escenas, incluida la de que el resultado no aparece antes de predecir. Auditoría axe sin infracciones.

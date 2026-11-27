@@ -510,3 +510,15 @@
 }
 .label-layer [data-shift='up'] > div::before { top: 50%; border-bottom: 1px solid var(--ink-on-viewer-muted); }
 .label-layer [data-shift='down'] > div::before { bottom: 50%; border-top: 1px solid var(--ink-on-viewer-muted); }
+
+/* Predicción antes del experimento (ui/Prediction.tsx) */
+.prediction {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--r-inner);
+  border: 1px dashed var(--accent-line);
+  background: var(--accent-quiet);
+}
+.prediction__q { margin: 0; font-weight: 500; line-height: 1.45; }
+.prediction .btn { justify-self: start; }

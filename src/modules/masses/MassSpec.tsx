@@ -1,4 +1,5 @@
 import { useContinuousRender } from '../../render/demand';
+import { Prediction } from '../../ui/Prediction';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -322,6 +323,37 @@ function InverseProblem({ measured, isotopes }: { measured: number | null; isoto
   );
 }
 
+/** Predicción: cómo cambia el radio de las trayectorias al duplicar (o reducir a la mitad) el campo B. */
+function MassPrediction() {
+  const B = useMass((s) => s.B);
+  const set = useMass((s) => s.set);
+  const [round, setRound] = useState(0);
+  // El planteamiento se fija al empezar cada ronda: al comprobar, B cambia y la pregunta no debe cambiar.
+  const [base, setBase] = useState(B);
+  const up = base <= 0.6;
+  return (
+    <div className="stack-8">
+      <Prediction
+        resetKey={`b-${round}`}
+        question={`Con B = ${fmt(base, 3)} T, ¿qué le pasa al radio de las trayectorias si ${up ? 'DUPLICAS' : 'REDUCES A LA MITAD'} el campo magnético?`}
+        options={[
+          { id: 'x2', label: 'Se duplica' },
+          { id: 'half', label: 'Se reduce a la mitad' },
+          { id: 'quarter', label: 'Se divide entre 4' },
+          { id: 'same', label: 'No cambia' },
+        ]}
+        correct={up ? 'half' : 'x2'}
+        explanation={`r = √(2mV/q) / B: el radio es inversamente proporcional a B. ${up ? 'Con el doble de campo, la fuerza magnética curva más la trayectoria: radio a la mitad.' : 'Con la mitad de campo, la trayectoria se curva menos: radio doble.'} Los isótopos siguen separados en la misma proporción, √(m₂/m₁).`}
+        onRun={() => set({ B: Math.round((up ? base * 2 : base / 2) * 100) / 100 })}
+        runLabel={up ? 'Duplicar B y comprobar' : 'Reducir B a la mitad y comprobar'}
+      />
+      <button type="button" className="btn btn--ghost btn--sm" style={{ justifySelf: 'start' }} onClick={() => { setBase(useMass.getState().B); setRound((r) => r + 1); }}>
+        Otra predicción con el campo actual
+      </button>
+    </div>
+  );
+}
+
 export function MassOverlay() {
   const st = useMass();
   // Al salir del laboratorio se abandona el problema inverso (la muestra no queda oculta para siempre).
@@ -417,6 +449,7 @@ export function MassOverlay() {
                 <Icon name="reset" size={16} /> Nueva medida
               </button>
             </div>
+            <MassPrediction />
           </section>
           )}
           <section className="section" aria-live="off">
