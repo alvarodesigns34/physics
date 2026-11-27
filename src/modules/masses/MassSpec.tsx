@@ -186,7 +186,7 @@ export function MassScene() {
   // El espectrómetro cuenta iones de forma continua mientras está en marcha.
   useContinuousRender(useMass((s) => s.running));
   return (
-    <Stage camera={[0.4, 8.5, 1.2]} fov={40}>
+    <Stage mood="masas" camera={[0.4, 8.5, 1.2]} fov={40}>
       <ambientLight intensity={0.75} />
       <directionalLight position={[3, 8, 4]} intensity={1.8} color="#ffe6c8" />
       <Spectrometer />

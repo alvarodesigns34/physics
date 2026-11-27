@@ -1,5 +1,5 @@
 import { installInteractionWatch, markInteraction, onWake, shouldRender } from './demand';
-import { Suspense, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, Lightformer } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, ToneMapping } from '@react-three/postprocessing';
@@ -101,13 +101,59 @@ function FrameMonitor() {
   return null;
 }
 
-/** Entorno de reflejos procedural (sin descargas): lámparas de instrumento cálidas y un contraluz frío. */
-function StudioEnvironment() {
+/**
+ * ATOM 5.1 · Dirección artística por laboratorio dentro de una identidad común: cada uno tiene su cielo
+ * (degradado vertical con un halo), su niebla y el tinte de sus reflejos. Todo procedural, sin descargas.
+ */
+export type Mood = 'forja' | 'historia' | 'fotones' | 'masas' | 'cuantico' | 'arquitecto' | 'periodico' | 'campana' | 'neutro';
+export const MOODS: Record<Mood, { top: string; bottom: string; halo: string; key: string; rim: string; fog: string }> = {
+  forja: { top: '#0b0a0c', bottom: '#1d140d', halo: '#3a2412', key: '#ffd3a0', rim: '#8fb6ea', fog: '#0d0a08' },
+  historia: { top: '#0c0b0a', bottom: '#1b1610', halo: '#33281a', key: '#ffdcae', rim: '#9fbbe0', fog: '#0d0b08' },
+  fotones: { top: '#040509', bottom: '#0b0d16', halo: '#161a2c', key: '#f3ead8', rim: '#7d9ce8', fog: '#05060a' },
+  masas: { top: '#070a0f', bottom: '#0f1620', halo: '#1a2636', key: '#e6eef8', rim: '#7fb0e8', fog: '#080b10' },
+  cuantico: { top: '#06061a', bottom: '#0d0f26', halo: '#1d1f4a', key: '#e9e4ff', rim: '#8a8dff', fog: '#07071a' },
+  arquitecto: { top: '#06101e', bottom: '#0c1a2e', halo: '#14304d', key: '#e8f1ff', rim: '#6fb6ff', fog: '#07101c' },
+  periodico: { top: '#09090b', bottom: '#141518', halo: '#24252b', key: '#fff1dc', rim: '#a9c7ee', fog: '#0a0a0c' },
+  campana: { top: '#05060c', bottom: '#0f121c', halo: '#1b2036', key: '#ffe2bd', rim: '#9dbfe8', fog: '#06070c' },
+  neutro: { top: '#0e121b', bottom: '#151b27', halo: '#1f2738', key: '#ffd9a8', rim: '#a9c7ee', fog: '#0b0a09' },
+};
+
+/** Cúpula de fondo: degradado vertical y un halo suave detrás de la escena (una llamada de dibujo). */
+function Backdrop({ mood }: { mood: Mood }) {
+  const m = MOODS[mood];
+  const uniforms = useMemo(() => ({ uTop: { value: new THREE.Color(m.top) }, uBottom: { value: new THREE.Color(m.bottom) }, uHalo: { value: new THREE.Color(m.halo) } }), [m]);
+  return (
+    <mesh scale={90} renderOrder={-10} frustumCulled={false}>
+      <sphereGeometry args={[1, 32, 16]} />
+      <shaderMaterial
+        side={THREE.BackSide}
+        depthWrite={false}
+        fog={false}
+        uniforms={uniforms}
+        vertexShader={`varying vec3 vP; void main(){ vP = normalize(position); vec4 p = projectionMatrix * modelViewMatrix * vec4(position,1.0); gl_Position = p.xyww; }`}
+        fragmentShader={`uniform vec3 uTop; uniform vec3 uBottom; uniform vec3 uHalo; varying vec3 vP;
+          void main(){
+            float h = clamp(vP.y * 0.5 + 0.5, 0.0, 1.0);
+            vec3 c = mix(uBottom, uTop, smoothstep(0.3, 0.85, h));
+            float halo = pow(max(0.0, 1.0 - length(vec2(vP.x, (vP.y - 0.05) * 1.6))), 2.2) * step(0.0, -vP.z);
+            c += uHalo * halo * 0.9;
+            gl_FragColor = vec4(c, 1.0);
+            #include <colorspace_fragment>
+          }`}
+      />
+    </mesh>
+  );
+}
+
+/** Entorno de reflejos procedural (sin descargas): lámparas tintadas según el laboratorio. */
+function StudioEnvironment({ mood }: { mood: Mood }) {
+  const m = MOODS[mood];
   return (
     <Environment resolution={128} frames={1}>
-      <Lightformer form="rect" intensity={2.2} color="#ffd9a8" position={[0, 5, -6]} scale={[10, 2, 1]} />
-      <Lightformer form="rect" intensity={0.9} color="#a9c7ee" position={[-6, 2, 3]} rotation-y={Math.PI / 2} scale={[6, 3, 1]} />
+      <Lightformer form="rect" intensity={2.2} color={m.key} position={[0, 5, -6]} scale={[10, 2, 1]} />
+      <Lightformer form="rect" intensity={0.9} color={m.rim} position={[-6, 2, 3]} rotation-y={Math.PI / 2} scale={[6, 3, 1]} />
       <Lightformer form="ring" intensity={1.4} color="#f2a93b" position={[5, 3, 2]} scale={2} />
+      <Lightformer form="rect" intensity={0.5} color={m.rim} position={[0, -4, 0]} rotation-x={Math.PI / 2} scale={[12, 12, 1]} />
     </Environment>
   );
 }
@@ -145,7 +191,7 @@ function ViewOffset({ panel, fov }: { panel: number; fov: number }) {
   return null;
 }
 
-export function Stage({ children, camera = [0, 2.4, 9] as [number, number, number], fov = 40, panel = 432 }: { children: ReactNode; camera?: [number, number, number]; fov?: number; panel?: number }) {
+export function Stage({ children, camera = [0, 2.4, 9] as [number, number, number], fov = 40, panel = 432, mood = 'neutro' }: { children: ReactNode; camera?: [number, number, number]; fov?: number; panel?: number; mood?: Mood }) {
   const q = useQuality();
   const reduced = useReducedMotion();
   const auto = useStore((s) => s.settings.quality === 'auto');
@@ -174,14 +220,15 @@ export function Stage({ children, camera = [0, 2.4, 9] as [number, number, numbe
       frameloop="demand"
       aria-hidden="true"
     >
-      <color attach="background" args={['#121722']} />
-      <fog attach="fog" args={['#0b0a09', 14, 42]} />
+      <color attach="background" args={[MOODS[mood].top]} />
+      <fog attach="fog" args={[MOODS[mood].fog, 16, 48]} />
+      <Backdrop mood={mood} />
       <ViewOffset panel={panel} fov={fov} />
       <DemandDriver />
       {auto && !reduced && <FrameMonitor />}
       <Suspense fallback={null}>
         {q.tier !== 'baja' ? (
-          <StudioEnvironment />
+          <StudioEnvironment mood={mood} />
         ) : (
           // Sin mapa de entorno (calidad baja), las escenas sin luces propias quedaban planas: un juego de
           // luces barato (sin sombras) conserva el volumen.

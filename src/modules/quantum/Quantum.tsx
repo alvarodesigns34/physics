@@ -336,7 +336,7 @@ export function QuantumScene() {
     // Comparación: la MISMA escala para los dos (la del mayor), para que los tamaños relativos sean reales.
     const common = 2.0 / Math.max(radius90(n, l), radius90(compare.n, compare.l));
     return (
-      <Stage camera={slice ? [0, 11, 0.01] : [0, 3.2, 10.5]} fov={40} key={slice ? 'corte-c' : 'libre-c'}>
+      <Stage mood="cuantico" camera={slice ? [0, 11, 0.01] : [0, 3.2, 10.5]} fov={40} key={slice ? 'corte-c' : 'libre-c'}>
         <group position={[-2.35, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <OrbitalSurface n={n} l={l} m={m} subshell={false} scale={common} slice={slice} res={Math.min(res, 56)} p={fraction} onInfo={setInfo} />
         </group>
@@ -354,7 +354,7 @@ export function QuantumScene() {
     // La nube incluye también el 10 % exterior de la probabilidad (llega a ~2 veces el radio del 90 %): la
     // cámara se aleja un 25 % en esa vista, sin cambiar la escala del mundo, para que nube y superficie
     // sigan siendo comparables.
-    <Stage camera={slice ? (view === 'nube' ? [0, 11.5, 0.01] : [0, 9, 0.01]) : view === 'nube' ? [6.5, 4.25, 7.75] : [5.2, 3.4, 6.2]} fov={40} key={`${slice ? 'corte' : 'libre'}-${view}`}>
+    <Stage mood="cuantico" camera={slice ? (view === 'nube' ? [0, 11.5, 0.01] : [0, 9, 0.01]) : view === 'nube' ? [6.5, 4.25, 7.75] : [5.2, 3.4, 6.2]} fov={40} key={`${slice ? 'corte' : 'libre'}-${view}`}>
       <group rotation={[-Math.PI / 2, 0, 0]}>
         {view === 'nube' ? (
           <CloudView n={n} l={l} m={m} subshell={subshell} count={Math.min(60000, Math.round(q.points * 2.2))} scale={scale} slice={slice} reduced={reduced} size={q.tier === 'baja' ? 44 : 30} />

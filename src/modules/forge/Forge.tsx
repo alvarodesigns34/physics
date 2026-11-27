@@ -95,7 +95,7 @@ export function ForgeScene() {
   const nScale = density ? Math.min(1, (0.25 * r50) / nucleusRadius(Math.max(1, sp.z + sp.n))) : 1;
   const radius = density ? Math.max(nucleusRadius(sp.z + sp.n) * nScale * 2, rq(density.positions, CLOUD_SCALE, 0.9)) : nucleusRadius(Math.max(1, sp.z + sp.n)) * 4;
   return (
-    <Stage camera={[0, 0.8, 6]} fov={36}>
+    <Stage mood="forja" camera={[0, 0.8, 6]} fov={36}>
       <ambientLight intensity={0.2} />
       <directionalLight position={[3, 5, 5]} intensity={2.3} color="#ffe4c4" castShadow />
       <directionalLight position={[-4, -1, -3]} intensity={1.1} color="#9fc2ee" />

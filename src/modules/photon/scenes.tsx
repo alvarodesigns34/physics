@@ -1,4 +1,5 @@
 import { requestFrames } from '../../render/demand';
+import { PotentialWell, useHydroView, WELL_ANCHORS } from './PotentialWell';
 import { GlassMaterial } from '../../render/Glass';
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -54,6 +55,97 @@ function WaveLine({ axis, color, amplitude, lambdaVis, phase, opacity }: { axis:
   return <primitive object={line} />;
 }
 
+/**
+ * ATOM 5.1 · Lámina y vectores del campo (imagen de libro de texto). La lámina une el eje con la curva; los
+ * vectores, muestreados cada λ/8 dibujada, muestran que E y B son perpendiculares, están en fase y
+ * perpendiculares a la propagación. ESQUEMA: amplitudes y velocidad ilustrativas.
+ */
+function FieldSheet({ axis, color, amplitude, lambdaVis, phase, opacity }: { axis: 'y' | 'z'; color: THREE.Color; amplitude: number; lambdaVis: number; phase: React.MutableRefObject<number>; opacity: number }) {
+  const N = 260;
+  const X0 = -4.2;
+  const X1 = 4.2;
+  const geom = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 2 * 3), 3));
+    const idx: number[] = [];
+    for (let i = 0; i < N - 1; i++) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
+    g.setIndex(idx);
+    return g;
+  }, []);
+  useEffect(() => () => geom.dispose(), [geom]);
+  useFrame(() => {
+    const a = geom.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < N; i++) {
+      const x = X0 + ((X1 - X0) * i) / (N - 1);
+      const env = Math.min(1, (x - X0) / 0.8, (X1 - x) / 0.8);
+      const v = amplitude * env * Math.sin(((2 * Math.PI) / lambdaVis) * x - phase.current);
+      a.setXYZ(i * 2, x, 0, 0);
+      a.setXYZ(i * 2 + 1, x, axis === 'y' ? v : 0, axis === 'z' ? v : 0);
+    }
+    a.needsUpdate = true;
+  });
+  return (
+    <mesh geometry={geom} frustumCulled={false}>
+      <meshBasicMaterial color={color} transparent opacity={opacity} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+    </mesh>
+  );
+}
+
+function FieldVectors({ axis, color, amplitude, lambdaVis, phase }: { axis: 'y' | 'z'; color: THREE.Color; amplitude: number; lambdaVis: number; phase: React.MutableRefObject<number> }) {
+  const MAX = 48;
+  const shafts = useRef<THREE.InstancedMesh>(null);
+  const heads = useRef<THREE.InstancedMesh>(null);
+  const shaftGeo = useMemo(() => new THREE.CylinderGeometry(0.008, 0.008, 1, 6).translate(0, 0.5, 0), []);
+  const headGeo = useMemo(() => new THREE.ConeGeometry(0.035, 0.09, 10), []);
+  useEffect(() => () => {
+    shaftGeo.dispose();
+    headGeo.dispose();
+  }, [shaftGeo, headGeo]);
+  const m4 = useMemo(() => new THREE.Matrix4(), []);
+  const q = useMemo(() => new THREE.Quaternion(), []);
+  const qx = useMemo(() => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2), []);
+  const flip = useMemo(() => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI), []);
+  useFrame(() => {
+    const sm = shafts.current;
+    const hm = heads.current;
+    if (!sm || !hm) return;
+    const step = lambdaVis / 8;
+    const count = Math.min(MAX, Math.floor(8.4 / step));
+    let k = 0;
+    for (let i = 0; i < count; i++) {
+      const x = -4.2 + 0.4 + i * step;
+      if (x > 3.8) break;
+      const env = Math.min(1, (x + 4.2) / 0.8, (4.2 - x) / 0.8);
+      const v = amplitude * env * Math.sin(((2 * Math.PI) / lambdaVis) * x - phase.current);
+      const len = Math.abs(v);
+      if (len < 0.06) continue;
+      q.identity();
+      if (axis === 'z') q.multiply(qx);
+      if (v < 0) q.multiply(flip);
+      m4.compose(new THREE.Vector3(x, 0, 0), q, new THREE.Vector3(1, len - 0.06, 1));
+      sm.setMatrixAt(k, m4);
+      const tip = new THREE.Vector3(0, len - 0.045, 0).applyQuaternion(q).add(new THREE.Vector3(x, 0, 0));
+      m4.compose(tip, q, new THREE.Vector3(1, 1, 1));
+      hm.setMatrixAt(k, m4);
+      k++;
+    }
+    sm.count = k;
+    hm.count = k;
+    sm.instanceMatrix.needsUpdate = true;
+    hm.instanceMatrix.needsUpdate = true;
+  });
+  return (
+    <group>
+      <instancedMesh ref={shafts} args={[shaftGeo, undefined, MAX]} frustumCulled={false}>
+        <meshBasicMaterial color={color} toneMapped={false} />
+      </instancedMesh>
+      <instancedMesh ref={heads} args={[headGeo, undefined, MAX]} frustumCulled={false}>
+        <meshBasicMaterial color={color} toneMapped={false} />
+      </instancedMesh>
+    </group>
+  );
+}
+
 /** Anclas de las etiquetas de la onda (el grupo de la escena está girado −0,12 rad en Y). */
 function waveAnchors(): Anchor[] {
   const rot = (x: number, y: number, z: number): [number, number, number] => {
@@ -87,7 +179,7 @@ export function WaveScene() {
   const color = useMemo(() => lineColor(lambdaNm, 2.4), [lambdaNm]);
   const bColor = useMemo(() => new THREE.Color('#a9cdf5').multiplyScalar(0.7), []);
   return (
-    <Stage camera={[2.2, 1.6, 7.6]} fov={40}>
+    <Stage mood="fotones" camera={[2.2, 1.6, 7.6]} fov={40}>
       <PhaseDriver phase={phase} running={!reduced} />
       <LabelProjector anchors={WAVE_ANCHORS} />
       <ambientLight intensity={0.3} />
@@ -98,6 +190,10 @@ export function WaveScene() {
         </mesh>
         <WaveLine axis="y" color={color} amplitude={1.05} lambdaVis={vis} phase={phase} opacity={1} />
         <WaveLine axis="z" color={bColor} amplitude={0.75} lambdaVis={vis} phase={phase} opacity={0.55} />
+        <FieldSheet axis="y" color={color} amplitude={1.05} lambdaVis={vis} phase={phase} opacity={0.045} />
+        <FieldSheet axis="z" color={bColor} amplitude={0.75} lambdaVis={vis} phase={phase} opacity={0.06} />
+        <FieldVectors axis="y" color={color} amplitude={1.05} lambdaVis={vis} phase={phase} />
+        <FieldVectors axis="z" color={bColor} amplitude={0.75} lambdaVis={vis} phase={phase} />
         {/* Regla: una longitud de onda dibujada */}
         <group position={[-vis / 2, -1.55, 0]}>
           <mesh position={[vis / 2, 0, 0]}>
@@ -260,6 +356,27 @@ function Electron({ reduced }: { reduced: boolean }) {
 }
 
 export function HydrogenScene() {
+  const view = useHydroView((s) => s.view);
+  const reduced = useReducedMotion();
+  const level = usePhoton((s) => s.level);
+  const last = usePhoton((s) => s.lastTransition);
+  const detected = usePhoton((s) => s.detected);
+  if (view === 'pozo') {
+    const lastT = detected.find((d) => d.stamp === last?.stamp)?.t;
+    return (
+      <Stage mood="fotones" camera={[0, 3.0, 9.6]} fov={40} key="pozo">
+        <ambientLight intensity={0.35} />
+        <directionalLight position={[3, 6, 4]} intensity={1.2} color="#e9e4ff" />
+        <PotentialWell level={level} lastStamp={last?.stamp} lastColor={lastT ? lineColor(lastT.wavelength * 1e9, 3) : new THREE.Color('#ffffff')} reduced={reduced} />
+        <LabelProjector anchors={WELL_ANCHORS} />
+        <OrbitControls target={[0, 0.7, 0]} enablePan={false} enableDamping minDistance={4} maxDistance={14} maxPolarAngle={1.5} autoRotate={!reduced} autoRotateSpeed={0.3} />
+      </Stage>
+    );
+  }
+  return <HydrogenLadder />;
+}
+
+function HydrogenLadder() {
   const reduced = useReducedMotion();
   const flights = usePhoton((s) => s.flights);
   const level = usePhoton((s) => s.level);
@@ -274,7 +391,7 @@ export function HydrogenScene() {
     else setFrom(n);
   };
   return (
-    <Stage camera={[0.4, 0.9, 8.6]} fov={40}>
+    <Stage mood="fotones" camera={[0.4, 0.9, 8.6]} fov={40} key="diagrama">
       <ambientLight intensity={0.3} />
       {LEVELS.map((n) => (
         <Level key={n} n={n} active={n === level} onPick={onPick} />
@@ -334,7 +451,7 @@ export function LampScene({ symbol, mode }: { symbol: string; mode: 'emision' | 
   const reduced = useReducedMotion();
   const col = useMemo(() => (mode === 'emision' ? lampColor(symbol).multiplyScalar(3) : new THREE.Color('#fff6ea').multiplyScalar(3)), [symbol, mode]);
   return (
-    <Stage camera={[0, 0.6, 6.5]} fov={38}>
+    <Stage mood="fotones" camera={[0, 0.6, 6.5]} fov={38}>
       <ambientLight intensity={0.25} />
       <pointLight position={[0, 0, 1]} color={col} intensity={6} distance={6} />
       <group rotation-z={Math.PI / 2}>

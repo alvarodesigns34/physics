@@ -1,3 +1,4 @@
+import { requestFrames } from '../../render/demand';
 import { ChallengesPanel } from './Challenges';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -57,8 +58,30 @@ function boxX(i: number, k: number) {
 }
 
 function Arrow({ up, color, x }: { up: boolean; color: THREE.Color; x: number }) {
+  // Aparición elástica (spring): la flecha «salta» al entrar el electrón.
+  const g = useRef<THREE.Group>(null);
+  const s = useRef(0.2);
+  const v = useRef(0);
+  const reduced = useReducedMotion();
+  useEffect(() => {
+    requestFrames(900);
+  }, []);
+  useFrame((_, dt) => {
+    if (!g.current) return;
+    if (reduced) s.current = 1;
+    else {
+      const k = 180;
+      const c = 14;
+      v.current += (-(s.current - 1) * k - v.current * c) * Math.min(dt, 0.05);
+      s.current += v.current * Math.min(dt, 0.05);
+    }
+    g.current.scale.setScalar(Math.max(0.01, s.current));
+  });
   return (
-    <group position={[x, 0, 0.13]} rotation={[0, 0, up ? 0 : Math.PI]}>
+    <group ref={g} position={[x, 0, 0.13]} rotation={[0, 0, up ? 0 : Math.PI]}>
+      <sprite position={[0, 0.02, -0.02]} scale={[0.42, 0.56, 1]}>
+        <spriteMaterial map={haloTexture()} color={color} transparent opacity={0.35} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+      </sprite>
       <mesh position={[0, -0.06, 0]}>
         <cylinderGeometry args={[0.022, 0.022, 0.32, 10]} />
         <meshBasicMaterial color={color} toneMapped={false} />
@@ -108,7 +131,7 @@ function OrbitalBox({ state, x, onClick, bad, hund }: { state: BoxState; x: numb
           document.body.style.cursor = '';
         }}
       >
-        <meshPhysicalMaterial color={bad ? '#9a3a2c' : hund ? '#8a6c2a' : state ? '#7088b0' : '#566a8e'} roughness={0.55} metalness={0} clearcoat={0.25} clearcoatRoughness={0.6} transparent opacity={hover ? 0.98 : 0.9} emissive={hover ? '#f2a93b' : '#000000'} emissiveIntensity={hover ? 0.15 : 0} />
+        <meshPhysicalMaterial color={bad ? '#9a3a2c' : hund ? '#8a6c2a' : state ? '#2d4f86' : '#1c2c48'} roughness={0.18} metalness={0.05} clearcoat={1} clearcoatRoughness={0.12} transparent opacity={state ? 0.78 : 0.55} envMapIntensity={1.4} emissive={hover ? '#f2a93b' : state ? '#4f86d8' : '#0c1a30'} emissiveIntensity={hover ? 0.2 : state ? 0.35 : 0.2} depthWrite={false} />
       </mesh>
       <lineSegments geometry={edges} raycast={() => null}>
         <lineBasicMaterial color={bad ? '#ff9c86' : hund ? '#f2c46b' : hover ? '#f2a93b' : '#a9bde0'} transparent opacity={state ? 0.95 : 0.75} toneMapped={false} />
@@ -153,6 +176,7 @@ function Tower() {
           const arr = boxes[label] ?? new Array<BoxState>(k).fill(0);
           return (
             <group key={label} position={[0, i * ROW_H, 0]}>
+              <Shelf width={k * (BOX + GAP) + 0.12} l={s.l} />
               {arr.map((st, j) => (
                 <OrbitalBox
                   key={j}
@@ -179,14 +203,82 @@ function Tower() {
   );
 }
 
+const L_COLOR = ['#d9785a', '#74b8a8', '#8d9db3', '#b892c2']; // s, p, d, f: los colores de bloque de la tabla
+
+/** Repisa metálica bajo cada subnivel, con el canto del color de su bloque (s, p, d, f). */
+function Shelf({ width, l }: { width: number; l: number }) {
+  return (
+    <group position={[0, -BOX * 0.4 - 0.05, 0]}>
+      <mesh>
+        <boxGeometry args={[width, 0.035, 0.36]} />
+        <meshStandardMaterial color="#1b2638" metalness={0.85} roughness={0.32} />
+      </mesh>
+      <mesh position={[0, 0, 0.181]}>
+        <boxGeometry args={[width, 0.035, 0.004]} />
+        <meshBasicMaterial color={new THREE.Color(L_COLOR[l]!).multiplyScalar(1.5)} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
+let HALO: THREE.Texture | null = null;
+function haloTexture(): THREE.Texture {
+  if (HALO) return HALO;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d')!;
+  const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grd.addColorStop(0, 'rgba(255,255,255,1)');
+  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 64, 64);
+  HALO = new THREE.CanvasTexture(c);
+  return HALO;
+}
+
+/** Plano de fondo con retícula técnica (la identidad «plano de arquitecto» del laboratorio). */
+function Blueprint() {
+  const tex = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 512;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#0a1628';
+    g.fillRect(0, 0, 512, 512);
+    for (let i = 0; i <= 512; i += 16) {
+      g.strokeStyle = i % 128 === 0 ? 'rgba(111,182,255,0.22)' : 'rgba(111,182,255,0.07)';
+      g.lineWidth = i % 128 === 0 ? 2 : 1;
+      g.beginPath();
+      g.moveTo(i, 0);
+      g.lineTo(i, 512);
+      g.moveTo(0, i);
+      g.lineTo(512, i);
+      g.stroke();
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(4, 4);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    return t;
+  }, []);
+  useEffect(() => () => tex.dispose(), [tex]);
+  return (
+    <mesh position={[0, 0, -2.2]}>
+      <planeGeometry args={[34, 34]} />
+      <meshBasicMaterial map={tex} toneMapped={false} />
+    </mesh>
+  );
+}
+
 export function ArchitectScene() {
   return (
-    <Stage camera={[0, 0.6, 9.5]} fov={42}>
+    <Stage mood="arquitecto" camera={[0, 0.6, 9.5]} fov={42}>
       <ambientLight intensity={0.9} />
       {/* Relleno frontal: las caras que mira la cámara quedaban sin luz directa. */}
       <directionalLight position={[-6, 6, 8]} intensity={0.8} color="#dfe8f7" />
       <directionalLight position={[3, 5, 6]} intensity={1.6} color="#ffe6c8" />
       <directionalLight position={[-4, -2, -3]} intensity={0.6} color="#a8c4ea" />
+      <Blueprint />
       <Tower />
       <OrbitControls enablePan={false} enableDamping minDistance={5} maxDistance={18} minAzimuthAngle={-0.8} maxAzimuthAngle={0.8} minPolarAngle={0.9} maxPolarAngle={2.2} />
     </Stage>

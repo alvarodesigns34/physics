@@ -290,7 +290,7 @@ export function SpectroscopeScene({ symbol, mode, gas = 'frio' }: { symbol: stri
     return new THREE.Vector3().addVectors(src, scr).multiplyScalar(0.5);
   }, [src]);
   return (
-    <Stage camera={[target.x - 0.2, 5.4, target.z + 9.4]} fov={36}>
+    <Stage mood="fotones" camera={[target.x - 0.2, 5.4, target.z + 9.4]} fov={36}>
       <ambientLight intensity={0.25} />
       <group>
         <Lamp color={lamp} flicker={!reduced} position={src} />

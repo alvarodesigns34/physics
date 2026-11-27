@@ -248,7 +248,7 @@ function ModelScene() {
   const reduced = useReducedMotion();
   const cloud = useMemo(() => atomDensity(1, groundState(1), 9000, mulberry32(1)), []);
   return (
-    <Stage camera={[0, 1.2, 5.6]} fov={40} key={model}>
+    <Stage mood="historia" camera={[0, 1.2, 5.6]} fov={40} key={model}>
       <ambientLight intensity={0.45} />
       <directionalLight position={[3, 4, 5]} intensity={2} color="#ffe6c8" />
       <directionalLight position={[-4, -1, -3]} intensity={0.8} color="#a8c4ea" />
@@ -426,7 +426,7 @@ function GeigerContent() {
 
 function GeigerScene() {
   return (
-    <Stage camera={[2.2, 3.2, 6.4]} fov={42}>
+    <Stage mood="historia" camera={[2.2, 3.2, 6.4]} fov={42}>
       <GeigerContent />
     </Stage>
   );

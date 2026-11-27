@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useHydroView } from './PotentialWell';
 import { absorptionLines } from '../../science/data/spectralLines';
 import { Prediction } from '../../ui/Prediction';
 import { usePhoton, type PhotonTab } from './state';
@@ -200,6 +201,7 @@ function HydrogenPanel() {
   const t = from !== to ? transition(from, to, SIM_CONSTANTS) : null;
   const key = `${mode}-${from}-${to}`;
   const hideCalc = predict && revealed !== key;
+  const hydroView = useHydroView();
   const doFire = () => {
     const r = fire();
     if (r) announce(`${r.type === 'emision' ? 'Emitido' : 'Absorbido'} un fotón de ${fmt(r.wavelength * 1e9, 4)} nanómetros, serie de ${r.series?.name ?? '—'}, región ${r.region.name}.`);
@@ -208,6 +210,20 @@ function HydrogenPanel() {
     <>
       <section className="section">
         <span className="eyebrow">Átomo de hidrógeno</span>
+        <div className="segmented" role="radiogroup" aria-label="Representación">
+          <button type="button" role="radio" aria-checked={hydroView.view === 'diagrama'} onClick={() => hydroView.set('diagrama')}>
+            Diagrama de niveles
+          </button>
+          <button type="button" role="radio" aria-checked={hydroView.view === 'pozo'} onClick={() => hydroView.set('pozo')}>
+            Pozo de potencial 3D
+          </button>
+        </div>
+        {hydroView.view === 'pozo' && (
+          <p className="small muted" style={{ margin: 0 }}>
+            La altura es la energía (escala lineal, la misma del diagrama). La pared es la energía potencial V(r) = −27,2 eV·a₀/r: cada nivel la corta en r = 2n²·a₀. Por eso los niveles se apiñan arriba: la pared se aplana. Ionizar es salir del pozo.
+          </p>
+        )}
+        {hydroView.view === 'pozo' && <EpiTag kind="esquema">Radio comprimido (∝ √r); el electrón sobre el anillo es la imagen de Bohr</EpiTag>}
         <div className="segmented" role="tablist" aria-label="Tipo de proceso">
           <button type="button" role="tab" aria-selected={mode === 'emision'} onClick={() => setMode('emision')}>
             Emisión
@@ -461,7 +477,26 @@ function SpectroPanel() {
 
 function SceneLabels({ tab }: { tab: PhotonTab }) {
   const level = usePhoton((s) => s.level);
+  const hydroView = useHydroView((s) => s.view);
   const lambdaNm = usePhoton((s) => s.lambdaNm);
+  if (tab === 'hidrogeno' && hydroView === 'pozo')
+    return (
+      <LabelLayer>
+        {[1, 2, 3].map((n) => (
+          <AnchoredLabel key={n} id={`pz-${n}`} align="left">
+            <span className="scene-label" style={{ color: n === level ? 'var(--accent)' : undefined }}>
+              n = {n} · r = {2 * n * n} a₀
+            </span>
+          </AnchoredLabel>
+        ))}
+        <AnchoredLabel id="pz-inf" align="center">
+          <span className="scene-label" style={{ color: 'var(--ink-faint)' }}>E = 0: fuera del pozo (ionizado)</span>
+        </AnchoredLabel>
+        <AnchoredLabel id="pz-wall" align="right">
+          <span className="scene-label scene-label--part">Pared: V(r) = −27,2 eV·a₀/r</span>
+        </AnchoredLabel>
+      </LabelLayer>
+    );
   if (tab === 'hidrogeno')
     return (
       <LabelLayer>

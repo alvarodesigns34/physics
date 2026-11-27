@@ -412,7 +412,7 @@ function Bench() {
     <group position={[0.3, -1.66, 0]}>
       <mesh receiveShadow>
         <boxGeometry args={[9.6, 0.12, 3.2]} />
-        <meshPhysicalMaterial color="#130d09" roughness={0.5} clearcoat={0.8} clearcoatRoughness={0.18} />
+        <meshStandardMaterial color="#120c08" roughness={0.62} metalness={0.1} envMapIntensity={0.25} />
       </mesh>
       <mesh position={[0, 0.065, 0]}>
         <boxGeometry args={[9.62, 0.012, 3.22]} />
@@ -487,7 +487,7 @@ export function ThomsonTubeScene({ res, plates, B, accel, gas, view }: { res: Ca
   const spotY = !res.hitsPlate && !res.turnsBack && Number.isFinite(res.screenY) && Math.abs(res.screenY * TUBE_SCALE) < SCREEN_R - 0.06 ? res.screenY * TUBE_SCALE : null;
   const gasColor = useMemo(() => new THREE.Color(GAS_GLOW[gas]), [gas]);
   return (
-    <Stage camera={VIEWS.perspectiva.pos} fov={36}>
+    <Stage mood="historia" camera={VIEWS.perspectiva.pos} fov={36}>
       <ambientLight intensity={0.22} />
       <directionalLight position={[-3, 6, 5]} intensity={1.5} color="#ffe2bf" castShadow shadow-mapSize={[1024, 1024]} />
       <directionalLight position={[6, 2, -5]} intensity={0.8} color="#9ec2f0" />

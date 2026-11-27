@@ -287,7 +287,7 @@ export function CampaignMapScene({ onPick }: { onPick: (id: string) => void }) {
   }), [states]);
   const focus = POS[next < 0 ? POS.length - 1 : next]!;
   return (
-    <Stage camera={[0, 22, 30]} fov={34}>
+    <Stage mood="campana" camera={[0, 22, 30]} fov={34}>
       <ambientLight intensity={0.25} />
       <directionalLight position={[6, 14, 8]} intensity={1.2} color="#ffe6c8" />
       <directionalLight position={[-8, 5, -6]} intensity={0.6} color="#a8c4ea" />
