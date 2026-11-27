@@ -56,3 +56,10 @@ describe('modelos históricos: sus imágenes se presentan como del modelo, no co
     expect(bad).toEqual([]);
   });
 });
+
+describe('masa media: «más cerca del más abundante» solo está garantizado con dos isótopos', () => {
+  it('ninguna capa lo afirma sin esa condición', () => {
+    const bad = TEXT.filter((t) => /m[aá]s cerca del (is[oó]topo )?m[aá]s abundante/i.test(t) && !/dos/i.test(t));
+    expect(bad).toEqual([]);
+  });
+});

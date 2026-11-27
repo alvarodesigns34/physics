@@ -22,10 +22,11 @@ import { createRequire } from 'node:module';
 import { writeFileSync } from 'node:fs';
 
 const { chromium } = createRequire(import.meta.url)('playwright');
-const PORT = 4181;
+const PORT = Number(process.env.PORT ?? 4181);
+const DIST = process.env.DIST ?? 'dist';
 const out = process.argv.slice(2).find((a) => !a.startsWith('--'));
 const CYCLES = process.env.PERF_ROUTES ? 0 : Number(process.argv.find((a) => a.startsWith('--ciclos='))?.split('=')[1] ?? 4);
-const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'pipe' });
+const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', String(PORT), '--strictPort', '--outDir', DIST], { stdio: 'pipe' });
 await new Promise((res, rej) => {
   const t = setTimeout(() => rej(new Error('vite preview no arrancó')), 20000);
   server.stdout.on('data', (d) => String(d).includes(String(PORT)) && (clearTimeout(t), res()));

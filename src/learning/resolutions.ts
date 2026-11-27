@@ -112,7 +112,7 @@ export function averageMassResolution(symbol: string, iso: { a: number; mass: nu
     { kind: 'por-que', text: 'Una muestra real contiene billones de átomos en esas proporciones. La masa que se mide es la media, no la de ningún átomo concreto.' },
     { kind: 'sustitucion', text: '', math: `M = \\frac{${iso.map((i) => `${texNum(i.mass, 7)} \\cdot ${texNum(i.abundance, 4)}`).join(' + ')}}{100}` },
     { kind: 'resultado', text: `M = ${sci(M, 6)} u.` },
-    { kind: 'comprobacion', text: `M queda entre la masa del isótopo más ligero y la del más pesado, y más cerca del más abundante (${symbol}-${top.a}, ${sci(top.abundance, 3)} %).` },
+    { kind: 'comprobacion', text: `M queda entre la masa del isótopo más ligero y la del más pesado${iso.length === 2 ? `, y más cerca del más abundante (${symbol}-${top.a}, ${sci(top.abundance, 3)} %)` : `; suele quedar cerca de los más abundantes (${symbol}-${top.a}, ${sci(top.abundance, 3)} %)`}.` },
     { kind: 'errores', text: 'Hacer la media aritmética (sin ponderar), olvidar dividir entre 100 y usar A (entero) en lugar de la masa isotópica cuando el enunciado da la masa exacta.' },
   ];
 }

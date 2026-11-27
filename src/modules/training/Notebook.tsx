@@ -38,9 +38,9 @@ export function NotebookView() {
   const gaps = useMemo(() => conceptualGaps(notebook, mastery), [notebook, mastery]);
   if (notebook.length === 0) {
     return (
-      <div className="panel-card stack-8">
-        <span className="h3">Tu cuaderno está vacío</span>
-        <p className="small muted" style={{ margin: 0 }}>
+      <div className="empty-state">
+        <span className="empty-state__title">Tu cuaderno está vacío</span>
+        <p className="small muted" style={{ margin: 0, maxWidth: '62ch' }}>
           Cada ejercicio en el que falles un paso (o tengas que verlo resuelto) aparecerá aquí con su diagnóstico. Lo darás por superado cuando aciertes una <strong>variante nueva</strong> a la primera.
         </p>
       </div>

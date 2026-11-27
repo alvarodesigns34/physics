@@ -108,30 +108,65 @@ function DaltonSphere() {
   );
 }
 
+/**
+ * Modelo de Thomson (1904), como él lo propuso: una esfera de carga positiva uniforme (la «gelatina») y
+ * los electrones en ANILLOS concéntricos que giran en su interior (Thomson buscaba configuraciones
+ * estables así). ESQUEMA histórico: 12 electrones en anillos de 3 y 9.
+ */
 function ThomsonPudding({ reduced }: { reduced: boolean }) {
-  const pts = useMemo(() => {
-    const rng = mulberry32(5);
-    return Array.from({ length: 12 }, () => {
-      const v = new THREE.Vector3(rng() * 2 - 1, rng() * 2 - 1, rng() * 2 - 1).normalize().multiplyScalar(0.45 + rng() * 0.75);
-      return { base: v, ph: rng() * 6 };
-    });
-  }, []);
-  const refs = useRef<(THREE.Mesh | null)[]>([]);
-  useFrame((s) => {
+  const rings = useMemo(() => [{ r: 0.42, n: 3, speed: 0.9, tilt: 0.2 }, { r: 0.98, n: 9, speed: -0.5, tilt: -0.15 }], []);
+  const groups = useRef<(THREE.Group | null)[]>([]);
+  const rim = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: { uColor: { value: new THREE.Color('#ff8a5c') } },
+        vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
+        fragmentShader: `uniform vec3 uColor; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.2); gl_FragColor = vec4(uColor * (0.35 + 1.4 * f), 0.12 + 0.7 * f); }`,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        toneMapped: false,
+      }),
+    [],
+  );
+  useEffect(() => () => rim.dispose(), [rim]);
+  useFrame((_, dt) => {
     if (reduced) return;
-    pts.forEach((p, i) => refs.current[i]?.position.copy(p.base).addScalar(Math.sin(s.clock.elapsedTime * 1.5 + p.ph) * 0.015));
+    rings.forEach((r, i) => {
+      const g = groups.current[i];
+      if (g) g.rotation.y += dt * r.speed;
+    });
   });
   return (
     <group>
-      <mesh>
-        <sphereGeometry args={[1.4, 64, 48]} />
-        <meshPhysicalMaterial color="#e8775c" roughness={0.4} transparent opacity={0.28} depthWrite={false} />
-      </mesh>
-      {pts.map((p, i) => (
-        <mesh key={i} ref={(m) => (refs.current[i] = m)} position={p.base}>
-          <sphereGeometry args={[0.07, 20, 14]} />
-          <meshBasicMaterial color={new THREE.Color('#bfe0ff').multiplyScalar(2)} toneMapped={false} />
+      {/* Carga positiva repartida: capas concéntricas tenues + borde luminoso */}
+      {[0.55, 0.95, 1.25].map((r) => (
+        <mesh key={r}>
+          <sphereGeometry args={[r, 40, 28]} />
+          <meshBasicMaterial color="#ff8a5c" transparent opacity={0.045} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} />
         </mesh>
+      ))}
+      <mesh material={rim}>
+        <sphereGeometry args={[1.4, 64, 48]} />
+      </mesh>
+      {rings.map((r, i) => (
+        <group key={i} rotation-x={r.tilt}>
+          <mesh rotation-x={Math.PI / 2}>
+            <torusGeometry args={[r.r, 0.003, 6, 96]} />
+            <meshBasicMaterial color="#bfe0ff" transparent opacity={0.25} />
+          </mesh>
+          <group ref={(g) => (groups.current[i] = g)}>
+            {Array.from({ length: r.n }, (_, k) => {
+              const a = (k / r.n) * Math.PI * 2;
+              return (
+                <mesh key={k} position={[Math.cos(a) * r.r, 0, Math.sin(a) * r.r]}>
+                  <sphereGeometry args={[0.075, 20, 14]} />
+                  <meshBasicMaterial color={new THREE.Color('#bfe0ff').multiplyScalar(2.2)} toneMapped={false} />
+                </mesh>
+              );
+            })}
+          </group>
+        </group>
       ))}
     </group>
   );
@@ -374,23 +409,25 @@ function GeigerContent() {
       <ambientLight intensity={0.35} />
       <directionalLight position={[3, 6, 5]} intensity={2} color="#ffe6c8" />
       <LabelProjector anchors={GEIGER_ANCHORS} />
+      {/* Fuente radiactiva en un bloque de plomo; el emisor se ve por la boca del colimador */}
       <mesh position={[-4.3, 0, 0]}>
-        <boxGeometry args={[0.6, 0.6, 0.6]} />
-        <meshStandardMaterial color="#8a8f9a" metalness={0.5} roughness={0.4} />
+        <boxGeometry args={[0.66, 0.66, 0.66]} />
+        <meshPhysicalMaterial color="#5d6068" metalness={0.35} roughness={0.72} clearcoat={0.2} />
       </mesh>
-      {/* Colimador: el haz sale por una rendija */}
-      <mesh position={[-3.9, 0, 0]} rotation-z={Math.PI / 2}>
-        <cylinderGeometry args={[0.09, 0.09, 0.25, 24]} />
-        <meshStandardMaterial color="#5a5f6a" metalness={0.6} roughness={0.35} />
+      <mesh position={[-3.96, 0, 0]} rotation-y={Math.PI / 2}>
+        <circleGeometry args={[0.07, 24]} />
+        <meshBasicMaterial color={new THREE.Color('#ffb15c').multiplyScalar(2.4)} toneMapped={false} />
       </mesh>
+      <mesh position={[-3.84, 0, 0]} rotation-z={Math.PI / 2}>
+        <cylinderGeometry args={[0.12, 0.12, 0.28, 32, 1, true]} />
+        <meshStandardMaterial color="#3d4048" metalness={0.7} roughness={0.35} side={THREE.DoubleSide} />
+      </mesh>
+      <GeigerBase />
       <instancedMesh ref={beam} args={[undefined, undefined, 30]}>
         <sphereGeometry args={[0.025, 8, 6]} />
         <meshBasicMaterial color={new THREE.Color('#ffcf8a').multiplyScalar(2.5)} toneMapped={false} />
       </instancedMesh>
-      <mesh rotation-y={Math.PI / 2}>
-        <planeGeometry args={[1.1, 1.1]} />
-        <meshStandardMaterial color="#d4a641" metalness={1} roughness={0.25} side={THREE.DoubleSide} />
-      </mesh>
+      <GoldFoil />
       {/* Pantalla de ZnS: banda cilíndrica de eje z, graduada en ángulo de desviación */}
       <mesh rotation-x={Math.PI / 2}>
         <cylinderGeometry args={[SCREEN_R + 0.02, SCREEN_R + 0.02, SCREEN_H, 128, 1, true]} />
@@ -413,7 +450,7 @@ function GeigerContent() {
       })}
       <instancedMesh ref={flashes} args={[undefined, undefined, MAX_FLASH]} frustumCulled={false}>
         <sphereGeometry args={[1, 8, 6]} />
-        <meshBasicMaterial color={new THREE.Color('#b5ffcf').multiplyScalar(3)} toneMapped={false} />
+        <meshBasicMaterial color={new THREE.Color('#b5ffcf').multiplyScalar(3)} toneMapped={false} transparent blending={THREE.AdditiveBlending} depthWrite={false} />
       </instancedMesh>
       <instancedMesh ref={tracks} args={[undefined, undefined, 40]} frustumCulled={false}>
         <cylinderGeometry args={[0.008, 0.008, 1, 6]} />
@@ -421,6 +458,80 @@ function GeigerContent() {
       </instancedMesh>
       <OrbitControls enablePan={false} enableDamping minDistance={3} maxDistance={12} />
     </>
+  );
+}
+
+/** Lámina de oro (de unos 0,4 µm en el experimento: aquí ampliada) arrugada, sobre un marco de latón. */
+function GoldFoil() {
+  const geo = useMemo(() => {
+    const g = new THREE.PlaneGeometry(1.1, 1.1, 24, 24);
+    const pos = g.attributes.position as THREE.BufferAttribute;
+    const rng = mulberry32(11);
+    for (let i = 0; i < pos.count; i++) pos.setZ(i, (rng() - 0.5) * 0.012 + Math.sin(pos.getX(i) * 9) * 0.004);
+    g.computeVertexNormals();
+    return g;
+  }, []);
+  useEffect(() => () => geo.dispose(), [geo]);
+  return (
+    <group rotation-y={Math.PI / 2}>
+      <mesh geometry={geo}>
+        <meshPhysicalMaterial color="#e3b24a" metalness={1} roughness={0.22} clearcoat={0.5} side={THREE.DoubleSide} emissive="#6b4a10" emissiveIntensity={0.15} />
+      </mesh>
+      {[0.6, -0.6].map((y) => (
+        <mesh key={y} position-y={y}>
+          <boxGeometry args={[1.26, 0.08, 0.05]} />
+          <meshStandardMaterial color="#b38a4a" metalness={1} roughness={0.32} />
+        </mesh>
+      ))}
+      {[0.6, -0.6].map((x) => (
+        <mesh key={x} position-x={x}>
+          <boxGeometry args={[0.08, 1.26, 0.05]} />
+          <meshStandardMaterial color="#b38a4a" metalness={1} roughness={0.32} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** Base de la cámara de vacío con la escala angular grabada: el ángulo de desviación se lee desde arriba. */
+function GeigerBase() {
+  const tex = useMemo(() => {
+    const S = 1024;
+    const c = document.createElement('canvas');
+    c.width = c.height = S;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#121316';
+    g.beginPath();
+    g.arc(S / 2, S / 2, S / 2, 0, Math.PI * 2);
+    g.fill();
+    const R = (SCREEN_R / (SCREEN_R + 0.4)) * (S / 2);
+    for (let d = 0; d <= 360; d += 5) {
+      const a = (d * Math.PI) / 180;
+      const major = d % 30 === 0;
+      g.strokeStyle = major ? 'rgba(236,230,220,0.45)' : 'rgba(236,230,220,0.14)';
+      g.lineWidth = major ? 2 : 1;
+      g.beginPath();
+      g.moveTo(S / 2 + Math.cos(a) * (R - (major ? 34 : 14)), S / 2 - Math.sin(a) * (R - (major ? 34 : 14)));
+      g.lineTo(S / 2 + Math.cos(a) * (R - 2), S / 2 - Math.sin(a) * (R - 2));
+      g.stroke();
+    }
+    for (const r of [0.25, 0.5, 0.75]) {
+      g.strokeStyle = 'rgba(236,230,220,0.06)';
+      g.beginPath();
+      g.arc(S / 2, S / 2, R * r, 0, Math.PI * 2);
+      g.stroke();
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 8;
+    return t;
+  }, []);
+  useEffect(() => () => tex.dispose(), [tex]);
+  return (
+    <mesh position-z={-SCREEN_H / 2 - 0.03}>
+      <circleGeometry args={[SCREEN_R + 0.4, 128]} />
+      <meshStandardMaterial map={tex} roughness={0.55} metalness={0.3} />
+    </mesh>
   );
 }
 

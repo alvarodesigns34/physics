@@ -160,6 +160,21 @@ function Spectrometer() {
         <circleGeometry args={[rMean * MAGNET_SCALE, 96, MAGNET_THETA[0], MAGNET_THETA[1]]} />
         <meshStandardMaterial color="#3d5578" transparent opacity={0.2} roughness={0.5} side={THREE.DoubleSide} />
       </mesh>
+      {/* ATOM 5.1 · Piezas polares del electroimán (norte arriba, sur abajo), por encima y por debajo del plano de
+          los iones: el campo B es vertical entre ellas. Mismo semidisco x ≥ 0 (θ de 0 a π en el cilindro). */}
+      {([[0.34, '#7a2a24'], [-0.34, '#23324f']] as const).map(([y, edge]) => (
+        <group key={y} position={[0, y, -rMean]}>
+          <mesh castShadow>
+            <cylinderGeometry args={[rMean * MAGNET_SCALE, rMean * MAGNET_SCALE, 0.4, 96, 1, false, 0, Math.PI]} />
+            {/* La pieza superior casi transparente: la cámara mira desde arriba y no debe tapar las trayectorias */}
+            <meshPhysicalMaterial color="#2a2d33" metalness={0.85} roughness={0.32} clearcoat={0.5} transparent opacity={y > 0 ? 0.12 : 0.85} depthWrite={false} />
+          </mesh>
+          <mesh position-y={y > 0 ? 0.205 : -0.205} rotation-x={-Math.PI / 2}>
+            <ringGeometry args={[rMean * MAGNET_SCALE - 0.06, rMean * MAGNET_SCALE, 96, 1, -Math.PI / 2, Math.PI]} />
+            <meshBasicMaterial color={edge} toneMapped={false} side={THREE.DoubleSide} />
+          </mesh>
+        </group>
+      ))}
       {/* trayectorias */}
       {radii.map((r, i) => (
         // Arco del toro de θ = −π/2 a π/2 (Rz) llevado al plano horizontal (Rx): (r·cosθ, 0, −r + r·senθ),

@@ -59,6 +59,45 @@ for (const [name, ls] of Object.entries(cases)) {
   console.log(errs.length ? '✗' : '✓', 'sin conexión: inicio, guía, entrenamiento y laboratorio', errs.join(' | ').slice(0, 300));
   await ctx.close();
 }
+// ATOM 5.1 · Pérdida y recuperación del contexto WebGL (p. ej., la GPU se reinicia o el sistema la reclama).
+{
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  await ctx.addInitScript(() => localStorage.setItem('atom:v1', JSON.stringify({ state: { settings: { seenIntro: true, quality: 'auto' } }, version: 2 })));
+  const page = await ctx.newPage();
+  const errs = [];
+  page.on('pageerror', (e) => errs.push(e.message));
+  for (const r of ['#/forja', '#/periodico', '#/historia?tab=tubo']) {
+    await page.goto(`http://localhost:${PORT}/${r}`);
+    await page.waitForSelector('canvas', { timeout: 20000 });
+    await page.waitForTimeout(1500);
+    const lost = await page.evaluate(() => {
+      const c = document.querySelector('canvas');
+      const gl = c.getContext('webgl2') || c.getContext('webgl');
+      const ext = gl?.getExtension('WEBGL_lose_context');
+      if (!ext) return 'sin extensión';
+      ext.loseContext();
+      window.__ext = ext;
+      return 'ok';
+    });
+    if (lost !== 'ok') { errs.push(`${r}: ${lost}`); continue; }
+    await page.waitForTimeout(800);
+    await page.evaluate(() => window.__ext.restoreContext());
+    await page.waitForTimeout(2000);
+    // Tras recuperar: el lienzo sigue ahí, la interfaz responde y la escena vuelve a dibujar
+    const f0 = await page.evaluate(() => window.__atomFrames ?? 0);
+    await page.mouse.move(400, 400);
+    await page.mouse.down();
+    await page.mouse.move(520, 420, { steps: 6 });
+    await page.mouse.up();
+    await page.waitForTimeout(1200);
+    const ok = await page.evaluate((f) => ({ canvas: !!document.querySelector('canvas'), frames: (window.__atomFrames ?? 0) - f, lost: document.querySelector('canvas').getContext('webgl2')?.isContextLost?.() }), f0);
+    if (!ok.canvas || ok.lost || ok.frames < 1) errs.push(`${r}: tras recuperar ${JSON.stringify(ok)}`);
+    if ((await page.locator('main').innerText()).trim().length < 40) errs.push(`${r}: panel vacío`);
+  }
+  if (errs.length) failed++;
+  console.log(errs.length ? '✗' : '✓', 'contexto WebGL perdido y recuperado en Forja, tabla y tubo: la escena vuelve a dibujar', errs.join(' | ').slice(0, 400));
+  await ctx.close();
+}
 // ATOM 5.1 · Cachés ajenas, descarga deliberada y actualización con consentimiento.
 {
   const ctx = await browser.newContext();

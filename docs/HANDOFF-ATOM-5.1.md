@@ -159,3 +159,19 @@ Ciclo continuo: auditar → diseñar → implementar → ejecutar → capturar �
 No dar algo por terminado si la mejora es parcial. Ante un límite, dejar commits y un plan de reanudación.
 
 Para el diseño hay una skill disponible, `anthropic-skills:criterio-de-diseno`, que conviene cargar antes de rediseñar pantallas.
+
+
+---
+
+## 10. Estado al cerrar ATOM 5.1 (léelo primero si continúas)
+El informe completo, con el registro de objetivos y su estado honesto, está en `docs/11-atom-5-1.md`.
+Resumen de lo que cambió en el mapa del código:
+- `learning/procedure.ts` reescrito (dimensiones, procedencia, variables, arrastre); pruebas en `procedure51.test.ts`.
+- `state/store.ts`: `repetitionInfo()` es la única regla de repetición; `state/merge.ts` (fusión) y `state/transfer.ts` (código y compartir).
+- `public/sw.js` + `app/offline.ts` + `ui/OfflinePanel.tsx`; `vite.config.ts` genera `offline-manifest.json`.
+- Escenas nuevas: `history/ThomsonTube.tsx`, `forge/ForgeChamber.tsx`, `periodic/TileMaterial.ts`, `hub/CampaignMap.tsx`, `photon/PotentialWell.tsx`; `render/Stage.tsx` acepta `mood`.
+- Interfaz: `ui/SlidingTabs.tsx`, `training/ProgressCharts.tsx`, estilos nuevos en `styles/global/13-atom51.css`.
+- Didáctica: `learning/familyResolutions.ts`, `learning/generators/atom51.ts`.
+- Herramientas: `tools/shots.mjs` y `tools/perf.mjs` aceptan `DIST` y `PORT` (comparar con un worktree de otra versión).
+
+Pendiente prioritario: ver `docs/11-atom-5-1.md` §7.

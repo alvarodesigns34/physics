@@ -210,7 +210,7 @@ const G: Record<string, FamilyGuide> = {
     principle: 'A = Z + N; e⁻ = Z − q; masa atómica media = Σ (masa isotópica · abundancia) / 100.',
     math: 'M_{\\text{media}} = \\frac{\\sum m_i\\,x_i}{100}',
     why: 'La masa de la tabla es una media de los isótopos naturales, pesada por su abundancia.',
-    check: 'La masa media está entre la del isótopo más ligero y la del más pesado, más cerca del más abundante.',
+    check: 'La masa media está entre la del isótopo más ligero y la del más pesado; con dos isótopos, más cerca del más abundante.',
     errors: 'Hacer la media aritmética simple, olvidar dividir entre 100 o confundir el número másico con la masa isotópica.',
   },
   'asignar-ei': {

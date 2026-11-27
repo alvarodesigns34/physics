@@ -221,7 +221,7 @@ export function buildAverageMassExercise(z: number, difficulty: Difficulty, seed
       ],
       stepwise: true,
       hints: ['Las dos abundancias suman 100 %: llama x a una y 100 − x a la otra.', 'M = [m₁·x + m₂·(100 − x)] / 100. Despeja x.', `x = 100·(M − m₂)/(m₁ − m₂) con m₁ = ${fmt(l.mass, 7)} u y m₂ = ${fmt(h.mass, 7)} u.`],
-      solution: [`x = 100·(${fmt(M, 5)} − ${fmt(h.mass, 7)})/(${fmt(l.mass, 7)} − ${fmt(h.mass, 7)}) = ${fmt(x, 4)} %.`, `Comprobación: la masa media queda más cerca del isótopo más abundante.`],
+      solution: [`x = 100·(${fmt(M, 5)} − ${fmt(h.mass, 7)})/(${fmt(l.mass, 7)} − ${fmt(h.mass, 7)}) = ${fmt(x, 4)} %.`, `Comprobación: con dos isótopos, la masa media queda más cerca del más abundante.`],
       resolution: abundanceResolution(el.symbol, l, h, M, x),
       source,
     };
@@ -251,8 +251,12 @@ export function buildAverageMassExercise(z: number, difficulty: Difficulty, seed
         'cerca',
         '¿A qué isótopo está más cerca la masa media?',
         iso.map((i) => O(String(i.a), `${el.symbol}-${i.a}`, 'La media ponderada se acerca al isótopo con mayor abundancia.')),
-        [String([...iso].sort((a, b) => b.abundance - a.abundance)[0]!.a)],
-        'La masa media siempre queda más cerca del isótopo más abundante: es una buena forma de comprobar el resultado (TEO p.5).',
+        // La respuesta se CALCULA (isótopo más próximo a la media): con dos isótopos coincide siempre con el más
+        // abundante; con tres o más no está garantizado, y no se afirma.
+        [String([...iso].sort((a, b) => Math.abs(a.mass - res.value) - Math.abs(b.mass - res.value))[0]!.a)],
+        iso.length === 2
+          ? 'Con dos isótopos, la masa media siempre queda más cerca del más abundante: es una buena forma de comprobar el resultado (TEO p.5).'
+          : 'La media ponderada se acerca a los isótopos más abundantes; con más de dos isótopos, compruébalo comparando distancias.',
       ),
     ],
     stepwise: true,

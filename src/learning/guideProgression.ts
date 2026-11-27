@@ -134,7 +134,7 @@ export const PROGRESSION: Record<string, Progression> = {
         { text: 'La masa media de un átomo es la total entre N:', math: 'M = x_1 m_1 + x_2 m_2 + \\ldots = \\frac{m_1 \\cdot \\%_1 + m_2 \\cdot \\%_2 + \\ldots}{100}' },
         { text: 'Problema inverso con dos isótopos: si x₁ = x, entonces x₂ = 1 − x y se despeja:', math: 'x = \\frac{M - m_2}{m_1 - m_2}' },
       ],
-      meaning: 'La media siempre queda entre las masas de los isótopos, más cerca de la del más abundante. Si te sale fuera de ese intervalo, hay un error.',
+      meaning: 'La media siempre queda entre la masa del isótopo más ligero y la del más pesado; con dos isótopos, más cerca de la del más abundante. Si te sale fuera de ese intervalo, hay un error.',
     },
     connections: [
       { to: '1.3', why: 'Los isótopos son los que se promedian.' },

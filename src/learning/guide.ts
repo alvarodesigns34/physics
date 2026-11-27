@@ -189,7 +189,7 @@ export const LESSONS: Lesson[] = [
         formulas: [{ expr: 'M = (m₁·%₁ + m₂·%₂ + …) / 100', vars: [['M', 'masa atómica media', 'u'], ['mᵢ', 'masa del isótopo i', 'u'], ['%ᵢ', 'abundancia del isótopo i', '%']] }],
         widget: 'masa-media',
         mistakes: ['Hacer la media aritmética sin ponderar.', 'Olvidar dividir entre 100.', 'No comprobar que las abundancias sumen 100 % (los apuntes tienen una errata: 74,771 % debería ser 75,771 %).'],
-        tip: 'Comprueba siempre: el resultado debe quedar más cerca del isótopo más abundante.',
+        tip: 'Comprueba siempre: el resultado debe quedar entre las masas de los isótopos y, si son dos, más cerca del más abundante.',
       },
       {
         node: '3.2',
@@ -603,7 +603,7 @@ export const TRICKS: Record<string, string[]> = {
   '1.4': ['Carga negativa = electrones de MÁS: O²⁻ tiene 8 + 2 = 10. Carga positiva = electrones de MENOS: Al³⁺ tiene 13 − 3 = 10.', 'Truco del signo: «e⁻ = Z − q» funciona siempre si escribes q con su signo.'],
   '1.5': ['Cuenta electrones, no protones: N³⁻, O²⁻, F⁻, Ne, Na⁺, Mg²⁺ y Al³⁺ tienen todos 10.', 'En una serie isoelectrónica, el de MÁS protones es el MÁS pequeño: tira más de los mismos electrones.'],
   '2.4': ['Resume Rutherford en tres frases: «casi todas pasan → vacío; pocas se desvían → algo positivo; alguna rebota → núcleo pequeño y masivo».'],
-  '3.1': ['Comprobación en 2 segundos: la media debe quedar más cerca del isótopo más abundante (Cl: 35,45, cerca de 35).', 'Problema inverso (abundancias): llama x a una y 100 − x a la otra; la ecuación es de primer grado.'],
+  '3.1': ['Comprobación en 2 segundos: con dos isótopos, la media debe quedar más cerca del más abundante (Cl: 35,45, cerca de 35).', 'Problema inverso (abundancias): llama x a una y 100 − x a la otra; la ecuación es de primer grado.'],
   '3.2': ['λ y ν son como un balancín: λ·ν = c fijo. Si una sube, la otra baja en la misma proporción.', 'Prefijos que caen siempre: nm = 10⁻⁹ m, µm = 10⁻⁶ m, MHz = 10⁶ Hz, GHz = 10⁹ Hz, fs = 10⁻¹⁵ s.', 'Orden de magnitud del visible: λ ≈ 5·10⁻⁷ m, ν ≈ 6·10¹⁴ Hz, E ≈ 4·10⁻¹⁹ J ≈ 2,5 eV. Si te sale muy distinto, revisa las potencias.'],
   '3.3': ['Regla de memoria (de menor λ a mayor): «Gamma Xilofón Ultra Visible Infla Micro Radios» → γ, X, UV, visible, IR, microondas, radio.', 'En el visible: «el rojo es lento y largo» (λ grande, ν pequeña); el violeta, «corto y rápido».'],
   '3.4': ['E = h·c/λ: λ va DIVIDIENDO. Si te sale E ≈ 10⁻⁴⁰ J, has multiplicado por λ.', 'J → eV: divide entre 1,602·10⁻¹⁹ (salen números «normales», 1–15 eV). eV → J: multiplica.'],
