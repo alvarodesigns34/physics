@@ -44,10 +44,14 @@ describe('checkProcedure: localiza el PRIMER error', () => {
     expect(explainIssue(r.issue)).toMatch(/Línea 1/);
   });
   it('error de conversión en la línea 2 (m → nm mal hecho)', () => {
-    const r = checkProcedure('1/λ = 1,524·10^6 m⁻¹\nλ = 6,562·10^-7 m = 6562 nm', cps, final);
+    // ATOM 5.1 (P0): «1/λ = 1,524·10⁶ m⁻¹» sin operación es una afirmación, no un paso demostrado.
+    const r = checkProcedure('1/λ = 1,097·10^7·(1/4 − 1/9) = 1,524·10^6 m⁻¹\nλ = 1/1,524·10^6 = 6,562·10^-7 m = 6562 nm', cps, final);
     expect(r.issue).toMatchObject({ kind: 'aritmetica', line: 2 });
     expect(r.reached).toContain('1/λ');
     expect(r.procedureCredit).toBe(1);
+    const bare = checkProcedure('1/λ = 1,524·10^6 m⁻¹', cps, final);
+    expect(bare.reached).toEqual([]);
+    expect(bare.unsupported[0]?.reason).toMatch(/sin ninguna operación/);
   });
   it('cuentas coherentes pero fórmula equivocada: error final', () => {
     const r = checkProcedure('1/λ = 1,097·10^7·(1/4 + 1/9) = 3,962·10^6 m⁻¹\nλ = 1/3,962·10^6 = 2,524·10^-7 m', cps, final);

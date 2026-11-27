@@ -1,0 +1,13 @@
+/* ATOM 5.1 · Procedimiento con estados por línea */
+.procedure__line { flex-wrap: wrap; }
+.procedure__line--ok { background: var(--ok-quiet); }
+.procedure__line--ok .procedure__mark { color: var(--ok); }
+.procedure__line--error { background: var(--bad-quiet); }
+.procedure__line--error .procedure__mark { color: var(--bad); }
+.procedure__line--arrastre, .procedure__line--sin-justificar { background: var(--warn-quiet); }
+.procedure__line--arrastre .procedure__mark, .procedure__line--sin-justificar .procedure__mark { color: var(--warn); }
+.procedure__line--afirmado { background: var(--surface-2, transparent); }
+.procedure__line--afirmado .procedure__mark { color: var(--ink-3, currentColor); }
+.procedure__mark { font-weight: 700; min-width: 1ch; text-align: center; }
+.procedure__note { flex-basis: 100%; padding-left: calc(1ch + 10px); color: var(--ink-2, inherit); }
+.procedure__unsupported { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }

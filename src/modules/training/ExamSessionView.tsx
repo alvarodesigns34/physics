@@ -413,9 +413,11 @@ export function ExamReportView({ report, session, onNew }: { report: ExamReport;
                   <span className="eyebrow">Tu procedimiento</span>
                   <ol className="procedure__lines">
                     {q.procedure.lines.map((l, k) => (
-                      <li key={k} className={l.ok ? 'ok' : 'bad'}>
-                        <span className="procedure__mark" aria-hidden="true">{l.ok ? '✓' : '✗'}</span>
+                      <li key={k} className={`procedure__line procedure__line--${l.status}`}>
+                        <span className="procedure__mark" aria-hidden="true">{({ ok: '✓', arrastre: '↪', 'sin-justificar': '?', afirmado: '·', error: '✗' } as const)[l.status]}</span>
                         <span className="mono">{l.text}</span>
+                        {l.checkpoint && <span className="chip small">{l.checkpoint}</span>}
+                        {l.note && <span className="procedure__note small">{l.note}</span>}
                       </li>
                     ))}
                   </ol>

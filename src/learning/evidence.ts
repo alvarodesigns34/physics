@@ -86,6 +86,11 @@ export interface PartRecord {
   sigFigsAssessed?: boolean;
   /** Había pistas a la vista cuando se resolvió el paso (ATOM 5.0): el acierto no es «demostrado». */
   hinted?: boolean;
+  /**
+   * ATOM 5.1: el alumno pasó su procedimiento por el analizador ANTES de resolver este paso. El analizador
+   * dice qué líneas cuadran y cuánto vale cada operación: es una ayuda, así que el acierto es «asistida».
+   */
+  procedureAssisted?: boolean;
 }
 
 /** Cómo se obtuvo la evidencia de un apartado (ATOM 4.0): no todo acierto demuestra lo mismo. */
@@ -184,7 +189,7 @@ export function buildEvidence(ex: Exercise, records: PartRecord[]): Evidence {
     let yNode = r.revealed ? 0 : r.credit;
     if (!r.carried && !r.revealed && r.credit > 0 && realErrors.length > 0) yNode = Math.max(yNode, Math.min(...realErrors.map(nodeFloor)));
     const g = guessChance(part);
-    const partKind: EvidenceKind = part.answer.kind === 'essay' ? 'autoevaluada' : r.revealed || r.attempts > 1 || r.carried || r.hinted ? 'asistida' : g >= 0.2 ? 'posible-azar' : 'demostrada';
+    const partKind: EvidenceKind = part.answer.kind === 'essay' ? 'autoevaluada' : r.revealed || r.attempts > 1 || r.carried || r.hinted || r.procedureAssisted ? 'asistida' : g >= 0.2 ? 'posible-azar' : 'demostrada';
     skillGuess = g;
     skillKind = partKind;
     for (const n of partNodes) {

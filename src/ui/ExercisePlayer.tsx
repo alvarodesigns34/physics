@@ -80,12 +80,13 @@ interface PartState {
   carried: boolean;
   sigFigIssue: boolean;
   hinted?: boolean;
+  procedureAssisted?: boolean;
 }
 
 const freshPart = (p: ExercisePart): PartState => ({ value: initialValue(p), attempts: 0, result: null, done: false, revealed: false, credit: 0, errors: [], carried: false, sigFigIssue: false });
 
 function toRecords(ex: Exercise, parts: PartState[]): PartRecord[] {
-  return parts.map((p, i) => ({ id: ex.parts[i]!.id, credit: p.credit, attempts: p.attempts, revealed: p.revealed, errors: p.errors, carried: p.carried, sigFigIssue: p.sigFigIssue, sigFigsAssessed: p.sigFigsAssessed, hinted: p.hinted }));
+  return parts.map((p, i) => ({ id: ex.parts[i]!.id, credit: p.credit, attempts: p.attempts, revealed: p.revealed, errors: p.errors, carried: p.carried, sigFigIssue: p.sigFigIssue, sigFigsAssessed: p.sigFigsAssessed, hinted: p.hinted, procedureAssisted: p.procedureAssisted }));
 }
 
 function initialValue(p: ExercisePart): string | string[] {
@@ -244,7 +245,26 @@ export function validInProgress(v: unknown, ex: Exercise): v is InProgress {
     Number.isInteger(x.hints) && x.hints! >= 0 && x.hints! <= 3 &&
     typeof x.finished === 'boolean' &&
     Array.isArray(x.parts) && x.parts.length === ex.parts.length &&
-    x.parts.every((p) => typeof p === 'object' && p !== null && (typeof p.value === 'string' || (Array.isArray(p.value) && p.value.every((y) => typeof y === 'string'))) && Number.isInteger(p.attempts) && p.attempts >= 0 && typeof p.done === 'boolean' && typeof p.revealed === 'boolean' && typeof p.credit === 'number' && p.credit >= 0 && p.credit <= 1 && Array.isArray(p.errors))
+    x.parts.every((p) => validPartState(p))
+  );
+}
+
+const optBool = (v: unknown) => v === undefined || typeof v === 'boolean';
+
+/** ATOM 5.1: validación estricta de cada paso restaurado (tipos, longitudes y el resultado mostrado). */
+function validPartState(p: unknown): boolean {
+  if (typeof p !== 'object' || p === null || Array.isArray(p)) return false;
+  const q = p as Partial<PartState>;
+  const okValue = (typeof q.value === 'string' && q.value.length <= 5000) || (Array.isArray(q.value) && q.value.length <= 40 && q.value.every((y) => typeof y === 'string' && y.length <= 5000));
+  const okResult = q.result === null || q.result === undefined || (typeof q.result === 'object' && typeof q.result.status === 'string' && typeof q.result.message === 'string' && typeof q.result.correct === 'boolean' && (q.result.warnings === undefined || Array.isArray(q.result.warnings)));
+  const okErrors = Array.isArray(q.errors) && q.errors.length <= 50 && q.errors.every((e) => typeof e === 'object' && e !== null && typeof e.kind === 'string');
+  return (
+    okValue && okResult && okErrors &&
+    Number.isInteger(q.attempts) && q.attempts! >= 0 && q.attempts! <= 100 &&
+    typeof q.done === 'boolean' && typeof q.revealed === 'boolean' &&
+    typeof q.credit === 'number' && Number.isFinite(q.credit) && q.credit >= 0 && q.credit <= 1 &&
+    typeof q.carried === 'boolean' && typeof q.sigFigIssue === 'boolean' &&
+    optBool(q.hinted) && optBool(q.procedureAssisted) && optBool(q.sigFigsAssessed)
   );
 }
 
@@ -344,7 +364,7 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
     }
     if (result.correct) {
       sfx.success();
-      update(i, { result, attempts, done: true, credit: attempts === 1 ? 1 : 0.5, carried: result.status === 'correcto-arrastre', sigFigIssue: result.errorKind === 'cifras', sigFigsAssessed: result.sigFigsAssessed, hinted: hints > 0 });
+      update(i, { result, attempts, done: true, credit: attempts === 1 ? 1 : 0.5, carried: result.status === 'correcto-arrastre', sigFigIssue: result.errorKind === 'cifras', sigFigsAssessed: result.sigFigsAssessed, hinted: hints > 0, procedureAssisted: st.procedureAssisted });
     } else {
       sfx.error();
       update(i, { result, attempts, errors: result.errorKind ? [...st.errors, { kind: result.errorKind, skill: result.errorSkill, valueCorrect: result.valueCorrect }, ...(result.secondary ?? [])] : st.errors });
@@ -464,7 +484,12 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
         })}
       </ol>
 
-      {!exam && !review && <ProcedurePanel exercise={exercise} />}
+      {!exam && !review && (
+        <ProcedurePanel
+          exercise={exercise}
+          onAnalyzed={() => setParts((ps) => ps.map((p, k) => (!p.done && exercise.parts[k]!.answer.kind === 'numeric' ? { ...p, procedureAssisted: true } : p)))}
+        />
+      )}
 
       {!exam && !allDone && !helpUnlocked && (
         <p className="small faint" style={{ margin: 0 }}>

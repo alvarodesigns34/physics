@@ -111,7 +111,7 @@ export const PROCEDURE_CREDIT = 0.75;
 export function gradeQuestion(ex: Exercise, answers: Record<string, PartValue> | undefined, points: number, confirmed: string[] = [], procedureText = ''): GradedQuestion {
   const prev: Record<string, number> = {};
   const spec = procedureText.trim() ? procedureCheckpoints(ex) : null;
-  const procedure = spec ? checkProcedure(procedureText, spec.checkpoints, spec.final) : undefined;
+  const procedure = spec ? checkProcedure(procedureText, spec) : undefined;
   const parts: GradedPart[] = ex.parts.map((p) => {
     const value = answers?.[p.id] ?? (p.answer.kind === 'order' && confirmed.includes(p.id) ? p.answer.items.map((x) => x.id) : undefined);
     const answered = isAnswered(p, value, confirmed.includes(p.id));

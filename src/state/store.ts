@@ -255,7 +255,7 @@ export const useStore = create<AppState>()(
               return { prompt: part.prompt, partId: part.id, kind: diag?.kind ?? (r.revealed ? ('revelado' as const) : 'incompleto'), skill: diag?.skill ?? r.errors[0]?.skill };
             });
           if (misses.length) notebook = addMiss(notebook, { exerciseId: ex.id, generatorId: ex.generatorId, title: ex.title, nodeIds: Object.keys(ev.nodes), at: now, mode, misses });
-          else if (o.hintsUsed === 0 && rep === 1 && o.parts.every((r) => r.attempts <= 1 && !r.revealed && !r.hinted && r.credit >= 1))
+          else if (o.hintsUsed === 0 && rep === 1 && o.parts.every((r) => r.attempts <= 1 && !r.revealed && !r.hinted && !r.procedureAssisted && r.credit >= 1))
             notebook = registerClean(notebook, { id: ex.id, generatorId: ex.generatorId, difficulty: ex.difficulty, steps: o.parts.map((r, k) => ({ id: r.id, prompt: ex.parts.find((p) => p.id === r.id)?.prompt ?? ex.parts[k]!.prompt })) }, now).list;
           return { mastery, skills, cards, notebook, history: [...s.history, attempt].slice(-400) };
         }),
