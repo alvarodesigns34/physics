@@ -50,11 +50,23 @@ Rama: `claude/proyecto-atom-interactive-830d7u` · Producción (`main`) intacta 
 - [ ] Estudio integrado por concepto (comprender → observar → experimentar → practicar → error → consolidar).
 - [ ] `level` 1–5 visible en la interfaz cuando se haya validado con datos de uso.
 
-## Ciclo 5 — Laboratorios 3.0 ⏳
-Forge · Photon · Quantum (comparación múltiple) · Time Machine (7 pasos por modelo) · Architect (desafíos) · Periodic (vistas, multiselección) · Mass Spec (inversos).
+## Ciclo 5 — Laboratorios 3.0 ◐
+- [x] Time Machine: 7 pasos por modelo con predicción + matriz (57a1838).
+- [x] Electron Architect: 11 desafíos (094515e).
+- [x] Mass Spectrometry: muestra desconocida, inversos (db56501).
+- [x] Quantum: comparación de dos orbitales con escala común (32114ca).
+- [ ] Forge: comparación simultánea átomo/ion/isótopo y experimentos guiados.
+- [ ] Photon: identificar un elemento desconocido por su espectro (líneas NIST).
+- [ ] Periodic: vistas por grupo/periodo (gráficos), multiselección y razonamiento.
+- [ ] Materiales/iluminación 3D coherentes con la nueva identidad (revisión visual de cada escena).
 
-## Ciclos 6–9 ⏳
-Optimización y medición · inspección visual (escritorio + iPad) · revisión adversarial · refinamiento.
+## Ciclo 6 — Medición ◐
+- [x] `perf-atom3-ciclo6.json` frente a 2.0; perfil CDP de la interacción en Quantum (sin cuello de botella en JS).
+- [ ] Render bajo demanda cuando la escena esté quieta (batería en iPad) sin romper simulaciones continuas.
+- [ ] Medición en GPU real y en iPad (no disponible en este entorno).
+
+## Ciclos 7–9 ⏳
+Inspección visual completa (todas las pestañas, escritorio + iPad) · revisión adversarial · refinamiento.
 
 ## Pruebas
 - Línea base: 223 vitest + 23 e2e. Actual: 709 vitest + 26 e2e (todas en verde). Cifras: `npm run stats` → docs/ESTADISTICAS.md.

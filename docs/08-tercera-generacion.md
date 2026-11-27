@@ -67,5 +67,29 @@ Las pruebas de estas familias encontraron dos defectos propios antes de publicar
 
 **Pistas.** Una prueba recorre todo el banco: la primera pista no puede contener el resultado, la opción correcta (salvo que defina todas) ni datos sustituidos. Encontró y se corrigieron las pistas de EBAU-3 a y EBAU-2 (2025).
 
-## 5. Pendiente
+## 5. Laboratorios 3.0 (primera pasada)
+- **Time Machine**: recorrido de 7 pasos por modelo (qué se sabía → problema → hipótesis → *predicción del alumno* → observación → interpretación → limitaciones → siguiente modelo) y matriz fenómeno × modelo con la razón de cada veredicto. Revisión histórica: los casos dudosos se marcan «fuera de alcance» y no «✗».
+- **Electron Architect**: 11 desafíos (construir, excepciones, iones, excitados con condiciones, reparar Pauli/Hund/Aufbau nombrando antes la regla). Durante el desafío se ocultan el objetivo y el llenado automático.
+- **Mass Spectrometry**: muestra desconocida X (siete elementos de dos isótopos): identificar por la masa media MEDIDA y deducir abundancias con la media fijada; se distinguen abundancia natural, medida e intensidad ilustrativa.
+- **Quantum Space**: dos orbitales a la vez con la misma escala (tamaños relativos reales) y P(r) superpuestas; parejas didácticas.
+- Pendientes: Forge (comparación simultánea de especies y experimentos guiados), Photon (identificación de elementos por espectro), Periodic (vistas por grupo/periodo y multiselección).
+
+## 6. Ciclo 6 — Mediciones (SwiftShader; solo comparativas)
+Misma herramienta (`tools/perf.mjs`), misma máquina y mismo renderizador por software que en ATOM 2.0. Datos: `docs/mediciones/perf-final.json` (2.0) frente a `perf-atom3-ciclo6.json` (3.0).
+
+| Vista | fps 2.0 → 3.0 | p95 fotograma (ms) | memoria JS (MB) |
+|---|---|---|---|
+| Inicio | 2,2 → **60,3** | 583 → **16,7** | 20 → **9** |
+| Forja | 6,6 → 6,8 | 183 → 183 | 25 → 20 |
+| Photon (ondas) | 6,2 → 7,4 | 233 → 150 | 14 → 18 |
+| Masas | 5,9 → 6,0 | 233 → 217 | 29 → 30 |
+| Quantum | 5,1 → 4,7 | 233 → 250 | 24 → **16** |
+| Periódico | 3,7 → 3,4 | 317 → 367 | 29 → **21** |
+| Guía / Entrenamiento | 60 → 60 | 16,7 → 16,7 | 18 → 23 / 22 → 18 |
+
+- El inicio ya no carga una escena 3D a pantalla completa: 60 fps y 9 MB. El atrio 3D sigue en `#/campana` (2 fps en SwiftShader, como antes).
+- Laboratorios: sin cambio significativo. **Interacción en Quantum** (cambiar n): tarea larga máxima 0,9 s → 1,9 s. Perfil de CPU (CDP): el JavaScript propio suma < 30 ms; 6,7 s son «(program)», rasterización síncrona de SwiftShader. No es atribuible a nuestro código ni extrapolable a una GPU real.
+- **No se afirma ninguna mejora de FPS en hardware real**: hace falta medir en un ordenador con GPU y en un iPad (pendiente).
+
+## 7. Pendiente
 Véase `ATOM3-PROGRESS.md`.

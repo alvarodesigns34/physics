@@ -18,7 +18,7 @@ await new Promise((res, rej) => {
   server.stdout.on('data', (d) => String(d).includes(String(PORT)) && (clearTimeout(t), res()));
 });
 
-const ROUTES = ['/', '/forja', '/historia', '/fotones', '/fotones?tab=hidrogeno', '/fotones?tab=espectroscopio', '/masas', '/cuantico', '/arquitecto', '/periodico', '/guia?b=3', '/entrenamiento'];
+const ROUTES = ['/', '/campana', '/forja', '/historia', '/fotones', '/fotones?tab=hidrogeno', '/fotones?tab=espectroscopio', '/masas', '/cuantico', '/arquitecto', '/periodico', '/guia?b=3', '/entrenamiento'];
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--enable-precise-memory-info'] });
 const results = [];
 try {
@@ -35,7 +35,7 @@ try {
     const t0 = Date.now();
     await page.goto(`http://localhost:${PORT}/#${r}`);
     await page.reload();
-    await page.waitForFunction(() => document.querySelector('canvas') || document.querySelector('.guide, .workspace--full'), null, { timeout: 30000 });
+    await page.waitForFunction(() => document.querySelector('canvas') || document.querySelector('.guide, .workspace--full, .home .lab-card'), null, { timeout: 30000 });
     const ready = Date.now() - t0;
     await page.waitForTimeout(1500);
     const m = await page.evaluate(async () => {
