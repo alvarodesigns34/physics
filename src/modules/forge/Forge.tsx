@@ -1,4 +1,5 @@
 import { CalmOrbitControls } from '../../render/CalmControls';
+import { Prediction } from '../../ui/Prediction';
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -460,6 +461,19 @@ export function ForgeOverlay() {
               </div>
             </dl>
             <NuclearStatus sp={sp} table={table} />
+            <Prediction
+              resetKey="forja-neutron"
+              question="Tienes un carbono-12 (6 p⁺, 6 n⁰, 6 e⁻). Si le añades UN neutrón, ¿qué obtienes?"
+              options={[
+                { id: 'otro', label: 'Otro elemento' },
+                { id: 'isotopo', label: 'Un isótopo del C' },
+                { id: 'ion', label: 'Un ion' },
+              ]}
+              correct="isotopo"
+              explanation="El elemento lo decide Z (protones) y la carga, la diferencia entre protones y electrones. Un neutrón no cambia ninguna de las dos: solo A, de 12 a 13. Es el carbono-13, un isótopo estable (1,1 % del carbono natural)."
+              onRun={() => setSp({ z: 6, n: 7, e: 6 })}
+              runLabel="Forjar el carbono-13"
+            />
             {highlyChargedAnion && (
               <p className="note">
                 <b>Matiz.</b> Un anión aislado con carga {chargeLabel(id.charge)} no es estable en fase gaseosa: el electrón extra se escapa. Existe en sólidos iónicos y disoluciones, donde el entorno lo estabiliza.

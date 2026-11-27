@@ -1,4 +1,5 @@
 import { TrendsChart, TrendsPanel } from './Trends';
+import { Prediction } from '../../ui/Prediction';
 import { useQuality } from '../../app/hooks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
@@ -681,6 +682,21 @@ export function PeriodicOverlay() {
                   ))}
                 </div>
                 <Legend prop={st.prop} color={st.color} />
+              </section>
+              <section className="section">
+                <Prediction
+                  resetKey="pt-radio"
+                  question="Del litio al cesio (bajando por el grupo 1), ¿cómo cambia el radio atómico?"
+                  options={[
+                    { id: 'aumenta', label: 'Aumenta' },
+                    { id: 'disminuye', label: 'Disminuye' },
+                    { id: 'igual', label: 'No cambia' },
+                  ]}
+                  correct="aumenta"
+                  explanation="Cada periodo añade una capa (n crece) y la carga nuclear efectiva sobre el electrón externo apenas cambia: el electrón de valencia está cada vez más lejos. Li 133 pm → Cs 232 pm (radios covalentes de Pyykkö, los mismos de la tabla)."
+                  onRun={() => st.set({ prop: 'radio', color: 'propiedad', selected: 55, compared: null })}
+                  runLabel="Mostrar el radio en la tabla"
+                />
               </section>
               {st.compareMode && <Feedback tone="info">Toca otro elemento de la tabla para compararlo con el {sel?.name.toLowerCase()}.</Feedback>}
               {st.compared && <ComparisonCard a={elementByZ(st.compared[0])!} b={elementByZ(st.compared[1])!} prop={cmpProp} />}

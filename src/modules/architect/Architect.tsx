@@ -1,4 +1,5 @@
 import { requestFrames } from '../../render/demand';
+import { Prediction } from '../../ui/Prediction';
 import { ChallengesPanel } from './Challenges';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -506,6 +507,24 @@ export function ArchitectOverlay() {
             <div className="row row--wrap" style={{ gap: 6 }}>
               <span className="chip">{unpairedElectrons(conf)} desapareados</span>
               {conf.length > 0 && <span className="chip">{valenceElectrons(conf)} en la capa externa</span>}
+              {!st.challenge && (
+                <Prediction
+                  resetKey="arq-hund"
+                  question="El nitrógeno tiene 2p³. ¿Cuántos electrones desapareados tiene en su estado fundamental?"
+                  options={[
+                    { id: '1', label: '1' },
+                    { id: '3', label: '3' },
+                    { id: '5', label: '5' },
+                  ]}
+                  correct="3"
+                  explanation="Regla de Hund: en los tres orbitales 2p, de igual energía, los electrones se reparten primero uno en cada uno con el mismo espín. Así se repelen menos. 2p³ = ↑ ↑ ↑: tres desapareados."
+                  onRun={() => {
+                    st.set({ z: 7, charge: 0, boxes: {} });
+                    requestAnimationFrame(buildAnimated);
+                  }}
+                  runLabel="Construir el nitrógeno"
+                />
+              )}
               {!st.challenge && (
                 <span className="chip" style={{ color: tone2(statusTone) }}>
                   objetivo: {formatConfiguration(target, { abbreviate: e > 10 })}
