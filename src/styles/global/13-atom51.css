@@ -36,3 +36,73 @@
 .map-title { position: absolute; left: var(--gutter); top: 12px; display: grid; gap: 8px; max-width: 420px; }
 .map-title__h { font-family: var(--font-display); font-weight: 650; font-size: clamp(2rem, 3vw, 2.75rem); line-height: 1; letter-spacing: -0.03em; margin: 0; color: #ece6dc; }
 .app[data-kind="laboratorio"] .map-title .muted { color: rgb(236 230 220 / 0.7); }
+
+/* ATOM 5.1 · Pestañas con indicador deslizante */
+.stabs { position: relative; display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 4px; border-radius: 14px; background: var(--surface-sunken, rgb(127 127 127 / 0.08)); border: 1px solid var(--hairline); }
+.stabs__ind { position: absolute; top: 4px; bottom: 4px; left: 0; border-radius: 10px; background: var(--surface-raised); box-shadow: 0 1px 2px rgb(0 0 0 / 0.08), 0 4px 14px rgb(0 0 0 / 0.06); transition: transform 420ms var(--ease-spring), width 420ms var(--ease-spring); }
+.stabs__tab { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-muted); font: 500 0.9375rem/1.2 var(--font-ui); cursor: pointer; white-space: nowrap; transition: color 160ms var(--ease-std); }
+.stabs__tab[aria-selected="true"] { color: var(--ink); font-weight: 600; }
+.stabs__tab:hover { color: var(--ink); }
+.stabs__tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.stabs__badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: #fff; font: 600 11px/18px var(--font-mono); text-align: center; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .stabs__ind { transition: none; } }
+.app[data-motion="reducido"] .stabs__ind { transition: none; }
+
+/* Entrenamiento: navegación fija y titular por modo */
+.training-nav { position: sticky; top: 0; z-index: 5; padding: 8px 0; margin: -8px 0 0; background: linear-gradient(var(--surface) 70%, transparent); }
+.training-hero { display: grid; gap: 10px; animation: hero-in 520ms var(--ease-out) both; }
+.training-hero__title { margin: 0; font-family: var(--font-display); font-weight: 650; font-size: clamp(2.25rem, 4.4vw, 3.5rem); line-height: 1.02; letter-spacing: -0.035em; color: var(--ink); text-wrap: balance; }
+.training-hero__lead { margin: 0; max-width: 62ch; font-size: 1.0625rem; line-height: 1.55; color: var(--ink-muted); }
+@keyframes hero-in { from { opacity: 0; transform: translateY(12px); } }
+@media (prefers-reduced-motion: reduce) { .training-hero { animation: none; } }
+.app[data-motion="reducido"] .training-hero { animation: none; }
+
+/* ATOM 5.1 · Progreso: cifras y gráficas */
+.stack-24 { display: flex; flex-direction: column; gap: 24px; }
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1px; border: 1px solid var(--hairline); border-radius: 16px; overflow: hidden; background: var(--hairline); }
+.stat { display: grid; gap: 4px; padding: 18px 20px; background: var(--surface-raised); }
+.stat__label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); }
+.stat__value { font-family: var(--font-display); font-weight: 650; font-size: 2.75rem; line-height: 1; letter-spacing: -0.04em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.stat__of { font-size: 1.125rem; font-weight: 500; letter-spacing: 0; color: var(--ink-muted); margin-left: 6px; }
+.stat__meta { font-size: 0.8125rem; color: var(--ink-muted); }
+.empty-state { display: grid; justify-items: start; gap: 10px; padding: 24px; border: 1px dashed var(--hairline-strong, var(--hairline)); border-radius: 16px; }
+.empty-state__title { font-family: var(--font-display); font-weight: 600; font-size: 1.25rem; letter-spacing: -0.015em; }
+.pchart { margin: 0; display: grid; gap: 12px; padding: 20px; border: 1px solid var(--hairline); border-radius: 16px; background: var(--surface-raised); }
+.pchart__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+.pchart__title { font-family: var(--font-display); font-weight: 600; font-size: 1.125rem; letter-spacing: -0.015em; color: var(--ink); }
+.pchart__legend { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--ink-muted); }
+.pchart__swatch { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+.pchart__swatch--empty { margin-right: 6px; background: repeating-linear-gradient(135deg, var(--surface-sunken, rgb(127 127 127 / 0.1)) 0 3px, transparent 3px 6px); border: 1px solid var(--hairline); }
+.pchart__readout { margin: 0; min-height: 1.5em; }
+.mmap { display: grid; gap: 6px; }
+.mmap__row { display: grid; grid-template-columns: 128px 1fr; align-items: center; gap: 12px; }
+.mmap__label { font-size: 0.8125rem; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mmap__label .mono { color: var(--ink); margin-right: 4px; }
+.mmap__cells { display: flex; flex-wrap: wrap; gap: 4px; }
+.mmap__cell { width: 44px; height: 32px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; display: grid; place-items: center; transition: transform 180ms var(--ease-spring), box-shadow 180ms; padding: 0; }
+.mmap__cell:hover, .mmap__cell:focus-visible { transform: translateY(-2px) scale(1.06); box-shadow: 0 6px 16px rgb(0 0 0 / 0.12); outline: 2px solid var(--accent); outline-offset: 1px; }
+.mmap__cell--empty { background: repeating-linear-gradient(135deg, var(--surface-sunken, rgb(127 127 127 / 0.1)) 0 3px, transparent 3px 6px); border-color: var(--hairline); }
+.mmap__cell--weak { border: 1.5px dashed var(--ink-muted); }
+.mmap__id { font: 500 10px/1 var(--font-mono); color: var(--ink); mix-blend-mode: normal; background: var(--surface-raised); border-radius: 3px; padding: 1px 3px; opacity: 0.9; }
+.ichart { width: 100%; height: auto; display: block; font-family: var(--font-ui); }
+.ichart__grid { stroke: var(--hairline); stroke-width: 1; }
+.ichart__ref { stroke: var(--ink-muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.ichart__tick { font-size: 11px; fill: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.ichart__label { font-size: 12px; fill: var(--ink); }
+.ichart__val { font-size: 12px; font-weight: 600; fill: var(--ink); font-variant-numeric: tabular-nums; }
+.ichart__ci { stroke: color-mix(in oklab, var(--accent) 45%, var(--surface-raised)); stroke-width: 6; }
+.ichart__dot { fill: var(--accent); stroke: var(--surface-raised); stroke-width: 2; }
+.ichart__bar { fill: var(--accent); }
+.detail-list > summary { cursor: pointer; list-style: none; padding: 8px 0; }
+.detail-list[open] > summary { margin-bottom: 12px; }
+@media (max-width: 760px) { .mmap__row { grid-template-columns: 1fr; gap: 6px; } .mmap__cell { width: 40px; } }
+.mmap__cell--empty .mmap__id { background: transparent; color: var(--ink-muted); }
+
+/* ATOM 5.1 · Transiciones entre pantallas: el panel entra desde abajo con freno suave; el lienzo 3D se
+   funde desde el color de su laboratorio (sin destello blanco). Movimiento reducido: estado final. */
+#contenido > * { animation: route-in 440ms var(--ease-out) both; }
+.stage canvas { animation: stage-in 700ms var(--ease-out) both; }
+@keyframes route-in { from { opacity: 0; transform: translateY(10px); } }
+@keyframes stage-in { from { opacity: 0; transform: scale(1.015); } }
+.app[data-motion="reducido"] #contenido > *, .app[data-motion="reducido"] .stage canvas { animation: none; }
+@media (prefers-reduced-motion: reduce) { #contenido > *, .stage canvas { animation: none; } }

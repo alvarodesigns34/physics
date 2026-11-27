@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { SlidingTabs } from '../../ui/SlidingTabs';
 import { useStore } from '../../state/store';
 import { BLOCKS, NODES, nodeTitle } from '../../learning/syllabus';
 import { COVERED_NODES, GENERATORS } from '../../learning/registry';
@@ -180,6 +181,16 @@ function Practice({ initialScope, fixedExercise, onClearFixed, forceVariant }: {
   );
 }
 
+const VIEW_TITLE: Record<View, string> = {
+  practica: 'Practica lo que te falta.',
+  ruta: 'Un concepto, de principio a fin.',
+  repaso: 'Vuelve antes de olvidar.',
+  examen: 'Simulacro con nota.',
+  cuaderno: 'Tus errores, con nombre.',
+  progreso: 'Lo que ya dominas.',
+  fuentes: 'Los ejercicios de clase.',
+};
+
 const MODE_HELP: Record<View, string> = {
   practica: 'Ejercicios nuevos elegidos por tu nivel: cada uno te dice por qué te toca. Si fallas, tienes pistas graduadas y un enlace a la teoría.',
   ruta: 'Un concepto de principio a fin: comprender, observarlo en el laboratorio, practicar guiado, aplicar solo, nivel examen y consolidar según tus errores.',
@@ -211,26 +222,29 @@ export function TrainingOverlay() {
     scroller.current?.scrollTo({ top: 0 });
   }, [view, fixed]);
   const dueCount = dueCards(useStore((s) => s.cards), Date.now()).length;
+  const openNotes = useStore((s) => s.notebook.filter((e) => !e.resolvedAt).length);
   const scopeKey = useMemo(() => practiceScope.join(','), [practiceScope]);
   return (
     <div className="workspace workspace--full" style={{ minHeight: 0 }}>
       <div ref={scroller} className="interactive" style={{ overflowY: 'auto', minHeight: 0, padding: '8px var(--gutter) 64px' }}>
         <div className="training-col" style={{ maxWidth: 920, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 32 }}>
-          <header className="stack-12 enter training-head">
+          <nav className="training-nav training-head" aria-label="Centro de entrenamiento">
+            <SlidingTabs
+              label="Modo de entrenamiento"
+              value={view}
+              onChange={(v) => {
+                setFixed(null);
+                setPracticeScope([]);
+                go(v);
+              }}
+              items={VIEWS.map((v) => ({ id: v.id, label: v.label, badge: v.id === 'repaso' ? dueCount : v.id === 'cuaderno' ? openNotes : undefined }))}
+            />
+          </nav>
+          <header className="training-hero training-head" key={view}>
             <span className="eyebrow eyebrow--accent">Centro de entrenamiento</span>
-            <h1 className="display training-title" style={{ fontSize: 'clamp(2.5rem, 5vw, 3.75rem)' }}>
-              Practica lo que te falta.
-            </h1>
-            <div className="segmented" role="tablist" aria-label="Modo" style={{ alignSelf: 'flex-start', flexWrap: 'wrap' }}>
-              {VIEWS.map((v) => (
-                <button key={v.id} type="button" role="tab" aria-selected={view === v.id} onClick={() => { setFixed(null); setPracticeScope([]); go(v.id); }}>
-                  {v.label}
-                  {v.id === 'repaso' && dueCount > 0 && <span className="mono" style={{ color: 'var(--accent)', marginLeft: 6 }}>{dueCount}</span>}
-                </button>
-              ))}
-            </div>
+            <h1 className="training-hero__title">{VIEW_TITLE[view]}</h1>
+            <p className="training-hero__lead">{MODE_HELP[view]}</p>
           </header>
-          <p className="small muted mode-help training-head">{MODE_HELP[view]}</p>
           {view === 'practica' && practiceScope.length > 0 && !fixed && (
             <div className="card row row--between row--wrap" style={{ gap: 12, padding: '12px 16px' }}>
               <span className="small">

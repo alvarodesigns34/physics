@@ -124,7 +124,7 @@ try {
   await page.fill('.procedure textarea', 'λ = 250 nm = 2,5·10^-7 m\nν = 3·10^8 / 2,5·10^-7 = 1,2·10^15 Hz\nE = 6,626·10^-34 · 1,2·10^15 = 7,2·10^-19 J');
   await page.click('button:has-text("Revisar procedimiento")');
   const procTxt = await page.locator('.procedure').innerText();
-  check(procTxt.includes('Línea 3') && (await page.locator('.procedure__lines li.ok').count()) === 2, 'Procedimiento: dos líneas correctas y el error localizado en la línea 3');
+  check(procTxt.includes('Línea 3') && (await page.locator('.procedure__lines li.procedure__line--ok').count()) === 2, 'Procedimiento: dos líneas correctas y el error localizado en la línea 3');
 
   // Cuaderno de errores: el fallo de AMP 6 (primer intento erróneo abajo) o el simulacro dejan entradas.
   await page.goto(base + '#/entrenamiento?gen=onda-lambda');
@@ -191,8 +191,17 @@ try {
   await page.goto(base + '#/periodico');
   await page.waitForSelector('button[role=radio]:text-is("EI₁")', { timeout: T });
   await page.click('button[role=radio]:text-is("EI₁")');
-  await page.waitForFunction(() => document.querySelectorAll('.label-layer span').length >= 118, null, { timeout: T }).catch(() => {});
-  check((await page.locator('.label-layer span').count()) >= 118, 'Periodic Universe: 118 elementos etiquetados');
+  // ATOM 5.1: los símbolos van grabados en las piezas (atlas en el sombreador), no en 118 etiquetas DOM.
+  await page.waitForFunction(() => document.querySelectorAll('.axis-label').length >= 25, null, { timeout: T }).catch(() => {});
+  const atlas = await page.evaluate(() => {
+    let n = 0;
+    window.__atomScene?.traverse((o) => {
+      const a = o.geometry?.attributes?.aCell;
+      if (o.isInstancedMesh && a) n = a.count;
+    });
+    return n;
+  });
+  check(atlas === 118 && (await page.locator('.axis-label').count()) === 25, 'Periodic Universe: 118 casillas con símbolo grabado y 25 rótulos de grupo y periodo');
   await page.screenshot({ path: `${OUT}/06-periodico.png` });
 
   await page.goto(base + '#/cuantico');

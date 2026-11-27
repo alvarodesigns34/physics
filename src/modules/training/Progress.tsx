@@ -8,6 +8,8 @@ import { ERROR_LABEL, evidenceBreakdown, EVIDENCE_KIND_LABEL, SKILLS, type Evide
 import { weakSkills, explainWeakSkill } from '../../learning/diagnosis';
 import type { ErrorKind, SkillId } from '../../learning/types';
 import { Feedback } from '../../ui/common';
+import { navigate } from '../../app/hooks';
+import { ActivityBars, IntervalPlot, MasteryMap } from './ProgressCharts';
 const MODULE_LABEL: Record<ModuleId, string> = {
   forja: 'Atomic Forge',
   historia: 'Time Machine',
@@ -124,24 +126,44 @@ export function ProgressView() {
   const covered = new Set(COVERED_NODES);
   const levelColor = { 'sin-datos': 'var(--surface-sunken)', iniciado: 'rgb(242 169 59 / 0.18)', 'en-progreso': 'rgb(242 169 59 / 0.45)', dominado: 'var(--accent)' } as const;
   const dominated = NODES.filter((n) => masteryLevel(mastery[n.id]) === 'dominado').length;
+  const practiced = NODES.filter((n) => mastery[n.id]?.attempts).length;
   return (
-    <div className="stack-16">
-      <div className="row row--wrap" style={{ gap: 24 }}>
-        <div className="stack-8">
-          <span className="eyebrow">Dominados</span>
-          <span className="h2 num">
-            {dominated} <span className="faint" style={{ fontSize: '1.25rem' }}>/ {NODES.length}</span>
+    <div className="stack-24">
+      <div className="stat-row">
+        <div className="stat">
+          <span className="stat__label">Dominados</span>
+          <span className="stat__value num">
+            {dominated}
+            <span className="stat__of">/ {NODES.length}</span>
           </span>
+          <span className="stat__meta">≥ 80 % con evidencia suficiente</span>
         </div>
-        <div className="stack-8">
-          <span className="eyebrow">Ejercicios resueltos</span>
-          <span className="h2 num">{history.length}</span>
+        <div className="stat">
+          <span className="stat__label">Apartados practicados</span>
+          <span className="stat__value num">
+            {practiced}
+            <span className="stat__of">/ {NODES.length}</span>
+          </span>
+          <span className="stat__meta">con al menos un intento</span>
         </div>
-        <div className="stack-8">
-          <span className="eyebrow">Acierto</span>
-          <span className="h2 num">{history.length ? Math.round((history.filter((h) => h.correct).length / history.length) * 100) : 0} %</span>
+        <div className="stat">
+          <span className="stat__label">Ejercicios</span>
+          <span className="stat__value num">{history.length}</span>
+          <span className="stat__meta">{history.length ? `${Math.round((history.filter((h) => h.correct).length / history.length) * 100)} % superados` : 'aún ninguno'}</span>
         </div>
       </div>
+      {history.length === 0 && (
+        <div className="empty-state">
+          <span className="empty-state__title">Todavía no hay datos que mostrar</span>
+          <span className="small muted">Resuelve tu primer ejercicio y aquí aparecerá tu mapa del temario, con lo que dominas, lo que no y cuánta evidencia lo respalda.</span>
+          <a className="btn btn--primary btn--sm" href="#/entrenamiento?v=practica">
+            Empezar a practicar
+          </a>
+        </div>
+      )}
+      <MasteryMap mastery={mastery} onPick={(n) => navigate(`/entrenamiento?v=ruta&n=${n}`)} />
+      <IntervalPlot mastery={mastery} />
+      <ActivityBars history={history} />
       <div className="row row--wrap small muted" style={{ gap: 16 }}>
         {(['sin-datos', 'iniciado', 'en-progreso', 'dominado'] as const).map((l) => (
           <span key={l} className="row" style={{ gap: 6 }}>
@@ -152,6 +174,8 @@ export function ProgressView() {
       </div>
       <SkillsPanel />
       <EvidenceLegend />
+      <details className="detail-list">
+        <summary className="h3">Detalle por apartado</summary>
       {BLOCKS.map((b) => (
         <section key={b.id} className="stack-8">
           <span className="h3">
@@ -180,6 +204,7 @@ export function ProgressView() {
           </div>
         </section>
       ))}
+      </details>
     </div>
   );
 }
