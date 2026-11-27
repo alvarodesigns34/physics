@@ -50,7 +50,7 @@
 
 /* Entrenamiento: navegación fija y titular por modo */
 .training-nav { position: sticky; top: 0; z-index: 5; padding: 8px 0; margin: -8px 0 0; background: linear-gradient(var(--surface) 70%, transparent); }
-.training-hero { display: grid; gap: 10px; animation: hero-in 520ms var(--ease-out) both; }
+.training-hero { display: grid; gap: 10px; animation: hero-in 520ms var(--ease-out) backwards; }
 .training-hero__title { margin: 0; font-family: var(--font-display); font-weight: 650; font-size: clamp(2.25rem, 4.4vw, 3.5rem); line-height: 1.02; letter-spacing: -0.035em; color: var(--ink); text-wrap: balance; }
 .training-hero__lead { margin: 0; max-width: 62ch; font-size: 1.0625rem; line-height: 1.55; color: var(--ink-muted); }
 @keyframes hero-in { from { opacity: 0; transform: translateY(12px); } }
@@ -100,9 +100,9 @@
 
 /* ATOM 5.1 · Transiciones entre pantallas: el panel entra desde abajo con freno suave; el lienzo 3D se
    funde desde el color de su laboratorio (sin destello blanco). Movimiento reducido: estado final. */
-#contenido > * { animation: route-in 440ms var(--ease-out) both; }
-.stage canvas { animation: stage-in 700ms var(--ease-out) both; }
+#contenido > * { animation: route-in 440ms var(--ease-out) backwards; } /* backwards, no both: una animación de transform que sigue «en efecto» convierte al panel en bloque contenedor de las etiquetas fijas */
+.stage canvas { animation: stage-in 700ms var(--ease-out) backwards; }
 @keyframes route-in { from { opacity: 0; transform: translateY(10px); } }
-@keyframes stage-in { from { opacity: 0; transform: scale(1.015); } }
+@keyframes stage-in { from { opacity: 0; } } /* solo opacidad: R3F mide el lienzo con getBoundingClientRect, que incluye transformaciones */
 .app[data-motion="reducido"] #contenido > *, .app[data-motion="reducido"] .stage canvas { animation: none; }
 @media (prefers-reduced-motion: reduce) { #contenido > *, .stage canvas { animation: none; } }

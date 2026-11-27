@@ -346,7 +346,7 @@ export function PeriodicScene() {
   const anchors = useMemo(sizeAnchors, []);
   const axes = useMemo(axisAnchors, []);
   return (
-    <Stage mood="periodico" camera={view !== 'tamanos' ? [0, 16.4, 13.4] : [0, 17, 10.5]} fov={34} key={view === 'tamanos' ? 'tamanos' : 'tabla'}>
+    <Stage mood="periodico" camera={view !== 'tamanos' ? [0, 17.2, 14.4] : [0, 17, 10.5]} fov={34} key={view === 'tamanos' ? 'tamanos' : 'tabla'}>
       <ambientLight intensity={0.35} />
       <directionalLight position={[6, 14, 8]} intensity={2.4} color="#ffe6c8" castShadow />
       <directionalLight position={[-8, 6, -6]} intensity={0.9} color="#a8c4ea" />

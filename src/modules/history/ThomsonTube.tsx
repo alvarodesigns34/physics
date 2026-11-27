@@ -414,10 +414,13 @@ function Bench() {
         <boxGeometry args={[9.6, 0.12, 3.2]} />
         <meshStandardMaterial color="#120c08" roughness={0.62} metalness={0.1} envMapIntensity={0.25} />
       </mesh>
-      <mesh position={[0, 0.065, 0]}>
-        <boxGeometry args={[9.62, 0.012, 3.22]} />
-        <meshStandardMaterial color="#b38a4a" metalness={1} roughness={0.35} />
-      </mesh>
+      {/* Filete de latón solo en el perímetro del banco */}
+      {([[0, 1.6, 9.62, 0.03], [0, -1.6, 9.62, 0.03], [4.8, 0, 0.03, 3.22], [-4.8, 0, 0.03, 3.22]] as const).map(([x, z, w, d]) => (
+        <mesh key={`${x}-${z}`} position={[x, 0.062, z]}>
+          <boxGeometry args={[w, 0.012, d]} />
+          <meshStandardMaterial color="#b38a4a" metalness={1} roughness={0.35} />
+        </mesh>
+      ))}
       {/* Cunas que sujetan el tubo: poste desde el banco y medio anillo bajo el vidrio */}
       {([[-2.6, 0.43], [2.3, 0.97]] as const).map(([x, r]) => (
         <group key={x} position={[x, 0, 0]}>

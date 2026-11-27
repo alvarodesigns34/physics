@@ -1,5 +1,5 @@
 import { installInteractionWatch, markInteraction, onWake, shouldRender } from './demand';
-import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
+import { Suspense, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, Lightformer } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, ToneMapping } from '@react-three/postprocessing';
@@ -118,31 +118,22 @@ export const MOODS: Record<Mood, { top: string; bottom: string; halo: string; ke
   neutro: { top: '#0e121b', bottom: '#151b27', halo: '#1f2738', key: '#ffd9a8', rim: '#a9c7ee', fog: '#0b0a09' },
 };
 
-/** Cúpula de fondo: degradado vertical y un halo suave detrás de la escena (una llamada de dibujo). */
-function Backdrop({ mood }: { mood: Mood }) {
-  const m = MOODS[mood];
-  const uniforms = useMemo(() => ({ uTop: { value: new THREE.Color(m.top) }, uBottom: { value: new THREE.Color(m.bottom) }, uHalo: { value: new THREE.Color(m.halo) } }), [m]);
-  return (
-    <mesh scale={90} renderOrder={-10} frustumCulled={false}>
-      <sphereGeometry args={[1, 32, 16]} />
-      <shaderMaterial
-        side={THREE.BackSide}
-        depthWrite={false}
-        fog={false}
-        uniforms={uniforms}
-        vertexShader={`varying vec3 vP; void main(){ vP = normalize(position); vec4 p = projectionMatrix * modelViewMatrix * vec4(position,1.0); gl_Position = p.xyww; }`}
-        fragmentShader={`uniform vec3 uTop; uniform vec3 uBottom; uniform vec3 uHalo; varying vec3 vP;
-          void main(){
-            float h = clamp(vP.y * 0.5 + 0.5, 0.0, 1.0);
-            vec3 c = mix(uBottom, uTop, smoothstep(0.3, 0.85, h));
-            float halo = pow(max(0.0, 1.0 - length(vec2(vP.x, (vP.y - 0.05) * 1.6))), 2.2) * step(0.0, -vP.z);
-            c += uHalo * halo * 0.9;
-            gl_FragColor = vec4(c, 1.0);
-            #include <colorspace_fragment>
-          }`}
-      />
-    </mesh>
-  );
+/**
+ * ATOM 5.1 · El cielo de cada laboratorio es un degradado CSS DETRÁS de un lienzo transparente: la cúpula
+ * en WebGL rellenaba todos los píxeles en cada fotograma (Forja: p95 de 167 a 283 ms en SwiftShader).
+ * Así el fondo no cuesta nada a la GPU.
+ */
+function MoodBackground({ mood }: { mood: Mood }) {
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    const m = MOODS[mood];
+    const el = gl.domElement.parentElement?.parentElement ?? gl.domElement;
+    el.style.background = `radial-gradient(ellipse 70% 55% at 50% 42%, ${m.halo}, transparent 70%), linear-gradient(180deg, ${m.top}, ${m.bottom})`;
+    return () => {
+      el.style.background = '';
+    };
+  }, [gl, mood]);
+  return null;
 }
 
 /** Entorno de reflejos procedural (sin descargas): lámparas tintadas según el laboratorio. */
@@ -199,7 +190,7 @@ export function Stage({ children, camera = [0, 2.4, 9] as [number, number, numbe
     <Canvas
       dpr={q.dpr}
       camera={{ position: camera, fov, near: 0.05, far: 200 }}
-      gl={{ antialias: q.antialias, powerPreference: 'high-performance', alpha: false, stencil: false }}
+      gl={{ antialias: q.antialias, powerPreference: 'high-performance', alpha: true, premultipliedAlpha: true, stencil: false }}
       onCreated={({ gl }) => {
         const canvas = gl.domElement;
         canvas.addEventListener('webglcontextlost', (e) => {
@@ -215,14 +206,13 @@ export function Stage({ children, camera = [0, 2.4, 9] as [number, number, numbe
         });
         canvas.addEventListener('webglcontextrestored', () => toast('Contexto gráfico recuperado.'));
         gl.toneMapping = q.bloom ? THREE.NoToneMapping : THREE.NeutralToneMapping;
-        gl.setClearColor('#121722');
+        gl.setClearColor('#000000', 0);
       }}
       frameloop="demand"
       aria-hidden="true"
     >
-      <color attach="background" args={[MOODS[mood].top]} />
       <fog attach="fog" args={[MOODS[mood].fog, 16, 48]} />
-      <Backdrop mood={mood} />
+      <MoodBackground mood={mood} />
       <ViewOffset panel={panel} fov={fov} />
       <DemandDriver />
       {auto && !reduced && <FrameMonitor />}
