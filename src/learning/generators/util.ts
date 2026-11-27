@@ -44,6 +44,7 @@ export function numericPart(opts: {
   placeholder?: string;
   skills?: SkillId[];
   nodeIds?: string[];
+  strictUnit?: boolean;
 }): ExercisePart {
   const sig = opts.sig ?? 3;
   return {
@@ -57,6 +58,7 @@ export function numericPart(opts: {
       relTol: opts.relTol ?? 0.01,
       misconceptions: opts.misconceptions,
       recompute: opts.recompute,
+      ...(opts.strictUnit ? { strictUnit: true } : {}),
     },
     canonical: `${formatNumber(opts.value, { sig })}${opts.unit ? ' ' + opts.unit : ''}`,
     explanation: opts.explanation,

@@ -405,3 +405,16 @@ describe('10 — simulacros por perfil', async () => {
     expect(weakProfile({}, 1).limitation).toMatch(/poca evidencia/);
   });
 });
+
+describe('conversiones: la unidad pedida es obligatoria', () => {
+  it('con strictUnit, una unidad equivalente pide convertir (sin contar como error)', () => {
+    const spec = { kind: 'numeric' as const, value: 0.6563, unit: 'µm', relTol: 0.01, sigFigs: 4, strictUnit: true };
+    expect(checkAnswer(spec, '656,3 nm').status).toBe('formato');
+    expect(checkAnswer(spec, '0,6563 µm').correct).toBe(true);
+    // Sin strictUnit se mantiene el comportamiento general: equivalente con aviso.
+    const loose = { ...spec, strictUnit: undefined };
+    const r = checkAnswer(loose, '656,3 nm');
+    expect(r.correct).toBe(true);
+    expect(r.warnings.length).toBe(1);
+  });
+});

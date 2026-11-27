@@ -781,6 +781,87 @@ export const spectrumIDGenerator: ExerciseGenerator = {
   },
 };
 
+
+// ── 12. Conversiones encadenadas ─────────────────────────────────────────
+
+const NA_DATA = 6.022e23;
+const EV_DATA = 1.602e-19;
+
+export function buildConversions(kind: 'longitud' | 'energia' | 'ondas', v: number, difficulty: Difficulty, seedId: string): Exercise {
+  let statement: string;
+  let parts: ExercisePart[];
+  let steps: ResolutionStep[];
+  if (kind === 'longitud') {
+    const m = v * 1e-9;
+    statement = `Una línea espectral tiene **λ = ${fmt(v, 4)} nm**. Exprésala en otras unidades sin perder cifras.`;
+    parts = [
+      numericPart({ id: 'm', prompt: 'En metros', value: m, unit: 'm', sig: 4, strictUnit: true, explanation: `1 nm = 10⁻⁹ m → ${fmt(v, 4)}·10⁻⁹ m = ${sci(m)} m.`, skills: ['unidades'] }),
+      numericPart({ id: 'um', prompt: 'En micrómetros (µm)', value: v / 1000, unit: 'µm', sig: 4, strictUnit: true, explanation: `1 µm = 1000 nm → ${fmt(v, 4)} / 1000 = ${fmt(v / 1000, 4)} µm.`, skills: ['unidades'] }),
+      numericPart({ id: 'A', prompt: 'En ángstroms (Å)', value: v * 10, unit: 'Å', sig: 4, strictUnit: true, explanation: `1 nm = 10 Å → ${fmt(v * 10, 4)} Å.`, skills: ['unidades'] }),
+    ];
+    steps = [
+      { kind: 'principio', text: 'Cada prefijo es una potencia de 10: pasa siempre por la unidad base (el metro).', math: `1\\;\\text{nm} = 10^{-9}\\;\\text{m}\\qquad 1\\;\\mu\\text{m} = 10^{-6}\\;\\text{m}\\qquad 1\\;\\text{Å} = 10^{-10}\\;\\text{m}` },
+      { kind: 'calculo', text: '', math: `${tex(v, 4)}\\;\\text{nm}\\cdot\\frac{10^{-9}\\;\\text{m}}{1\\;\\text{nm}} = ${tex(m, 4)}\\;\\text{m}` },
+      { kind: 'comprobacion', text: 'Unidad más pequeña → número más grande: en Å sale 10 veces más que en nm; en µm, 1000 veces menos.' },
+    ];
+  } else if (kind === 'energia') {
+    const eV = v / EV_DATA;
+    const kjmol = (v * NA_DATA) / 1000;
+    statement = `Un fotón transporta **E = ${sci(v, 3)} J**. Expresa esa energía en las unidades que se usan en química y en física atómica.`;
+    parts = [
+      numericPart({ id: 'eV', prompt: 'En electronvoltios (eV)', value: eV, unit: 'eV', sig: 3, strictUnit: true, explanation: `1 eV = 1,602·10⁻¹⁹ J → ${sci(v, 3)} / 1,602·10⁻¹⁹ = ${fmt(eV, 3)} eV.`, skills: ['unidades'] }),
+      numericPart({ id: 'kjmol', prompt: 'Para un mol de fotones, en kJ/mol', value: kjmol, unit: 'kJ/mol', sig: 3, strictUnit: true, explanation: `× N_A = 6,022·10²³ mol⁻¹ y ÷ 1000: ${fmt(kjmol, 3)} kJ/mol.`, skills: ['unidades', 'calculo'], misconceptions: [{ test: (x) => Math.abs(x / (v * NA_DATA) - 1) < 0.02, message: 'Ese es el valor en J/mol: falta dividir entre 1000 para kJ/mol.', skill: 'unidades' }] }),
+      choicePart('cmp', '¿Bastaría esa energía (por mol) para ionizar el sodio (EI₁ = 496 kJ/mol)?', [O('si', 'Sí'), O('no', 'No')], [kjmol >= 496 ? 'si' : 'no'], `${fmt(kjmol, 3)} kJ/mol ${kjmol >= 496 ? '≥' : '<'} 496 kJ/mol: ${kjmol >= 496 ? 'cada fotón tiene energía suficiente para arrancar el electrón 3s.' : 'no llega: cada fotón se queda corto, por muchos que haya.'}`),
+    ];
+    steps = [
+      { kind: 'principio', text: 'eV es «energía por partícula»; kJ/mol es «energía por mol de partículas». El puente es N_A.', math: `E(\\text{eV}) = \\frac{E(\\text{J})}{1,602\\cdot 10^{-19}}\\qquad E(\\text{kJ/mol}) = \\frac{E(\\text{J})\\cdot N_A}{1000}` },
+      { kind: 'calculo', text: '', math: `${tex(v, 3)}\\cdot 6,022\\cdot 10^{23} / 1000 = ${tex(kjmol, 3)}\\;\\text{kJ/mol}` },
+      { kind: 'comprobacion', text: 'Atajo de control: 1 eV por partícula ≈ 96,5 kJ/mol. Tu resultado en kJ/mol debe ser unas 96,5 veces el valor en eV.' },
+      { kind: 'errores', text: 'Olvidar N_A (salen números absurdamente pequeños) o el ÷1000 de J a kJ.' },
+    ];
+  } else {
+    const perM = 1 / (v * 1e-9);
+    const perCm = perM / 100;
+    statement = `Una línea del hidrógeno tiene **λ = ${fmt(v, 4)} nm**. Los espectroscopistas la describen por su número de ondas.`;
+    parts = [
+      numericPart({ id: 'm1', prompt: 'Número de ondas en m⁻¹', value: perM, unit: 'm⁻¹', sig: 4, strictUnit: true, explanation: `1/λ = 1 / ${sci(v * 1e-9)} m = ${sci(perM)} m⁻¹.`, skills: ['unidades', 'calculo'] }),
+      numericPart({ id: 'cm1', prompt: 'En cm⁻¹', value: perCm, unit: 'cm⁻¹', sig: 4, strictUnit: true, explanation: `1 m⁻¹ = 0,01 cm⁻¹ (en 1 cm caben 100 veces menos ondas que en 1 m): ${fmt(perCm, 4)} cm⁻¹.`, skills: ['unidades'], misconceptions: [{ test: (x) => Math.abs(x / (perM * 100) - 1) < 0.02, message: 'Has multiplicado por 100. Un centímetro es más corto que un metro: caben MENOS ondas, así que el número en cm⁻¹ es 100 veces MENOR.', skill: 'unidades' }] }),
+    ];
+    steps = [
+      { kind: 'principio', text: 'El número de ondas es cuántas longitudes de onda caben en una unidad de longitud.', math: `\\tilde{\\nu} = \\frac{1}{\\lambda}` },
+      { kind: 'unidades', text: 'Al pasar de m⁻¹ a cm⁻¹ se DIVIDE entre 100 (en un cm caben menos ondas que en un metro).', math: `1\\;\\text{m}^{-1} = 10^{-2}\\;\\text{cm}^{-1}` },
+      { kind: 'errores', text: 'Multiplicar por 100 al pasar a cm⁻¹ (es el error que hace salir R = 1,097·10⁹ cm⁻¹).' },
+    ];
+  }
+  return {
+    id: seedId,
+    generatorId: 'conversiones',
+    nodeIds: ['3.9'],
+    difficulty,
+    level: 2,
+    title: 'Conversiones sin perder el hilo',
+    statement,
+    parts,
+    stepwise: true,
+    hints: ['Escribe el factor de conversión como una fracción que valga 1 (p. ej. 10⁻⁹ m / 1 nm) y cancela unidades.', 'Pasa siempre por la unidad del SI y después a la que te piden.', 'Comprueba el sentido: si la unidad es más pequeña, el número debe salir más grande.'],
+    solution: parts.map((p) => p.explanation),
+    resolution: steps,
+  };
+}
+
+export const conversionsGenerator: ExerciseGenerator = {
+  id: 'conversiones',
+  title: 'Conversiones encadenadas',
+  nodeIds: ['3.9'],
+  difficulties: [1, 2, 3],
+  create(seed, difficulty) {
+    const rng = rngFor(this.id, seed, difficulty);
+    if (difficulty === 1) return buildConversions('longitud', pick(rng, [121.6, 434.0, 486.1, 589.0, 656.3, 1875]), difficulty, exId(this.id, difficulty, seed));
+    if (difficulty === 2) return buildConversions('energia', pick(rng, [3.03e-19, 4.09e-19, 4.58e-19, 1.64e-18, 9.94e-19]), difficulty, exId(this.id, difficulty, seed));
+    return buildConversions('ondas', pick(rng, [121.6, 486.1, 656.3, 1875, 102.6]), difficulty, exId(this.id, difficulty, seed));
+  },
+};
+
 export const REASONING_GENERATORS: ExerciseGenerator[] = [
   rydbergErrorGenerator,
   cluesGenerator,
@@ -793,4 +874,5 @@ export const REASONING_GENERATORS: ExerciseGenerator[] = [
   predictionGenerator,
   essayGenerator,
   spectrumIDGenerator,
+  conversionsGenerator,
 ];

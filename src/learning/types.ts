@@ -55,6 +55,8 @@ export type AnswerSpec =
        * resultado (en la unidad esperada de ese paso).
        */
       recompute?: { from: string; fn: (studentPrev: number) => number };
+      /** Ejercicios de conversión: la respuesta debe darse EN esta unidad (otra equivalente no basta) */
+      strictUnit?: boolean;
     }
   | { kind: 'integer'; value: number }
   | { kind: 'choice'; options: ChoiceOption[]; correct: string[]; multiple?: boolean }

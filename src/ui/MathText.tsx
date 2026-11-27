@@ -51,6 +51,10 @@ export function parseMath(src: string): MathNode[] {
         return { t: 'frac', num, den };
       }
       if (name === 'sqrt') return { t: 'sqrt', v: group() };
+      if (name === 'tilde') {
+        const g = group();
+        return { t: 'word', v: g.map((n) => (n.t === 'text' || n.t === 'sym' || n.t === 'word' ? n.v : '')).join('') + '\u0303' };
+      }
       if (name === 'text' || name === 'mathrm') {
         const g = group();
         return { t: 'word', v: g.map((n) => (n.t === 'text' || n.t === 'sym' || n.t === 'word' ? n.v : '')).join('') };

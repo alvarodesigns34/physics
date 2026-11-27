@@ -120,6 +120,9 @@ function checkNumeric(spec: NumericSpec, input: string, ctx: CheckContext): Chec
     if (unit.quantity !== expectedUnit.quantity) {
       return bad(`«${unit.symbol}» es una unidad de ${QUANTITY_LABEL[unit.quantity]}, pero aquí se pide una ${QUANTITY_LABEL[expectedUnit.quantity]} (en ${expectedUnit.symbol}).`, [], undefined, 'unidad-incompatible');
     }
+    if (spec.strictUnit && unit.symbol !== expectedUnit.symbol) {
+      return format(`Exprésalo en ${expectedUnit.symbol}: convertir es justo lo que pide este paso.`);
+    }
     value = convert(value, unit, expectedUnit);
     if (unit.symbol !== expectedUnit.symbol) warnings.push(`Has respondido en ${unit.symbol}; es equivalente, pero el enunciado pide ${expectedUnit.symbol}.`);
   }
