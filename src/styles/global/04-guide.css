@@ -161,7 +161,7 @@
 
 .formula-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 10px;
 }
 
@@ -176,11 +176,14 @@
 }
 
 .formula__expr {
-  /* Tipografía matemática del sistema (STIX/Cambria) en peso normal: las fórmulas no son titulares. */
-  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif;
-  font-weight: 400;
-  font-size: 1.6rem;
-  line-height: 1.15;
+  /* ATOM 5.0: la tipografía de la interfaz (incluida en la aplicación) en lugar de fuentes matemáticas del
+     sistema, que no existen en todos los dispositivos (aquí caía en Times): mismo aspecto en todas partes. */
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.5rem;
+  line-height: 1.25;
+  text-wrap: balance;
   color: var(--ink);
   letter-spacing: 0.01em;
 }
