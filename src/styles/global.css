@@ -221,42 +221,11 @@ p {
   flex: 1;
 }
 
-.topnav {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--surface-raised) 72%, transparent);
-  border: 1px solid var(--hairline);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
 
-.topnav a {
-  pointer-events: auto;
-  color: var(--ink-muted);
-  text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  padding: 7px 14px;
-  border-radius: var(--r-pill);
-  transition: color var(--dur-instant) var(--ease-std), background var(--dur-instant) var(--ease-std);
-}
 
-.topnav a:hover {
-  color: var(--ink);
-}
 
-.topnav a[aria-current='page'] {
-  color: var(--ink);
-  background: var(--surface-raised-2);
-}
 
-@media (max-width: 900px) {
-  .topnav {
-    display: none;
-  }
-}
+
 
 .workspace {
   position: relative;
@@ -484,13 +453,6 @@ p {
   white-space: nowrap;
 }
 
-.chip__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-  flex: none;
-}
 
 .tag {
   pointer-events: auto;
@@ -536,9 +498,6 @@ p {
   padding: 16px;
 }
 
-.card--quiet {
-  background: transparent;
-}
 
 .kv {
   display: grid;
@@ -932,31 +891,8 @@ input[type='range']::-moz-range-thumb {
   }
 }
 
-.labs-menu {
-  position: absolute;
-  top: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%);
-  min-width: 280px;
-  padding: 6px;
-  border-radius: var(--r-outer);
-  background: color-mix(in srgb, var(--surface-raised) 97%, transparent);
-  border: 1px solid var(--hairline-strong);
-  box-shadow: 0 24px 48px hsl(var(--shadow-color) / 0.45);
-  display: flex;
-  flex-direction: column;
-  z-index: 60;
-}
 
-.labs-menu a {
-  padding: 10px 12px !important;
-  border-radius: var(--r-inner) !important;
-}
 
-.labs-menu a:hover,
-.labs-menu a[aria-current='page'] {
-  background: var(--surface-raised-2);
-}
 
 details.chapter > summary::-webkit-details-marker {
   display: none;
@@ -2503,10 +2439,6 @@ details.chapter + details.chapter {
   }
 }
 
-.topnav a[aria-current='page'] {
-  background: linear-gradient(180deg, var(--surface-raised-2), var(--surface-raised));
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
-}
 
 /* Botones con relieve */
 .btn {
@@ -2879,8 +2811,7 @@ details.chapter + details.chapter {
 }
 
 /* Todo lo que se dibuja SOBRE el visor usa la tinta del visor, sea cual sea el tema. */
-.label-layer,
-.viewer-ink {
+.label-layer {
   --ink: var(--ink-on-viewer);
   --ink-muted: var(--ink-on-viewer-muted);
   --ink-faint: #8790a1;
