@@ -40,6 +40,8 @@ jobs:
       - run: npm run e2e
       - name: Accesibilidad (axe-core, sin infracciones graves)
         run: npm run a11y
+      - name: Resiliencia ante almacenamiento dañado
+        run: npm run resilience
       - if: always()
         uses: actions/upload-artifact@v4
         with:

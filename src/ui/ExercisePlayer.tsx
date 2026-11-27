@@ -7,7 +7,7 @@ import { toSuperscript } from '../science/numbers';
 import { lLetter } from '../science/quantum';
 import { nodeTitle } from '../learning/syllabus';
 import { guideAnchorFor, SECTION_BY_NODE } from '../learning/guide';
-import { Feedback, Rich } from './common';
+import { Feedback, Rich, announce } from './common';
 import { Icon } from './Icon';
 import { EssayInput, FigureView, ResolutionView } from './Pedagogy';
 import { structuredResolution } from '../learning/autoResolution';
@@ -150,12 +150,19 @@ export function PartInput({ part, value, onChange, onSubmit, disabled, labelId }
   }
   if (a.kind === 'order') {
     const order = value as string[];
-    const move = (i: number, d: number) => {
+    const move = (i: number, d: number, el?: HTMLElement) => {
       const j = i + d;
       if (j < 0 || j >= order.length) return;
       const next = [...order];
       [next[i], next[j]] = [next[j]!, next[i]!];
       onChange(next);
+      const item = a.items.find((x) => x.id === order[i]);
+      announce(`${item?.text ?? ''}: posición ${j + 1} de ${order.length}.`);
+      // Si el botón pulsado queda desactivado (primera o última posición), el foco pasa al otro botón.
+      if (j === 0 || j === order.length - 1) {
+        const li = el?.closest('li');
+        requestAnimationFrame(() => (li?.querySelector('button:not([disabled])') as HTMLElement | null)?.focus());
+      }
     };
     return (
       <ol className="stack-8" style={{ listStyle: 'none', padding: 0, margin: 0 }} aria-labelledby={labelId}>
@@ -168,10 +175,10 @@ export function PartInput({ part, value, onChange, onSubmit, disabled, labelId }
                 <span>{item.text}</span>
               </span>
               <span className="row" style={{ gap: 4 }}>
-                <button type="button" className="btn btn--ghost btn--sm btn--icon" disabled={disabled || i === 0} onClick={() => move(i, -1)} aria-label={`Subir ${item.text}`}>
+                <button type="button" className="btn btn--ghost btn--sm btn--icon" disabled={disabled || i === 0} onClick={(e) => move(i, -1, e.currentTarget)} aria-label={`Subir ${item.text}`}>
                   <Icon name="chevron-up" size={16} />
                 </button>
-                <button type="button" className="btn btn--ghost btn--sm btn--icon" disabled={disabled || i === order.length - 1} onClick={() => move(i, 1)} aria-label={`Bajar ${item.text}`}>
+                <button type="button" className="btn btn--ghost btn--sm btn--icon" disabled={disabled || i === order.length - 1} onClick={(e) => move(i, 1, e.currentTarget)} aria-label={`Bajar ${item.text}`}>
                   <Icon name="chevron-down" size={16} />
                 </button>
               </span>

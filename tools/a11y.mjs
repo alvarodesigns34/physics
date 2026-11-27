@@ -11,7 +11,14 @@ const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 const axeSource = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const PORT = 4186;
-const VIEWS = ['#/', '#/guia?b=3', '#/entrenamiento', '#/entrenamiento?v=examen', '#/entrenamiento?gen=desarrollo', '#/entrenamiento?v=ruta&n=3.6', '#/entrenamiento?v=cuaderno', '#/forja', '#/arquitecto', '#/periodico?tab=tendencias', '#/historia'];
+// ATOM 5.0: cobertura ampliada (todos los laboratorios y pestañas, progreso, documentos, simulacro EN CURSO
+// e informe, ambos temas). Cada entrada: [ruta, tema, acción previa opcional].
+const BASE_VIEWS = ['#/', '#/guia?b=3', '#/guia?b=6', '#/entrenamiento', '#/entrenamiento?v=examen', '#/entrenamiento?gen=desarrollo', '#/entrenamiento?gen=pauli-hund', '#/entrenamiento?v=ruta&n=3.6', '#/entrenamiento?v=cuaderno', '#/entrenamiento?v=progreso', '#/entrenamiento?v=fuentes', '#/entrenamiento?v=repaso', '#/forja', '#/historia', '#/historia?tab=tubo', '#/historia?tab=geiger', '#/fotones', '#/fotones?tab=hidrogeno', '#/fotones?tab=espectroscopio', '#/masas', '#/cuantico', '#/cuantico?tab=incertidumbre', '#/arquitecto', '#/periodico', '#/periodico?tab=atomos', '#/periodico?tab=tendencias', '#/campana'];
+const VIEWS = [
+  ...BASE_VIEWS.map((v) => [v, 'claro']),
+  ...['#/', '#/guia?b=3', '#/entrenamiento', '#/entrenamiento?v=progreso', '#/fotones?tab=hidrogeno', '#/cuantico'].map((v) => [v, 'oscuro']),
+  ['#/entrenamiento?v=examen', 'claro', 'simulacro'],
+];
 
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'pipe' });
 await new Promise((resolve, reject) => {
@@ -22,12 +29,21 @@ const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=sw
 const report = [];
 let serious = 0;
 try {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  await ctx.addInitScript(() => localStorage.setItem('atom:v1', JSON.stringify({ state: { settings: { seenIntro: true } }, version: 2 })));
-  const page = await ctx.newPage();
-  for (const v of VIEWS) {
-    await page.goto(`http://localhost:${PORT}/${v}`);
+  const pages = {};
+  for (const theme of ['claro', 'oscuro']) {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    await ctx.addInitScript((t) => localStorage.setItem('atom:v1', JSON.stringify({ state: { settings: { seenIntro: true, theme: t } }, version: 2 })), theme);
+    pages[theme] = await ctx.newPage();
+  }
+  for (const [route, theme, action] of VIEWS) {
+    const v = `${route}${theme === 'oscuro' ? ' (oscuro)' : ''}${action ? ` [${action}]` : ''}`;
+    const page = pages[theme];
+    await page.goto(`http://localhost:${PORT}/${route}`);
     await page.waitForTimeout(1800);
+    if (action === 'simulacro') {
+      await page.click('button:has-text("Empezar el simulacro equilibrado")');
+      await page.waitForSelector('.exam-q', { timeout: 30000 });
+    }
     await page.addScriptTag({ content: axeSource });
     const res = await page.evaluate(async () => {
       // El lienzo WebGL es decorativo (aria-hidden) y las etiquetas de escena se describen en el panel.

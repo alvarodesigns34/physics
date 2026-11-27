@@ -15,7 +15,8 @@
     "bench": "ATOM_BENCH=1 vitest run",
     "stats": "node tools/stats.mjs",
     "a11y": "node tools/a11y.mjs --strict",
-    "visual": "node tools/visual.mjs"
+    "visual": "node tools/visual.mjs",
+    "resilience": "node tools/resilience.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter-tight": "5.3.0",
