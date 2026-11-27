@@ -27,5 +27,7 @@ export default defineConfig({
     include: BENCH ? ['src/**/*.bench.ts'] : ['src/**/*.test.ts'],
     testTimeout: BENCH ? 120_000 : 5_000,
     environment: 'node',
+    // Las pruebas de contraste leen tokens.css como texto (?raw): hay que procesar ese CSS.
+    css: { include: [/tokens\.css/] },
   },
 } as never);

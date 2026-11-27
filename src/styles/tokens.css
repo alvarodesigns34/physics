@@ -21,8 +21,8 @@
 
   /* ── Tinta ── */
   --ink: #17191e;
-  --ink-muted: #4f5562; /* 7,4:1 sobre --surface */
-  --ink-faint: #6e7482; /* 4,6:1 sobre --surface (AA texto) */
+  --ink-muted: #4f5562; /* ≥ 6:1 sobre todas las superficies claras */
+  --ink-faint: #636977; /* 5,0:1 sobre --surface; 4,6:1 sobre --surface-sunken (AA, comprobado en contrast.test.ts) */
   --ink-on-viewer: #e9ecf2;
   --ink-on-viewer-muted: #a9b0bf;
   --hairline: rgb(23 25 30 / 0.08);
@@ -41,8 +41,8 @@
   --electron: #2f7fd8;
 
   /* ── Estados ── */
-  --ok: #1d8a52;
-  --ok-quiet: rgb(29 138 82 / 0.09);
+  --ok: #1a7d4a;
+  --ok-quiet: rgb(26 125 74 / 0.09);
   --bad: #c2412d;
   --bad-quiet: rgb(194 65 45 / 0.08);
   --warn: #a8670d;
