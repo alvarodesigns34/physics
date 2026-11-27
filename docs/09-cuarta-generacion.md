@@ -34,3 +34,14 @@ El estado de la ruta (paso, pasos hechos, errores, ids de sus ejercicios) se gua
 
 ### 1.6 Cancelación de cálculos obsoletos
 Si llega una petición distinta mientras el Worker calcula otra, el Worker se termina y se crea uno nuevo (antes el cálculo obsoleto seguía consumiendo CPU hasta terminar). `cancel()` al desmontar también lo detiene. Pruebas con un Worker simulado (`computeClient.test.ts`).
+
+### 1.7 Límites del comprobador de respuestas
+La auditoría señaló formas de escribir correctas que el comprobador rechazaba. Ahora `parseNumber` acepta `2**3`, `10^{14}`, `3 . 10^8` y la multiplicación con espacio, y `splitValueAndUnit` normaliza las llaves antes de separar la unidad. También se añadieron los alias `/s`, `/m` y `/cm`. Todo ello está cubierto con pruebas en `audit3.test.ts`. Sigue sin evaluarse ninguna expresión del usuario: no hay `eval`.
+
+## 2. Cuaderno inteligente de errores
+- **Registro.** Cada ejercicio terminado con algún paso no superado deja una entrada con su enunciado, sus apartados y los pasos fallados. Cada paso fallado lleva el diagnóstico real (unidades, cálculo, idea errónea…). Solo se anota «revelado» si el paso se vio resuelto sin que hubiera un error diagnosticado.
+- **Superación.** No basta con repetir el mismo enunciado, porque eso puede ser memoria. Una entrada se supera al acertar una variante nueva del mismo tipo al primer intento y sin ayuda. Los ejercicios de los documentos no tienen variantes: para ellos vale el mismo enunciado pasados al menos 2 días.
+- **Dificultades recurrentes.** Se señala un tipo de error cuando aparece en 3 o más entradas abiertas, o en 2 entradas de apartados distintos.
+- **Lagunas conceptuales probables.** Se señalan cuando se repiten errores de concepto o de regla en un mismo apartado, o cuando hay fallos repetidos en un apartado cuyo prerrequisito está sin practicar o tiene un dominio estimado por debajo del 60 %. Siempre se formulan como posibilidad e indican la evidencia en que se basan.
+- **Dónde está.** En Entrenamiento → Cuaderno. Cada entrada enlaza a una variante nueva (`?gen=`) o al mismo ejercicio en modo revisión (`?ex=…&modo=revision`). El cuaderno se guarda en el progreso y se incluye en la copia de seguridad exportada, que se valida al importarla.
+- **Pruebas.** `notebook.test.ts` cubre la lógica. En el navegador, `tools/smoke.mjs` falla un ejercicio completo y comprueba que la entrada aparece, y `tools/a11y.mjs` audita la vista con axe.

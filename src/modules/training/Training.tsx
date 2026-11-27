@@ -10,18 +10,20 @@ import type { ErrorKind, SkillId } from '../../learning/types';
 import type { Exercise } from '../../learning/types';
 import { ExercisePlayer, type ExerciseOutcome, type Variant } from '../../ui/ExercisePlayer';
 import { ExamRunner, ExamReportView, loadSavedSession, saveSession, useFinishExam } from './ExamSessionView';
-import { newSession, type ExamReport, type ExamSession } from '../../learning/examSession';
+import { exerciseFromId, newSession, type ExamReport, type ExamSession } from '../../learning/examSession';
+import { NotebookView } from './Notebook';
 import { StudyPath } from './StudyPath';
 import { Feedback } from '../../ui/common';
 import { Icon } from '../../ui/Icon';
 import { navigate, useRoute } from '../../app/hooks';
 
-type View = 'practica' | 'ruta' | 'repaso' | 'examen' | 'progreso' | 'fuentes';
+type View = 'practica' | 'ruta' | 'repaso' | 'examen' | 'cuaderno' | 'progreso' | 'fuentes';
 const VIEWS: { id: View; label: string }[] = [
   { id: 'practica', label: 'Práctica' },
   { id: 'ruta', label: 'Ruta de estudio' },
   { id: 'repaso', label: 'Repaso' },
   { id: 'examen', label: 'Examen' },
+  { id: 'cuaderno', label: 'Cuaderno de errores' },
   { id: 'progreso', label: 'Progreso' },
   { id: 'fuentes', label: 'Ejercicios de clase' },
 ];
@@ -111,7 +113,7 @@ const VARIANTS: { id: Variant; label: string; help: string }[] = [
   { id: 'revision', label: 'Revisión', help: 'Ves la resolución completa explicada sin responder. No cuenta para tu progreso.' },
 ];
 
-function Practice({ initialScope, fixedExercise, onClearFixed }: { initialScope: string[]; fixedExercise: Exercise | null; onClearFixed: () => void }) {
+function Practice({ initialScope, fixedExercise, onClearFixed, forceVariant }: { initialScope: string[]; fixedExercise: Exercise | null; onClearFixed: () => void; forceVariant?: Variant }) {
   const [blocks, setBlocks] = useState<number[]>([]);
   const [variant, setVariant] = useState<Variant>(() => {
     try {
@@ -205,8 +207,8 @@ function Practice({ initialScope, fixedExercise, onClearFixed }: { initialScope:
           <ExercisePlayer
             exercise={exercise}
             mode="practica"
-            variant={variant}
-            onFinish={variant === 'revision' ? undefined : onFinish}
+            variant={fixedExercise && forceVariant ? forceVariant : variant}
+            onFinish={(fixedExercise && forceVariant ? forceVariant : variant) === 'revision' ? undefined : onFinish}
             onNext={() => {
               if (fixedExercise) onClearFixed();
               setSel(pick());
@@ -576,6 +578,7 @@ const MODE_HELP: Record<View, string> = {
   ruta: 'Un concepto de principio a fin: comprender, observarlo en el laboratorio, practicar guiado, aplicar solo, nivel examen y consolidar según tus errores.',
   repaso: 'Lo que ya practicaste vuelve justo antes de que lo olvides (repetición espaciada). Cinco minutos al día bastan.',
   examen: 'Sin pistas ni correcciones hasta el final. Al terminar, verás la nota y exactamente qué estudiar para mejorarla.',
+  cuaderno: 'Lo que has fallado, los errores que repites y las posibles lagunas, con la forma de superarlos.',
   progreso: 'Tu dominio por apartado y por competencia, con su margen de incertidumbre.',
   fuentes: 'Los ejercicios de tus hojas, con los mismos datos que en clase. Empieza por los básicos y sube a los de examen.',
 };
@@ -670,10 +673,12 @@ export function TrainingOverlay() {
     if (nodesParam) setPracticeScope(nodesParam.split(',').filter((n) => COVERED_NODES.includes(n)));
   }, [nodesParam]);
   const genParam = query.get('gen');
-  const [fixed, setFixed] = useState<Exercise | null>(() => exerciseForGenerator(genParam));
+  const exParam = query.get('ex');
+  const [fixed, setFixed] = useState<Exercise | null>(() => (exParam ? exerciseFromId(exParam) : exerciseForGenerator(genParam)));
   useEffect(() => {
-    if (genParam) setFixed(exerciseForGenerator(genParam));
-  }, [genParam]);
+    if (exParam) setFixed(exerciseFromId(exParam));
+    else if (genParam) setFixed(exerciseForGenerator(genParam));
+  }, [genParam, exParam]);
   const go = (v: View) => navigate(`/entrenamiento?v=${v}`);
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -715,7 +720,7 @@ export function TrainingOverlay() {
               </span>
             </div>
           )}
-          {view === 'practica' && <Practice key={scopeKey} initialScope={practiceScope} fixedExercise={fixed} onClearFixed={() => setFixed(null)} />}
+          {view === 'practica' && <Practice key={scopeKey} initialScope={practiceScope} fixedExercise={fixed} onClearFixed={() => setFixed(null)} forceVariant={query.get('modo') === 'revision' ? 'revision' : undefined} />}
           {view === 'repaso' && (
             <Review
               onStart={(nodes) => {
@@ -726,6 +731,7 @@ export function TrainingOverlay() {
           )}
           {view === 'examen' && <ExamView />}
           {view === 'progreso' && <ProgressView />}
+          {view === 'cuaderno' && <NotebookView />}
           {view === 'ruta' && (query.get('n') && COVERED_NODES.includes(query.get('n')!) ? <StudyPath key={query.get('n')} node={query.get('n')!} /> : <RoutePicker />)}
           {view === 'fuentes' && (
             <Sources

@@ -38,6 +38,7 @@ export interface Sanitized {
   campaign: Obj;
   exams: unknown[];
   forge?: Obj;
+  notebook: unknown[];
   activeMission?: string | null;
 }
 
@@ -92,6 +93,18 @@ function missionEntry(k: string, v: unknown): boolean {
     (v.status !== 'completada' || v.step === m.steps.length || v.step === 0) &&
     Array.isArray(v.collected) && v.collected.length <= 200 && v.collected.every((c) => shortStr(c, 80)) &&
     intIn(v.stars, 0, 3) && intIn(v.hintsUsed, 0, 1e4) && typeof v.firstTry === 'boolean'
+  );
+}
+
+export function notebookEntry(v: unknown): boolean {
+  if (!isObj(v)) return false;
+  return (
+    shortStr(v.exerciseId) && shortStr(v.generatorId, 60) && shortStr(v.title, 200) && nodeList(v.nodeIds) && ts(v.at) &&
+    MODES.has(v.mode as string) && intIn(v.retries, 0, 1000) &&
+    Array.isArray(v.misses) && v.misses.length > 0 && v.misses.length <= 30 &&
+    v.misses.every((m) => isObj(m) && typeof m.prompt === 'string' && m.prompt.length <= 300 && (ERROR_KINDS.has(m.kind as string) || m.kind === 'revelado') && (m.skill === undefined || SKILL_IDS.has(m.skill as string))) &&
+    (v.resolvedAt === undefined || (ts(v.resolvedAt) && (v.resolvedAt as number) >= (v.at as number))) &&
+    (v.resolvedBy === undefined || v.resolvedBy === 'variante' || v.resolvedBy === 'mismo-dias-despues')
   );
 }
 
@@ -167,6 +180,7 @@ export function validateProgress(raw: unknown, mode: 'estricto' | 'tolerante'): 
     history: listClean(raw.history, attemptEntry, MAX_HISTORY, 'historial', issues),
     campaign: recordClean(raw.campaign, missionEntry, 'campaña', issues),
     exams: listClean(raw.exams, examEntry, MAX_EXAMS, 'exámenes', issues),
+    notebook: listClean(raw.notebook, notebookEntry, 200, 'cuaderno de errores', issues),
   };
   if (raw.forge !== undefined) {
     const f = raw.forge;

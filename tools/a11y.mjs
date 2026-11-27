@@ -11,7 +11,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 const axeSource = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const PORT = 4186;
-const VIEWS = ['#/', '#/guia?b=3', '#/entrenamiento', '#/entrenamiento?v=examen', '#/entrenamiento?gen=desarrollo', '#/entrenamiento?v=ruta&n=3.6', '#/forja', '#/arquitecto', '#/periodico?tab=tendencias', '#/historia'];
+const VIEWS = ['#/', '#/guia?b=3', '#/entrenamiento', '#/entrenamiento?v=examen', '#/entrenamiento?gen=desarrollo', '#/entrenamiento?v=ruta&n=3.6', '#/entrenamiento?v=cuaderno', '#/forja', '#/arquitecto', '#/periodico?tab=tendencias', '#/historia'];
 
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'pipe' });
 await new Promise((resolve, reject) => {

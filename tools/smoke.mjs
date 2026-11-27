@@ -102,6 +102,31 @@ try {
   check((await page.locator('.feedback--ok').count()) >= 2, 'Entrenamiento: AMP 6 corregido paso a paso');
   await page.screenshot({ path: `${OUT}/04-entrenamiento.png` });
 
+  // Cuaderno de errores: el fallo de AMP 6 (primer intento erróneo abajo) o el simulacro dejan entradas.
+  await page.goto(base + '#/entrenamiento?gen=onda-lambda');
+  await page.waitForSelector('input.input', { timeout: T });
+  // Completa el ejercicio fallando cada paso y viéndolo resuelto (solo se registra al terminar).
+  for (let k = 0; k < 8 && !(await page.locator('text=Completado').count()); k++) {
+    const inp = page.locator('article input.input:not([disabled])').last();
+    const opts = page.locator('article li:last-child [role=radio]:not([disabled]), article li:last-child [role=checkbox]:not([disabled])');
+    if (await inp.count()) {
+      await inp.fill('27');
+      await page.click('button:text-is("Comprobar")');
+      await inp.fill('28');
+      await page.click('button:text-is("Comprobar")');
+    } else if (await opts.count()) {
+      // Paso de elección: dos opciones distintas, ambas comprobadas (al menos una será errónea).
+      for (const j of [0, 1]) {
+        await opts.nth(j).click();
+        if (await page.locator('button:has-text("Ver este paso")').count()) break;
+        await page.click('button:text-is("Comprobar")');
+      }
+    } else break;
+    if (await page.locator('button:has-text("Ver este paso")').count()) await page.click('button:has-text("Ver este paso")');
+  }
+  await page.goto(base + '#/entrenamiento?v=cuaderno');
+  await page.waitForSelector('.nb-item, .panel-card', { timeout: T });
+  check((await page.locator('.nb-item').count()) >= 1, 'Cuaderno de errores: el paso fallado aparece con su diagnóstico');
   await page.goto(base + '#/entrenamiento?v=ruta&n=3.6');
   await page.waitForSelector('.path-steps', { timeout: T });
   await page.click('.path-steps button:has-text("Practicar guiado")');
