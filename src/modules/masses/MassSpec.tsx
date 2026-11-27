@@ -134,33 +134,46 @@ function Spectrometer() {
     mm.instanceMatrix.needsUpdate = true;
     if (mm.instanceColor) mm.instanceColor.needsUpdate = true;
   });
-  const anchors = useMemo(() => isotopes.map((iso, i) => ({ id: `iso-${iso.a}`, position: [0.25, 0, -2 * radii[i]!] as [number, number, number], offset: [10, (i - (isotopes.length - 1) / 2) * 16] as [number, number] })), [isotopes, radii.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+  const anchors = useMemo(
+    () => [
+      ...isotopes.map((iso, i) => ({ id: `iso-${iso.a}`, position: [0.25, 0, -2 * radii[i]!] as [number, number, number], offset: [10, (i - (isotopes.length - 1) / 2) * 16] as [number, number] })),
+      // Partes del instrumento (la separación automática evita que se pisen con las de los isótopos).
+      { id: 'ms-src', position: [-ACC_LEN - 0.4, 0, 0.42] as [number, number, number], offset: [0, 12] as [number, number] },
+      { id: 'ms-acc', position: [-1.25, 0, 0.42] as [number, number, number], offset: [0, 12] as [number, number] },
+      { id: 'ms-mag', position: [rMean * 0.45, 0, -rMean] as [number, number, number] },
+      { id: 'ms-det', position: [-0.05, 0, -rMean * 2 - (rMean * 0.45 + 0.3)] as [number, number, number], offset: [0, -10] as [number, number] },
+    ],
+    [isotopes, radii.join(','), rMean], // eslint-disable-line react-hooks/exhaustive-deps
+  );
   return (
     <>
       <LabelProjector anchors={anchors} />
       {/* fuente y aceleración */}
       <mesh position={[-ACC_LEN - 0.4, 0, 0]}>
         <boxGeometry args={[0.6, 0.5, 0.5]} />
-        <meshStandardMaterial color="#3a3a40" metalness={0.6} roughness={0.4} />
+        <meshStandardMaterial color="#8a8f9a" metalness={0.5} roughness={0.35} />
       </mesh>
       {[-1.6, -0.9].map((x, i) => (
         <mesh key={x} position={[x, 0, 0]} rotation-y={Math.PI / 2}>
           <ringGeometry args={[0.05, 0.32, 32]} />
-          <meshStandardMaterial color={i === 0 ? '#c0782c' : '#4a5a70'} metalness={0.7} roughness={0.35} side={THREE.DoubleSide} />
+          <meshStandardMaterial color={i === 0 ? '#d08a3c' : '#7d90ab'} metalness={0.6} roughness={0.35} side={THREE.DoubleSide} />
         </mesh>
       ))}
-      {/* sector magnético: media luna */}
+      {/* Sector magnético: semidisco en x ≥ 0, el mismo semiplano que recorren los iones (x = r·sen φ ≥ 0).
+          Antes estaba en x ≤ 0 y los iones se curvaban fuera del campo dibujado. */}
       <mesh rotation-x={-Math.PI / 2} position={[0, -0.12, -rMean]}>
-        <circleGeometry args={[rMean * 1.35, 96, Math.PI / 2, Math.PI]} />
-        <meshStandardMaterial color="#2a3a52" transparent opacity={0.35} roughness={0.5} />
+        <circleGeometry args={[rMean * 1.35, 96, -Math.PI / 2, Math.PI]} />
+        <meshStandardMaterial color="#3d5578" transparent opacity={0.45} roughness={0.5} />
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position={[0, 0.12, -rMean]}>
-        <circleGeometry args={[rMean * 1.35, 96, Math.PI / 2, Math.PI]} />
-        <meshStandardMaterial color="#2a3a52" transparent opacity={0.18} roughness={0.5} side={THREE.DoubleSide} />
+        <circleGeometry args={[rMean * 1.35, 96, -Math.PI / 2, Math.PI]} />
+        <meshStandardMaterial color="#3d5578" transparent opacity={0.2} roughness={0.5} side={THREE.DoubleSide} />
       </mesh>
       {/* trayectorias */}
       {radii.map((r, i) => (
-        <mesh key={i} rotation-x={Math.PI / 2} position={[0, 0, -r]}>
+        // Arco del toro de θ = −π/2 a π/2 (Rz) llevado al plano horizontal (Rx): (r·cosθ, 0, −r + r·senθ),
+        // exactamente la trayectoria de los iones, de (0, 0, 0) a (0, 0, −2r) pasando por (r, 0, −r).
+        <mesh key={i} rotation={[Math.PI / 2, 0, -Math.PI / 2]} position={[0, 0, -r]}>
           <torusGeometry args={[r, 0.006, 6, 160, Math.PI]} />
           <meshBasicMaterial color={new THREE.Color(ISO_COLORS[i % ISO_COLORS.length]!).multiplyScalar(1.4)} transparent opacity={0.45} toneMapped={false} />
         </mesh>
@@ -168,7 +181,7 @@ function Spectrometer() {
       {/* detector */}
       <mesh position={[-0.05, 0, -rMean * 2]}>
         <boxGeometry args={[0.08, 0.4, rMean * 0.9 + 0.6]} />
-        <meshStandardMaterial color="#1d2a22" roughness={0.7} />
+        <meshStandardMaterial color="#3f6a50" emissive="#1c3a28" emissiveIntensity={0.6} roughness={0.6} />
       </mesh>
       <instancedMesh ref={mesh} args={[undefined, undefined, 400]} frustumCulled={false}>
         <sphereGeometry args={[0.045, 10, 8]} />
@@ -183,7 +196,7 @@ export function MassScene() {
   useContinuousRender(useMass((s) => s.running));
   return (
     <Stage camera={[0.4, 8.5, 1.2]} fov={40}>
-      <ambientLight intensity={0.4} />
+      <ambientLight intensity={0.75} />
       <directionalLight position={[3, 8, 4]} intensity={1.8} color="#ffe6c8" />
       <Spectrometer />
       <OrbitControls enablePan={false} enableDamping minDistance={3} maxDistance={16} target={[0, 0, -2.2]} />
@@ -338,6 +351,16 @@ export function MassOverlay() {
             <span className="scene-label" style={{ color: ISO_COLORS[i % ISO_COLORS.length] }}>
               {st.unknown ? 'X' : el.symbol}-{iso.a}
             </span>
+          </AnchoredLabel>
+        ))}
+        {[
+          ['ms-src', 'Fuente de iones'],
+          ['ms-acc', 'Aceleración (V)'],
+          ['ms-mag', 'Campo magnético B'],
+          ['ms-det', 'Detector'],
+        ].map(([id, text]) => (
+          <AnchoredLabel key={id} id={id!}>
+            <span className="scene-label scene-label--part">{text}</span>
           </AnchoredLabel>
         ))}
       </LabelLayer>

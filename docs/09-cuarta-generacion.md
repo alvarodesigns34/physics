@@ -109,3 +109,18 @@ La auditoría señaló formas de escribir correctas que el comprobador rechazaba
 - **Diagnóstico.** Se reconocen la masa en gramos, la falta de raíz, h/p invertido, la falta de 4π y el cociente de masas invertido.
 - **Unidades.** Se añade kg·m/s (también se aceptan kg*m/s, kg m/s, N·s y kg·m·s⁻¹).
 - **Pruebas.** `quantum4.test.ts`, además de las pruebas de autoconsistencia y de atribución por paso que ya recorren todas las familias.
+
+## 8. Laboratorios: inspección visual y defectos corregidos
+Revisé los siete laboratorios con capturas, en calidad alta y baja. Defectos encontrados y corregidos:
+- **Espectrómetro de masas: geometría incoherente (defecto científico).**
+  - **Defecto.** El semidisco del imán y los arcos dibujados ocupaban x ≤ 0, mientras que los iones, con x = r·sen φ, se movían por x ≥ 0: se curvaban fuera del campo que los desvía.
+  - **Corrección.** Ahora el imán, el arco y el movimiento coinciden.
+  - **Regresión.** `masses/geometry.test.ts` construye las geometrías con three.js y comprueba que todos los vértices del arco están en el semiplano del imán y sobre la circunferencia de la trayectoria.
+  - **Legibilidad.** El instrumento tiene materiales más claros y rótulos de sus partes: fuente, aceleración, campo B y detector.
+- **Etiquetas superpuestas.**
+  - **Defecto.** Cl‑35 y Cl‑37, con radios casi iguales, se pisaban.
+  - **Corrección.** `LabelProjector` separa en vertical las etiquetas que se solapan (`separateLabels`, función pura probada) y respeta la alineación de cada una. Primero lee todas las medidas y después escribe, para no forzar un recálculo de estilos por etiqueta. Sirve para todos los laboratorios.
+- **Arquitecto: cajas casi invisibles.** Las cajas vacías (azul marino sobre fondo casi negro) no se distinguían.
+  - La caja redondeada no tiene aristas vivas, así que `EdgesGeometry` no devolvía contorno; ahora se toma de una caja recta de las mismas medidas.
+  - Materiales más claros, menos brillo especular y una luz de relleno lateral (una luz frontal producía un reflejo deslumbrante).
+- **Calidad baja: escenas planas.** Sin mapa de entorno, las escenas sin luces propias, como el orbital cuántico, se veían como recortes planos. `Stage` añade en ese nivel un juego de luces sin sombras (hemisférica y dos direccionales).

@@ -73,6 +73,19 @@ function Arrow({ up, color, x }: { up: boolean; color: THREE.Color; x: number })
 
 function OrbitalBox({ state, x, onClick, bad, hund }: { state: BoxState; x: number; onClick: () => void; bad: boolean; hund: boolean }) {
   const geo = useMemo(() => new RoundedBoxGeometry(BOX, BOX * 0.8, 0.18, 2, 0.05), []);
+  // Contorno: sin él, una caja vacía (azul oscuro) se confundía con el fondo de la escena.
+  // La caja redondeada no tiene aristas vivas (EdgesGeometry no devolvería ninguna): el contorno se toma
+  // de una caja recta de las mismas medidas.
+  const edges = useMemo(() => {
+    const box = new THREE.BoxGeometry(BOX * 1.01, BOX * 0.8 * 1.01, 0.18 * 1.01);
+    const e = new THREE.EdgesGeometry(box);
+    box.dispose();
+    return e;
+  }, []);
+  useEffect(() => () => {
+    geo.dispose();
+    edges.dispose();
+  }, [geo, edges]);
   const [hover, setHover] = useState(false);
   const ice = useMemo(() => new THREE.Color('#bfe0ff').multiplyScalar(2.2), []);
   const red = useMemo(() => new THREE.Color('#ff8a74').multiplyScalar(2.4), []);
@@ -95,8 +108,11 @@ function OrbitalBox({ state, x, onClick, bad, hund }: { state: BoxState; x: numb
           document.body.style.cursor = '';
         }}
       >
-        <meshPhysicalMaterial color={bad ? '#7a2e24' : hund ? '#6b5420' : '#3a465e'} roughness={0.25} metalness={0.1} clearcoat={0.8} transparent opacity={hover ? 0.95 : 0.8} emissive={hover ? '#f2a93b' : '#000000'} emissiveIntensity={hover ? 0.15 : 0} />
+        <meshPhysicalMaterial color={bad ? '#9a3a2c' : hund ? '#8a6c2a' : state ? '#7088b0' : '#566a8e'} roughness={0.55} metalness={0} clearcoat={0.25} clearcoatRoughness={0.6} transparent opacity={hover ? 0.98 : 0.9} emissive={hover ? '#f2a93b' : '#000000'} emissiveIntensity={hover ? 0.15 : 0} />
       </mesh>
+      <lineSegments geometry={edges} raycast={() => null}>
+        <lineBasicMaterial color={bad ? '#ff9c86' : hund ? '#f2c46b' : hover ? '#f2a93b' : '#a9bde0'} transparent opacity={state ? 0.95 : 0.75} toneMapped={false} />
+      </lineSegments>
       {state === 1 && <Arrow up color={col} x={0} />}
       {state === 2 && <Arrow up={false} color={col} x={0} />}
       {state === 3 && (
@@ -166,7 +182,9 @@ function Tower() {
 export function ArchitectScene() {
   return (
     <Stage camera={[0, 0.6, 9.5]} fov={42}>
-      <ambientLight intensity={0.5} />
+      <ambientLight intensity={0.9} />
+      {/* Relleno frontal: las caras que mira la cámara quedaban sin luz directa. */}
+      <directionalLight position={[-6, 6, 8]} intensity={0.8} color="#dfe8f7" />
       <directionalLight position={[3, 5, 6]} intensity={1.6} color="#ffe6c8" />
       <directionalLight position={[-4, -2, -3]} intensity={0.6} color="#a8c4ea" />
       <Tower />

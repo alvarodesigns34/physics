@@ -18,10 +18,58 @@ export interface Anchor {
   offset?: [number, number];
 }
 
+export interface LabelBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  align: 'center' | 'left' | 'right' | 'bottom';
+}
+
+const GAP = 2;
+
+function span(b: LabelBox): [number, number] {
+  return b.align === 'left' ? [b.x, b.x + b.w] : b.align === 'right' ? [b.x - b.w, b.x] : [b.x - b.w / 2, b.x + b.w / 2];
+}
+
+/**
+ * Separa en vertical las etiquetas que se solaparían (p. ej., dos isótopos con radios casi iguales en el
+ * espectrómetro). Recorre de arriba abajo y empuja hacia abajo cada etiqueta que choque con una ya
+ * colocada. Devuelve las nuevas coordenadas y (función pura; probada en labels.test.ts).
+ */
+export function separateLabels(boxes: LabelBox[]): number[] {
+  const order = boxes.map((_, i) => i).sort((a, b) => boxes[a]!.y - boxes[b]!.y);
+  const ys = boxes.map((b) => b.y);
+  const placed: number[] = [];
+  for (const i of order) {
+    const b = boxes[i]!;
+    const [l, r] = span(b);
+    let moved = true;
+    for (let guard = 0; moved && guard < boxes.length; guard++) {
+      moved = false;
+      for (const j of placed) {
+        const o = boxes[j]!;
+        const [ol, or] = span(o);
+        if (r <= ol || l >= or) continue;
+        const minDy = (b.h + o.h) / 2 + GAP;
+        if (Math.abs(ys[i]! - ys[j]!) < minDy) {
+          ys[i] = ys[j]! + minDy;
+          moved = true;
+        }
+      }
+    }
+    placed.push(i);
+  }
+  return ys;
+}
+
 export function LabelProjector({ anchors }: { anchors: Anchor[] }) {
   const { camera, size } = useThree();
   const v = useMemo(() => new THREE.Vector3(), []);
   useFrame(() => {
+    const items: { el: HTMLElement; box: LabelBox; hidden: boolean }[] = [];
+    // Primero se leen medidas y se proyecta (sin escribir en el DOM) y después se escribe: así no se
+    // fuerza un recálculo de estilos por etiqueta.
     for (const a of anchors) {
       const el = elements.get(a.id);
       if (!el) continue;
@@ -32,7 +80,14 @@ export function LabelProjector({ anchors }: { anchors: Anchor[] }) {
       const hidden = v.z > 1 || v.z < -1;
       const x = ((v.x + 1) / 2) * size.width + (a.offset?.[0] ?? 0);
       const y = ((1 - v.y) / 2) * size.height + (a.offset?.[1] ?? 0);
-      el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+      const inner = el.firstElementChild as HTMLElement | null;
+      items.push({ el, hidden, box: { x, y, w: inner?.offsetWidth ?? 0, h: inner?.offsetHeight ?? 0, align: (el.dataset.align as LabelBox['align']) ?? 'center' } });
+    }
+    const visible = items.filter((it) => !it.hidden);
+    const ys = separateLabels(visible.map((it) => it.box));
+    visible.forEach((it, k) => (it.box.y = ys[k]!));
+    for (const { el, box, hidden } of items) {
+      el.style.transform = `translate3d(${box.x.toFixed(1)}px, ${box.y.toFixed(1)}px, 0)`;
       el.style.visibility = hidden ? 'hidden' : 'visible';
     }
   });
@@ -53,7 +108,7 @@ export function AnchoredLabel({ id, children, align = 'center', style, className
   const inner: CSSProperties =
     align === 'center' ? { transform: 'translate(-50%, -50%)' } : align === 'left' ? { transform: 'translate(0, -50%)' } : align === 'right' ? { transform: 'translate(-100%, -50%)' } : { transform: 'translate(-50%, -100%)' };
   return (
-    <div ref={ref} className={className} style={{ position: 'absolute', left: 0, top: 0, visibility: 'hidden', willChange: 'transform', ...style }}>
+    <div ref={ref} className={className} data-align={align} style={{ position: 'absolute', left: 0, top: 0, visibility: 'hidden', willChange: 'transform', ...style }}>
       <div style={inner}>{children}</div>
     </div>
   );

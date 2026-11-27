@@ -4526,3 +4526,9 @@ kbd {
 .box-diagram__box:first-child { margin-left: 0; border-radius: 4px 0 0 4px; }
 .box-diagram__box:last-child { border-radius: 0 4px 4px 0; }
 .box-diagram__box:only-child { border-radius: 4px; }
+.scene-label--part {
+  color: var(--ink-on-viewer-muted);
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+}

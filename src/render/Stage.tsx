@@ -163,7 +163,17 @@ export function Stage({ children, camera = [0, 2.4, 9] as [number, number, numbe
       <DemandDriver />
       {auto && !reduced && <FrameMonitor />}
       <Suspense fallback={null}>
-        {q.tier !== 'baja' && <StudioEnvironment />}
+        {q.tier !== 'baja' ? (
+          <StudioEnvironment />
+        ) : (
+          // Sin mapa de entorno (calidad baja), las escenas sin luces propias quedaban planas: un juego de
+          // luces barato (sin sombras) conserva el volumen.
+          <>
+            <hemisphereLight args={['#dfe8f7', '#2a2320', 0.9]} />
+            <directionalLight position={[4, 6, 5]} intensity={1.4} color="#ffe6c8" />
+            <directionalLight position={[-5, -2, -3]} intensity={0.5} color="#a8c4ea" />
+          </>
+        )}
         {children}
       </Suspense>
       {q.bloom && (
