@@ -28,6 +28,7 @@ const VIEWS = [
   ['cuantico', '#/cuantico'],
   ['arquitecto', '#/arquitecto'],
   ['periodico', '#/periodico'],
+  ['tendencias', '#/periodico?tab=tendencias'],
 ];
 const DEVICES = {
   desktop: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },

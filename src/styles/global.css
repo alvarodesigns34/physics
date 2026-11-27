@@ -4055,3 +4055,22 @@ kbd {
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+/* Gráfica de tendencias dentro del visor */
+.trends-chart {
+  position: absolute;
+  inset: 72px 32px 72px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+.trends-chart .ex-figure {
+  width: min(880px, 100%);
+  background: color-mix(in srgb, var(--surface-raised) 94%, transparent);
+  box-shadow: var(--elev-3);
+  padding: 20px;
+}
+.trends-chart .fig-label {
+  font-size: 12px;
+}

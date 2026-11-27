@@ -1,3 +1,4 @@
+import { TrendsChart, TrendsPanel } from './Trends';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -22,7 +23,7 @@ import { Icon } from '../../ui/Icon';
 
 type PropSel = PropertyId | 'ninguna';
 type ColorMode = 'categoria' | 'bloque' | 'propiedad';
-type View = 'tabla' | 'tamanos';
+type View = 'tabla' | 'tamanos' | 'tendencias';
 
 interface PState {
   prop: PropSel;
@@ -213,7 +214,7 @@ export function PeriodicScene() {
   const view = usePeriodic((s) => s.view);
   const anchors = useMemo(sizeAnchors, []);
   return (
-    <Stage camera={view === 'tabla' ? [0, 17.5, 15.5] : [0, 17, 10.5]} fov={34} key={view}>
+    <Stage camera={view !== 'tamanos' ? [0, 17.5, 15.5] : [0, 17, 10.5]} fov={34} key={view === 'tamanos' ? 'tamanos' : 'tabla'}>
       <ambientLight intensity={0.35} />
       <directionalLight position={[6, 14, 8]} intensity={2.4} color="#ffe6c8" castShadow />
       <directionalLight position={[-8, 6, -6]} intensity={0.9} color="#a8c4ea" />
@@ -221,7 +222,7 @@ export function PeriodicScene() {
         <planeGeometry args={[60, 40]} />
         <meshStandardMaterial color="#100f0e" roughness={0.6} />
       </mesh>
-      {view === 'tabla' ? (
+      {view !== 'tamanos' ? (
         <>
           <Blocks />
           <TableLabelProjector />
@@ -441,7 +442,7 @@ export function PeriodicOverlay() {
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
     const v = query.get('tab');
-    if (v === 'tamanos' || v === 'tabla') st.set({ view: v });
+    if (v === 'tamanos' || v === 'tabla' || v === 'tendencias') st.set({ view: v });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.get('tab')]);
   const sel = st.selected ? elementByZ(st.selected)! : null;
@@ -465,8 +466,9 @@ export function PeriodicOverlay() {
             </div>
           </div>
         )}
+        {st.view === 'tendencias' && !mobile && <TrendsChart />}
         <div className="stage-caption desktop-only">
-          {st.view === 'tabla' ? (
+          {st.view !== 'tamanos' ? (
             st.prop === 'ninguna' ? <EpiTag kind="esquema">Disposición de la tabla de TEO p.17 (Lu y Lr en el grupo 3)</EpiTag> : <EpiTag kind="calculo">Altura proporcional a {PROPERTIES[st.prop].label.toLowerCase()} · datos reales</EpiTag>
           ) : (
             <EpiTag kind="calculo">Esferas a escala: radio covalente (gris) frente a radio iónico de Shannon (NC 6). Catión: coral · anión: lavanda</EpiTag>
@@ -487,8 +489,13 @@ export function PeriodicOverlay() {
             <button type="button" role="tab" aria-selected={st.view === 'tamanos'} style={{ flex: 1 }} onClick={() => st.set({ view: 'tamanos' })}>
               Átomos e iones
             </button>
+            <button type="button" role="tab" aria-selected={st.view === 'tendencias'} style={{ flex: 1 }} onClick={() => st.set({ view: 'tendencias' })}>
+              Tendencias
+            </button>
           </div>
-          {st.view === 'tabla' ? (
+          {st.view === 'tendencias' ? (
+            <TrendsPanel showChart={mobile} />
+          ) : st.view === 'tabla' ? (
             <>
               <section className="section">
                 <span className="eyebrow">Propiedad</span>
