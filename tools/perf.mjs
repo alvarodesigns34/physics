@@ -52,7 +52,7 @@ try {
     const t0 = Date.now();
     await page.goto(`http://localhost:${PORT}/#${r}`);
     await page.reload();
-    await page.waitForFunction(() => document.querySelector('canvas') || document.querySelector('.guide, .workspace--full, .home .lab-card, main'), null, { timeout: 30000 });
+    await page.waitForFunction(() => document.querySelector('canvas') || document.querySelector('.guide, .workspace--full, .home .lab-row, main'), null, { timeout: 30000 });
     const readyMs = Date.now() - t0;
     await page.waitForTimeout(6500); // pasa la ventana de interacción (5 s) tras la carga
     const m = await page.evaluate(async () => {

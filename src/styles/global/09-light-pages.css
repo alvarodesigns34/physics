@@ -34,6 +34,7 @@
   line-height: 1.08;
   color: var(--ink);
   text-wrap: balance;
+  text-wrap: balance;
 }
 .home__title-soft {
   color: var(--ink-faint);

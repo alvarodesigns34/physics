@@ -584,3 +584,63 @@
 .connection:hover { border-color: var(--accent-line); color: var(--ink); transform: translateY(-1px); }
 .connection:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .connection:hover { transform: none; } }
+
+/* ATOM 5.0 · Inicio: firma espectral e índice de laboratorios */
+.home__head--split {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(260px, 5fr);
+  align-items: end;
+  gap: 32px 48px;
+}
+@media (max-width: 980px) {
+  .home__head--split { grid-template-columns: 1fr; gap: 20px; }
+  .home__head--split .signature { max-width: 480px; }
+}
+.signature { margin: 0; display: grid; gap: 8px; }
+.signature svg { width: 100%; height: auto; display: block; overflow: visible; }
+.signature__bg { fill: #0d1016; }
+.signature__label { font-family: var(--font-mono); font-size: 10px; fill: var(--ink-muted); }
+.signature__cap { font-size: 0.75rem; color: var(--ink-faint); display: flex; align-items: center; gap: 6px; }
+.signature__cap .epi-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); display: inline-block; }
+.signature__line { animation: sig-in var(--dur-slow) var(--ease-out) both; transform-origin: center bottom; }
+@keyframes sig-in {
+  from { opacity: 0; transform: scaleY(0.4); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .signature__line { animation: none; } }
+
+.lab-index {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 48px;
+  border-top: 1px solid var(--hairline);
+}
+@media (max-width: 900px) { .lab-index { grid-template-columns: 1fr; } }
+.lab-index > li { border-bottom: 1px solid var(--hairline); }
+.lab-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto 18px;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 8px 16px 0;
+  color: var(--ink);
+  text-decoration: none;
+  border-radius: 12px;
+  transition: background var(--dur-fast) var(--ease-std);
+}
+.lab-row .lab-glyph { width: 44px; height: 44px; color: var(--lab); transition: transform var(--dur-base) var(--ease-out); }
+.lab-row__text { display: grid; gap: 2px; min-width: 0; }
+.lab-row__name { font-family: var(--font-display); font-weight: 600; font-size: 1.0625rem; letter-spacing: -0.01em; }
+.lab-row__blurb { font-size: 0.875rem; color: var(--ink-muted); line-height: 1.45; }
+.lab-row__topics { font-family: var(--font-mono); font-size: 0.6875rem; color: var(--ink-faint); white-space: nowrap; }
+.lab-row__go { color: var(--ink-faint); opacity: 0; transform: translateX(-4px); transition: opacity var(--dur-fast) var(--ease-std), transform var(--dur-base) var(--ease-out); }
+.lab-row:hover { background: var(--surface-raised); }
+.lab-row:hover .lab-glyph { transform: scale(1.06); }
+.lab-row:hover .lab-row__go, .lab-row:focus-visible .lab-row__go { opacity: 1; transform: none; color: var(--lab); }
+.lab-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 1180px) { .lab-row__topics { display: none; } .lab-row { grid-template-columns: 48px minmax(0, 1fr) 18px; } }
+@media (prefers-reduced-motion: reduce) { .lab-row .lab-glyph, .lab-row__go { transition: none; } }
+.home__head--split .home__title-soft { white-space: nowrap; }

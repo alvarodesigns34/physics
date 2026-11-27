@@ -39,8 +39,9 @@ try {
   check(await page.locator('.intro').isVisible(), 'Bienvenida visible en la primera visita');
   await page.click('.intro button:text-is("Cerrar")');
   // ATOM 3.0: el inicio es una página de estudio (sin escena 3D) con los laboratorios a un clic.
-  await page.waitForSelector('.lab-card', { timeout: T });
-  check((await page.locator('.lab-card').count()) === 8, 'Inicio: siete laboratorios y la campaña a un clic');
+  await page.waitForSelector('.lab-row', { timeout: T });
+  check((await page.locator('.lab-row').count()) === 8, 'Inicio: siete laboratorios y la campaña a un clic');
+  check((await page.locator('.signature svg rect[width="2.5"]').count()) === 5, 'Inicio: firma espectral con las 5 líneas de Balmer calculadas');
   check((await page.locator('.rail__item').count()) === 10, 'Raíl lateral: inicio, guía, práctica y siete laboratorios');
   await page.keyboard.press('Control+k');
   await page.waitForSelector('.palette input', { timeout: T });

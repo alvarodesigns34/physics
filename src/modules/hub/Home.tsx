@@ -16,6 +16,7 @@ import { SOURCE_EXERCISES } from '../../learning/registry';
 import type { ErrorKind, SkillId } from '../../learning/types';
 import { Icon } from '../../ui/Icon';
 import { LabGlyph, LAB_META } from './LabGlyph';
+import { SpectrumSignature } from './SpectrumSignature';
 
 const nodeTitle = (id: string) => NODES.find((n) => n.id === id)?.title ?? id;
 
@@ -72,12 +73,15 @@ export function HomeOverlay() {
   return (
     <div className="home" id="inicio">
       <div className="home__inner">
-        <header className="home__head enter">
-          <p className="eyebrow">Estructura atómica · Sistema periódico · 1.º Bachillerato</p>
-          <h1 className="home__title">
-            {greeting()}
-            {alias ? `, ${alias}` : ''}. <span className="home__title-soft">¿Qué estudiamos hoy?</span>
-          </h1>
+        <header className="home__head home__head--split enter">
+          <div className="stack-8">
+            <p className="eyebrow">Estructura atómica · Sistema periódico · 1.º Bachillerato</p>
+            <h1 className="home__title">
+              {greeting()}
+              {alias ? `, ${alias}` : ''}. <span className="home__title-soft">¿Qué estudiamos hoy?</span>
+            </h1>
+          </div>
+          <SpectrumSignature />
         </header>
 
         <section className="home__primary enter" aria-label="Qué hacer ahora" style={{ animationDelay: '40ms' }}>
@@ -116,29 +120,39 @@ export function HomeOverlay() {
             <h2 id="h-labs" className="home__h2">Laboratorios</h2>
             <span className="small faint">Simulaciones con cálculo real. Cada una declara qué es cálculo y qué es esquema.</span>
           </div>
-          <div className="lab-grid">
+          <ol className="lab-index">
             {LAB_META.map((l) => (
-              <a key={l.route} className="lab-card" href={`#${l.route}`} style={{ ['--lab' as string]: l.color }}>
-                <LabGlyph route={l.route} />
-                <span className="lab-card__name">{l.label}</span>
-                <span className="lab-card__blurb">{l.blurb}</span>
-                <span className="lab-card__topics">{l.topics}</span>
-              </a>
+              <li key={l.route}>
+                <a className="lab-row" href={`#${l.route}`} style={{ ['--lab' as string]: l.color }}>
+                  <LabGlyph route={l.route} />
+                  <span className="lab-row__text">
+                    <span className="lab-row__name">{l.label}</span>
+                    <span className="lab-row__blurb">{l.blurb}</span>
+                  </span>
+                  <span className="lab-row__topics">{l.topics}</span>
+                  <Icon name="arrow-right" size={18} className="lab-row__go" />
+                </a>
+              </li>
             ))}
-            <a className="lab-card lab-card--campaign" href="#/campana" style={{ ['--lab' as string]: 'var(--accent)' }}>
-              <svg className="lab-glyph" width="56" height="56" viewBox="0 0 56 56" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
-                <circle cx="28" cy="28" r="20" opacity=".3" />
-                <path d="M28 8a20 20 0 0 1 20 20" />
-                <circle cx="28" cy="28" r="3" fill="currentColor" stroke="none" />
-                <path d="M28 28 40 16" />
-              </svg>
-              <span className="lab-card__name">Campaña</span>
-              <span className="lab-card__blurb">{MISSIONS.length} misiones guiadas por los siete laboratorios, en el atrio 3D.</span>
-              <span className="lab-card__topics">
-                {missionsDone}/{MISSIONS.length} completadas
-              </span>
-            </a>
-          </div>
+            <li>
+              <a className="lab-row lab-row--campaign" href="#/campana" style={{ ['--lab' as string]: 'var(--accent)' }}>
+                <svg className="lab-glyph" width="56" height="56" viewBox="0 0 56 56" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+                  <circle cx="28" cy="28" r="20" opacity=".3" />
+                  <path d="M28 8a20 20 0 0 1 20 20" />
+                  <circle cx="28" cy="28" r="3" fill="currentColor" stroke="none" />
+                  <path d="M28 28 40 16" />
+                </svg>
+                <span className="lab-row__text">
+                  <span className="lab-row__name">Campaña</span>
+                  <span className="lab-row__blurb">{MISSIONS.length} misiones guiadas por los siete laboratorios, en el atrio 3D.</span>
+                </span>
+                <span className="lab-row__topics">
+                  {missionsDone}/{MISSIONS.length} completadas
+                </span>
+                <Icon name="arrow-right" size={18} className="lab-row__go" />
+              </a>
+            </li>
+          </ol>
         </section>
 
         <div className="home__cols">

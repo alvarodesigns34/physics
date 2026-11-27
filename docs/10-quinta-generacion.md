@@ -157,3 +157,11 @@ Cinco familias muy usadas dejan la plantilla genérica y pasan a tener una resol
 - abundancias a partir de la masa media (problema inverso).
 
 Cada resolución se construye con los números del propio ejercicio y tiene comprobación de coherencia y errores típicos. Las pruebas de buena formación de fórmulas cubren ahora 10 familias con resolución propia.
+
+## 6. Diseño: el inicio
+Seguí el método de criterio de diseño: primero fijar el sujeto y el gesto, después comprobar los antipatrones.
+- **Sujeto.** La entrada de un estudiante: que quede claro qué estudiar ahora y se llegue allí con un clic.
+- **Gesto.** Una firma espectral junto al título: la serie de Balmer del hidrógeno, calculada con el mismo modelo que el laboratorio. Cada línea está en su longitud de onda y con su color, entra escalonada y respeta el movimiento reducido. Encarna el concepto de diseño de ATOM, «el color lo pone la física», que antes no tenía presencia en la página.
+- **Antipatrón eliminado.** La cuadrícula de ocho tarjetas idénticas, típica de un panel genérico, pasa a ser un índice editorial en dos columnas, con filas separadas por líneas finas: glifo, nombre, descripción y temas en monoespaciada, y al pasar el cursor el glifo crece y aparece una flecha del color del laboratorio.
+- **Título.** Equilibrado con `text-wrap: balance`.
+- **Revisión.** Comprobado en escritorio (1440), iPad vertical (834) e iPad horizontal (1194). Las referencias visuales del inicio se han actualizado a propósito. Axe sigue sin encontrar infracciones.
