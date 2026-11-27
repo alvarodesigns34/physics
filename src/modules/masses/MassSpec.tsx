@@ -1,3 +1,4 @@
+import { useContinuousRender } from '../../render/demand';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -178,6 +179,8 @@ function Spectrometer() {
 }
 
 export function MassScene() {
+  // El espectrómetro cuenta iones de forma continua mientras está en marcha.
+  useContinuousRender(useMass((s) => s.running));
   return (
     <Stage camera={[0.4, 8.5, 1.2]} fov={40}>
       <ambientLight intensity={0.4} />

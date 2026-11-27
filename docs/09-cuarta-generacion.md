@@ -17,3 +17,20 @@ Corrección:
 - **Tipos de evidencia** por apartado y ejercicio: *demostrada*, *posible azar*, *asistida* (reintento, pista, paso revelado o arrastre) y *autoevaluada*, con pesos 1 / 1 (ya penalizada por c) / 0,6 / 0,4. Solo la demostrada (respuesta abierta, primer intento, sin pistas, dificultad ≥ 2) cuenta como «acierto demostrado».
 - **θ mostrado con contracción**: θ̂ = θ₀ + (θ − θ₀)·I/(I + I₀). Con poca información, la estimación queda cerca del punto de partida y con intervalo ancho.
 - Pruebas: `src/learning/model4.test.ts`.
+
+### 1.2 Datos científicos ausentes interpretados como 0
+`null` en la afinidad electrónica mezclaba «anión no ligado» (AE ≤ 0 medida: gases nobles, N, Be, Mg, Mn, Zn, Cd, Hg) con «sin valor en la fuente» (varios lantánidos, actínidos, transactínidos), y ATOM mostraba ambos como 0 kJ/mol. Ahora hay tres estados (`affinityStatus`): solo el primero es 0; el segundo aparece como «sin datos» y queda fuera de gráficas, ordenaciones y excepciones. Prueba en `trends3.test.ts`.
+
+### 1.3 Preguntas no respondidas en los simulacros
+Antes, al agotarse el tiempo, las preguntas no respondidas desaparecían del informe por apartados. Ahora (`examSession.ts`) cuentan 0 en la nota, se listan por apartado como «sin responder» y no se usan como evidencia de dominio (no responder por falta de tiempo no demuestra no saber).
+
+### 1.4 Continuidad de las rutas de estudio
+El estado de la ruta (paso, pasos hechos, errores, ids de sus ejercicios) se guarda en el navegador; desde un laboratorio o la guía, la barra superior ofrece «Ruta: … · paso n/6» para volver al punto exacto. Comprobado en la e2e.
+
+### 1.5 Renderizado continuo y memoria
+- **Bajo demanda** (`src/render/demand.ts`): se dibuja durante la interacción y 5 s después, mientras una simulación lo pide (Monte Carlo, conteo de iones, colapso) o durante animaciones de duración conocida (fotones). La autorrotación decorativa solo actúa en la ventana de actividad (`CalmOrbitControls`).
+- **Medición** (fotogramas dibujados en 5 s de reposo, tras la carga, SwiftShader): antes, todas las escenas dibujaban continuamente; ahora Forja 0, Fotones 0, Cuántica 0, Tabla 0, Arquitecto 0, Modelos 0, Campaña 0; solo Geiger–Marsden (158) y Masas (241), que simulan, siguen dibujando.
+- **Fugas corregidas**: material de las trayectorias del tubo de Thomson no liberado; `BoxGeometry` creada en cada render del espectroscopio. Recursos WebGL estables tras 4 rondas de cambios de orbital (5 geometrías, 1 textura) y 3 rondas de cambios de lámpara (20 y 2).
+
+### 1.6 Cancelación de cálculos obsoletos
+Si llega una petición distinta mientras el Worker calcula otra, el Worker se termina y se crea uno nuevo (antes el cálculo obsoleto seguía consumiendo CPU hasta terminar). `cancel()` al desmontar también lo detiene. Pruebas con un Worker simulado (`computeClient.test.ts`).

@@ -1,6 +1,6 @@
+import { CalmOrbitControls } from '../../render/CalmControls';
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { Stage } from '../../render/Stage';
@@ -133,7 +133,7 @@ export function ForgeScene() {
       {density && <ElectronCloud density={density} scale={CLOUD_SCALE} size={(q.tier === 'baja' ? 110 : 80) * Math.max(1, Math.sqrt(radius / 2.5))} opacity={(q.tier === 'baja' ? 0.32 : 0.2) * Math.min(1, Math.max(0.5, 1.2 - 0.25 * Math.log10(sp.e)))} animate={!reduced} />}
       <Crucible radius={radius} reduced={reduced} />
       <CameraRig radius={radius} reduced={reduced} />
-      <OrbitControls makeDefault enablePan={false} enableDamping autoRotate={!reduced} autoRotateSpeed={0.35} />
+      <CalmOrbitControls makeDefault enablePan={false} enableDamping autoRotate={!reduced} autoRotateSpeed={0.35} />
     </Stage>
   );
 }

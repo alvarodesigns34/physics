@@ -1,3 +1,5 @@
+import { CalmOrbitControls } from '../../render/CalmControls';
+import { useContinuousRender } from '../../render/demand';
 import { ModelStoryView, ModelMatrix } from './Story';
 import type { ModelKey } from '../../learning/history';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -254,7 +256,7 @@ function ModelScene() {
         </group>
       )}
       {model === 'actual' && <ElectronCloud density={cloud} scale={0.95} size={70} opacity={0.22} animate={!reduced} />}
-      <OrbitControls enablePan={false} enableDamping minDistance={3} maxDistance={10} autoRotate={!reduced && model !== 'bohr'} autoRotateSpeed={0.4} />
+      <CalmOrbitControls enablePan={false} enableDamping minDistance={3} maxDistance={10} autoRotate={!reduced && model !== 'bohr'} autoRotateSpeed={0.4} />
     </Stage>
   );
 }
@@ -281,7 +283,13 @@ function TubeScene() {
     const g = new THREE.BufferGeometry().setFromPoints(pts);
     return new THREE.Line(g, new THREE.LineBasicMaterial({ color: new THREE.Color('#9ff0c4').multiplyScalar(2.2), toneMapped: false }));
   }, [res]);
-  useEffect(() => () => line.geometry.dispose(), [line]);
+  useEffect(
+    () => () => {
+      line.geometry.dispose();
+      (line.material as THREE.Material).dispose();
+    },
+    [line],
+  );
   const screenX = X0 + (TUBE.length + TUBE.drift) * SX;
   const spotY = Number.isFinite(res.screenY) ? res.screenY * SY : null;
   return (
@@ -455,6 +463,10 @@ function GeigerScene() {
 
 export function HistoryScene() {
   const tab = useHistory((s) => s.tab);
+  const running = useHistory((s) => s.running);
+  const collapsing = useHistory((s) => s.collapse > 0 && !s.collapsed);
+  // Simulaciones que avanzan solas: Monte Carlo de Geiger–Marsden y la espiral del colapso clásico.
+  useContinuousRender((tab === 'geiger' && running) || collapsing);
   if (tab === 'tubo') return <TubeScene />;
   if (tab === 'geiger') return <GeigerScene />;
   return <ModelScene />;

@@ -1,3 +1,4 @@
+import { requestFrames } from '../../render/demand';
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -167,6 +168,8 @@ function Photon({ t, delay, createdAt }: { t: Transition; delay: number; created
   const y0 = yOfEnergy(levelEnergyEV(t.from));
   const y1 = yOfEnergy(levelEnergyEV(t.to));
   const sounded = useRef(false);
+  // El fotón vuela (delay + 1,6 s): durante ese tiempo la escena debe dibujarse aunque nadie toque nada.
+  useEffect(() => requestFrames(Math.max(0, createdAt + (delay + 1.8) * 1000 - performance.now())), [createdAt, delay]);
   useFrame(() => {
     const age = (performance.now() - createdAt) / 1000 - delay;
     const m = ref.current;

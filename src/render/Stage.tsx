@@ -1,4 +1,5 @@
-import { Suspense, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { installInteractionWatch, markInteraction, onWake, shouldRender } from './demand';
+import { Suspense, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, Lightformer } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, ToneMapping } from '@react-three/postprocessing';
@@ -9,6 +10,47 @@ import { toast } from '../ui/common';
 import { useStore } from '../state/store';
 
 /** Mide los fotogramas por ventanas y los entrega al controlador de calidad (solo en modo automático). */
+/**
+ * Controlador del renderizado bajo demanda: un bucle rAF ligero que solo invalida el lienzo mientras
+ * `shouldRender()`; cuando no hay nada que dibujar, se detiene y espera a `onWake`.
+ * Cuenta los fotogramas dibujados en `window.__atomFrames` (medición de tools/perf.mjs).
+ */
+function DemandDriver() {
+  const invalidate = useThree((s) => s.invalidate);
+  useEffect(() => {
+    installInteractionWatch();
+    let raf = 0;
+    let running = false;
+    const tick = () => {
+      if (!shouldRender()) {
+        running = false;
+        return;
+      }
+      invalidate();
+      raf = requestAnimationFrame(tick);
+    };
+    const start = () => {
+      if (running) return;
+      running = true;
+      raf = requestAnimationFrame(tick);
+    };
+    markInteraction();
+    start();
+    const off = onWake(start);
+    return () => {
+      off();
+      cancelAnimationFrame(raf);
+    };
+  }, [invalidate]);
+  const gl = useThree((s) => s.gl);
+  useFrame(() => {
+    const w = window as unknown as { __atomFrames?: number; __atomGL?: { geometries: number; textures: number } };
+    w.__atomFrames = (w.__atomFrames ?? 0) + 1;
+    w.__atomGL = { geometries: gl.info.memory.geometries, textures: gl.info.memory.textures };
+  });
+  return null;
+}
+
 function FrameMonitor() {
   const acc = useRef({ start: -1, frames: 0, longest: 0, last: -1, deltas: [] as number[] });
   useFrame(() => {
@@ -112,12 +154,13 @@ export function Stage({ children, camera = [0, 2.4, 9] as [number, number, numbe
         gl.toneMapping = q.bloom ? THREE.NoToneMapping : THREE.NeutralToneMapping;
         gl.setClearColor('#121722');
       }}
-      frameloop={reduced ? 'demand' : 'always'}
+      frameloop="demand"
       aria-hidden="true"
     >
       <color attach="background" args={['#121722']} />
       <fog attach="fog" args={['#0b0a09', 14, 42]} />
       <ViewOffset panel={panel} fov={fov} />
+      <DemandDriver />
       {auto && !reduced && <FrameMonitor />}
       <Suspense fallback={null}>
         {q.tier !== 'baja' && <StudioEnvironment />}

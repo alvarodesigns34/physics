@@ -15,6 +15,9 @@ import { prismGeometry, type PrismRay } from '../../science/prism';
 import { wavelengthToLinearRGB } from '../../science/photon';
 import { lampColor, lineColor } from './scenes';
 
+/** Geometría compartida del bulbo de la lámpara (antes se creaba una nueva en cada render y no se liberaba). */
+const LAMP_BOX = new THREE.BoxGeometry(0.5, 0.55, 0.42);
+
 export const PRISM = prismGeometry();
 // Plano del haz: (u, v) → (x, z) con z = v, de modo que el abanico se aleja de la cámara y la pantalla la mira.
 const to3 = (p: [number, number], y = 0) => new THREE.Vector3(p[0], y, p[1]);
@@ -298,7 +301,7 @@ export function SpectroscopeScene({ symbol, mode }: { symbol: string; mode: 'emi
               <meshPhysicalMaterial color={lampColor(symbol)} roughness={0.08} transparent opacity={0.3} />
             </mesh>
             <lineSegments>
-              <edgesGeometry args={[new THREE.BoxGeometry(0.5, 0.55, 0.42)]} />
+              <edgesGeometry args={[LAMP_BOX]} />
               <lineBasicMaterial color="#e8eef5" transparent opacity={0.4} />
             </lineSegments>
           </group>
