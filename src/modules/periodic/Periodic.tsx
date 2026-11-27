@@ -1,4 +1,5 @@
 import { TrendsChart, TrendsPanel } from './Trends';
+import { useQuality } from '../../app/hooks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -77,11 +78,13 @@ function Blocks() {
   const mesh = useRef<THREE.InstancedMesh>(null);
   const heights = useRef(ELEMENTS.map(() => 0.22));
   const colors = useRef(ELEMENTS.map((e) => new THREE.Color(CATEGORY_COLOR[e.category])));
+  // Segmentos del biselado según la calidad: con 3 segmentos, 118 casillas sumaban 69 000 triángulos.
+  const tier = useQuality().tier;
   const geo = useMemo(() => {
-    const g = new RoundedBoxGeometry(0.94, 1, 0.94, 3, 0.07);
+    const g = new RoundedBoxGeometry(0.94, 1, 0.94, tier === 'alta' ? 3 : tier === 'media' ? 2 : 1, 0.07);
     g.translate(0, 0.5, 0);
     return g;
-  }, []);
+  }, [tier]);
   const mat = useMemo(() => new THREE.MeshPhysicalMaterial({ roughness: 0.38, metalness: 0.05, clearcoat: 0.6, clearcoatRoughness: 0.3, envMapIntensity: 0.8 }), []);
   useEffect(() => () => {
     geo.dispose();
