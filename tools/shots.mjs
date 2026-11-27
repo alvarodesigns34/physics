@@ -19,6 +19,7 @@ const VIEWS = [
   ['inicio', '#/'],
   ['guia', '#/guia?b=3&n=3.7'],
   ['entrenamiento', '#/entrenamiento'],
+  ['examen', '#/entrenamiento?v=examen'],
   ['forja', '#/forja'],
   ['historia', '#/historia'],
   ['fotones', '#/fotones'],

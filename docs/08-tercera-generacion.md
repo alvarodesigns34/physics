@@ -28,5 +28,44 @@
 
 **P1.6 — Atribución.** Tabla `attribution.ts`. Las nuevas pruebas destaparon cuatro incoherencias reales: pasos anotados con apartados que el ejercicio no declaraba (3.5, 3.2, 3.3 en el examen de espectros; 7.2 y 6.4 en el de elementos; 1.4 en filas de átomos neutros) y tres generadores cuyo ámbito estático no cubría sus ejercicios, lo que permitía que un examen «puro» se saliera del ámbito.
 
-## 3. Pendiente
+## 3. Ciclo 3 — Identidad visual y experiencia
+- **Dirección artística**: «laboratorio a la luz del día». Tema claro principal; oscuro opcional coherente (no negro). Un único acento de interfaz (cobalto `#2f5bd3`); el color saturado se reserva para la física (fases, espectros) y para los bloques del temario. Sombras cortas (tres elevaciones), radios 10/16 px, escala tipográfica 13–48 px.
+- **Tipografía**: Inter Tight variable (autoalojada) para todo; JetBrains Mono solo para magnitudes y datos. Instrument Serif retirada.
+- **Visor de laboratorio**: la escena 3D se dibuja en un panel pizarra redondeado a la izquierda del panel de control. Motivo: nubes, espectros y emisiones necesitan fondo oscuro para ser legibles, pero eso no justifica una interfaz negra. Las etiquetas sobre el visor usan tokens locales de tinta clara.
+- **Inicio**: página de estudio. Acción principal elegida por el motor (recomendación explicable → repaso vencido → primer paso), simulacro, repaso, 7 laboratorios + campaña, dominio por bloque con su significado («orientativo, no es una nota»), competencias con intervalo y errores repetidos.
+- **Navegación**: raíl lateral (escritorio e iPad) con todo a un clic; búsqueda global con índice local, sinónimos de clase y resultados agrupados en teoría / laboratorio / práctica.
+- **iPad**: horizontal con raíl + visor + panel; vertical con visor arriba y panel abajo; la barra inferior queda solo para móvil.
+- **Defecto propio corregido**: el aviso «Se ha perdido el contexto gráfico» aparecía al salir de cualquier laboratorio (era la liberación intencionada del contexto al desmontar).
+- Capturas: `docs/capturas/antes/` frente a `c3b`–`c3e` (escritorio, iPad horizontal y vertical).
+
+## 4. Ciclo 4 — Pedagogía
+**Fórmulas.** KaTeX daría la máxima fidelidad, pero añade ≈ 270 kB de JavaScript y sus fuentes para un temario que solo necesita fracciones, potencias, subíndices, raíces y letras griegas. `MathText` implementa ese subconjunto (parser puro, probado, que nunca ejecuta código).
+
+**Resoluciones.** Bloques etiquetados (qué piden, datos, principio, por qué esta fórmula, despeje, unidades, sustitución, cálculo, resultado, interpretación, comprobación, errores) usados según la necesidad del problema, y métodos alternativos con su ventaja (p. ej., la línea sin serie: por regiones o probando cada n₁).
+
+**Familias nuevas (10).** Cada una exige un razonamiento distinto, no otra sustitución numérica:
+| Familia | Qué obliga a hacer |
+|---|---|
+| error-rydberg | Revisar una resolución ajena, localizar el primer error, clasificarlo y corregirlo |
+| pistas-elemento | Descartar candidatos con propiedades indirectas (periodo, desapareados, ion, bloque…) |
+| ei-sucesivas | Leer saltos de EI (cocientes) para deducir electrones de valencia, grupo y elemento |
+| linea-desconocida | Resolver con dos incógnitas fijando n₁ por la región o probando series |
+| grafica-ei | Interpretar una gráfica real (NIST) y justificar las anomalías B/O o Al/S |
+| bohr-proporciones | Razonar con proporcionalidades sin calcular valores absolutos |
+| luz-ionizante | Conectar kJ/mol con la energía de un fotón (EI → λ máxima) |
+| ion-misterioso | Ir del ion al átomo: Z, neutrones, desapareados y configuración (4s antes que 3d) |
+| prediccion-modelos | Predecir con un modelo histórico y contrastar con el experimento |
+| desarrollo | Escribir una justificación y autoevaluarla con rúbrica |
+
+Las pruebas de estas familias encontraron dos defectos propios antes de publicarlas: el método B aceptaba n₂ ≈ 1,03 como «entero» y el cobre era indistinguible del escandio con las pistas disponibles.
+
+**Desarrollo.** No hay corrección semántica automática y la interfaz no la finge: ATOM sugiere qué criterios *parecen* presentes por palabras clave y el alumno marca los que su texto cumple. El crédito es la fracción ponderada de la rúbrica.
+
+**Modos.** Guiado (paso a paso y primera pista visible), autónomo, desafío (pistas y teoría tras dos fallos), revisión (resolución completa, no cuenta para el progreso) y examen.
+
+**Simulacros.** Seis perfiles: equilibrado, numérico, razonamiento, exigente, estilo EBAU (con las cuestiones reales de 2021 y 2025) y puntos débiles (desde el dominio estimado, declarando cuándo hay poca evidencia). Las preguntas de desarrollo no entran en exámenes cronometrados.
+
+**Pistas.** Una prueba recorre todo el banco: la primera pista no puede contener el resultado, la opción correcta (salvo que defina todas) ni datos sustituidos. Encontró y se corrigieron las pistas de EBAU-3 a y EBAU-2 (2025).
+
+## 5. Pendiente
 Véase `ATOM3-PROGRESS.md`.
