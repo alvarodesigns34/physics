@@ -147,7 +147,7 @@ function Spectrometer() {
   );
   return (
     <>
-      <LabelProjector anchors={anchors} />
+      <LabelProjector anchors={anchors} avoidOverlap />
       {/* fuente y aceleración */}
       <mesh position={[-ACC_LEN - 0.4, 0, 0]}>
         <boxGeometry args={[0.6, 0.5, 0.5]} />

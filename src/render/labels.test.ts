@@ -22,3 +22,12 @@ describe('separateLabels', () => {
     expect(separateLabels([box(100, 0, 'left'), box(95, 2, 'right')])).toEqual([0, 2]);
   });
 });
+
+describe('separateLabels hacia arriba', () => {
+  it('la etiqueta más baja no se mueve; las de encima suben', () => {
+    const ys = separateLabels([box(0, 100), box(0, 95), box(0, 92)], 'up');
+    expect(ys[0]).toBe(100);
+    expect(ys[0]! - ys[1]!).toBeGreaterThanOrEqual(18);
+    expect(ys[1]! - ys[2]!).toBeGreaterThanOrEqual(18);
+  });
+});

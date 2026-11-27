@@ -37,8 +37,9 @@ function span(b: LabelBox): [number, number] {
  * espectrómetro). Recorre de arriba abajo y empuja hacia abajo cada etiqueta que choque con una ya
  * colocada. Devuelve las nuevas coordenadas y (función pura; probada en labels.test.ts).
  */
-export function separateLabels(boxes: LabelBox[]): number[] {
-  const order = boxes.map((_, i) => i).sort((a, b) => boxes[a]!.y - boxes[b]!.y);
+export function separateLabels(boxes: LabelBox[], direction: 'down' | 'up' = 'down'): number[] {
+  const sign = direction === 'down' ? 1 : -1;
+  const order = boxes.map((_, i) => i).sort((a, b) => sign * (boxes[a]!.y - boxes[b]!.y));
   const ys = boxes.map((b) => b.y);
   const placed: number[] = [];
   for (const i of order) {
@@ -53,7 +54,7 @@ export function separateLabels(boxes: LabelBox[]): number[] {
         if (r <= ol || l >= or) continue;
         const minDy = (b.h + o.h) / 2 + GAP;
         if (Math.abs(ys[i]! - ys[j]!) < minDy) {
-          ys[i] = ys[j]! + minDy;
+          ys[i] = ys[j]! + sign * minDy;
           moved = true;
         }
       }
@@ -63,7 +64,12 @@ export function separateLabels(boxes: LabelBox[]): number[] {
   return ys;
 }
 
-export function LabelProjector({ anchors }: { anchors: Anchor[] }) {
+/**
+ * `avoidOverlap`: separa las etiquetas que se solapan. Es opcional porque desplazar una etiqueta la aleja
+ * de su ancla: en diagramas donde la posición vertical ES el dato (niveles de energía), las escenas
+ * agrupan ellas mismas las etiquetas muy juntas («n = 5, 6, 7…») y no deben moverse.
+ */
+export function LabelProjector({ anchors, avoidOverlap = false }: { anchors: Anchor[]; avoidOverlap?: boolean | 'down' | 'up' }) {
   const { camera, size } = useThree();
   const v = useMemo(() => new THREE.Vector3(), []);
   useFrame(() => {
@@ -80,15 +86,27 @@ export function LabelProjector({ anchors }: { anchors: Anchor[] }) {
       const hidden = v.z > 1 || v.z < -1;
       const x = ((v.x + 1) / 2) * size.width + (a.offset?.[0] ?? 0);
       const y = ((1 - v.y) / 2) * size.height + (a.offset?.[1] ?? 0);
-      const inner = el.firstElementChild as HTMLElement | null;
+      const inner = avoidOverlap ? (el.firstElementChild as HTMLElement | null) : null;
       items.push({ el, hidden, box: { x, y, w: inner?.offsetWidth ?? 0, h: inner?.offsetHeight ?? 0, align: (el.dataset.align as LabelBox['align']) ?? 'center' } });
     }
-    const visible = items.filter((it) => !it.hidden);
-    const ys = separateLabels(visible.map((it) => it.box));
-    visible.forEach((it, k) => (it.box.y = ys[k]!));
+    const shift = new Map<HTMLElement, number>();
+    if (avoidOverlap) {
+      const visible = items.filter((it) => !it.hidden);
+      const ys = separateLabels(visible.map((it) => it.box), avoidOverlap === 'up' ? 'up' : 'down');
+      visible.forEach((it, k) => {
+        shift.set(it.el, ys[k]! - it.box.y);
+        it.box.y = ys[k]!;
+      });
+    }
     for (const { el, box, hidden } of items) {
       el.style.transform = `translate3d(${box.x.toFixed(1)}px, ${box.y.toFixed(1)}px, 0)`;
       el.style.visibility = hidden ? 'hidden' : 'visible';
+      // Línea guía hasta el ancla cuando la etiqueta se ha desplazado para no solaparse.
+      const dy = shift.get(el) ?? 0;
+      if (Math.abs(dy) > 1) {
+        el.dataset.shift = dy < 0 ? 'up' : 'down';
+        el.style.setProperty('--leader', `${Math.abs(dy).toFixed(1)}px`);
+      } else if (el.dataset.shift) delete el.dataset.shift;
     }
   });
   return null;

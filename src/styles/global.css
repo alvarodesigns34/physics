@@ -4532,3 +4532,18 @@ kbd {
   font-size: 0.6875rem;
   letter-spacing: 0.02em;
 }
+
+/* Línea guía de una etiqueta desplazada para no solaparse (render/labels.tsx) */
+.label-layer [data-shift] > div { position: relative; }
+.label-layer [data-shift] > div::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  width: 4px;
+  height: var(--leader);
+  border-left: 1px solid currentColor;
+  opacity: 0.5;
+  color: var(--ink-on-viewer-muted);
+}
+.label-layer [data-shift='up'] > div::before { top: 50%; border-bottom: 1px solid var(--ink-on-viewer-muted); }
+.label-layer [data-shift='down'] > div::before { bottom: 50%; border-top: 1px solid var(--ink-on-viewer-muted); }

@@ -119,7 +119,7 @@ Revisé los siete laboratorios con capturas, en calidad alta y baja. Defectos en
   - **Legibilidad.** El instrumento tiene materiales más claros y rótulos de sus partes: fuente, aceleración, campo B y detector.
 - **Etiquetas superpuestas.**
   - **Defecto.** Cl‑35 y Cl‑37, con radios casi iguales, se pisaban.
-  - **Corrección.** `LabelProjector` separa en vertical las etiquetas que se solapan (`separateLabels`, función pura probada) y respeta la alineación de cada una. Primero lee todas las medidas y después escribe, para no forzar un recálculo de estilos por etiqueta. Sirve para todos los laboratorios.
+  - **Corrección.** `LabelProjector` separa en vertical las etiquetas que se solapan (`separateLabels`, función pura probada) y respeta la alineación de cada una. Primero lee todas las medidas y después escribe, para no forzar un recálculo de estilos por etiqueta. Es opcional (`avoidOverlap`), porque desplazar una etiqueta la aleja de su ancla. Al activarla para todos, la inspección visual mostró que en el diagrama de niveles del hidrógeno las etiquetas n = 4, 3 y 2 acababan junto a líneas que no eran las suyas. Ahora el espectrómetro separa hacia abajo y el hidrógeno hacia arriba, donde hay espacio. Toda etiqueta desplazada dibuja una línea guía hasta su ancla.
 - **Arquitecto: cajas casi invisibles.** Las cajas vacías (azul marino sobre fondo casi negro) no se distinguían.
   - La caja redondeada no tiene aristas vivas, así que `EdgesGeometry` no devolvía contorno; ahora se toma de una caja recta de las mismas medidas.
   - Materiales más claros, menos brillo especular y una luz de relleno lateral (una luz frontal producía un reflejo deslumbrante).

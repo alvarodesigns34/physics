@@ -284,7 +284,9 @@ export function HydrogenScene() {
           <meshBasicMaterial color="#ece6dc" transparent opacity={0.25} />
         </mesh>
       </group>
-      <LabelProjector anchors={HYDROGEN_ANCHORS} />
+      {/* Los niveles altos están a pocos píxeles (escala lineal): las etiquetas se separan HACIA ARRIBA, donde
+          hay espacio, con una línea guía hasta su nivel. */}
+      <LabelProjector anchors={HYDROGEN_ANCHORS} avoidOverlap="up" />
       <TransitionArrows />
       <Electron reduced={reduced} />
       {flights.map((f) => (
