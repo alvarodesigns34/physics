@@ -524,3 +524,16 @@
 .prediction .btn { justify-self: start; }
 .confirm-order { justify-self: start; align-self: flex-start; }
 .confirm-order[aria-pressed='true'] { border-color: var(--ok); color: var(--ok); background: var(--ok-quiet); }
+
+/* Procedimiento escrito (ui/Procedure.tsx) */
+.procedure { border: 1px solid var(--hairline); border-radius: var(--r-inner); background: var(--surface-sunken); }
+.procedure summary { cursor: pointer; padding: 12px 14px; font-weight: 500; }
+.procedure__body { display: grid; gap: 10px; padding: 0 14px 14px; }
+.procedure__input { min-height: 84px; resize: vertical; line-height: 1.6; font-size: 0.9375rem; }
+.procedure .btn { justify-self: start; }
+.procedure__lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.procedure__lines li { display: flex; align-items: baseline; gap: 10px; padding: 6px 10px; border-radius: 8px; }
+.procedure__lines li.ok { background: var(--ok-quiet); }
+.procedure__lines li.bad { background: var(--bad-quiet); }
+.procedure__lines li.ok .procedure__mark { color: var(--ok); }
+.procedure__lines li.bad .procedure__mark { color: var(--bad); }

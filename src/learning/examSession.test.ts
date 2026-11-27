@@ -63,3 +63,24 @@ describe('P0 (auditoría 4.0): ordenación cuyo orden inicial ya es el correcto'
     expect(gradeQuestion(ex, {}, 1).state).toBe('sin-responder');
   });
 });
+
+describe('Crédito por procedimiento en el simulacro (ATOM 5.0)', async () => {
+  const { gradeQuestion, PROCEDURE_CREDIT } = await import('./examSession');
+  const { buildWaveExercise } = await import('./generators/photon');
+  const ex = buildWaveExercise({ value: 500, unit: 'nm' }, 1, 'onda-lambda:1:1');
+  const nu = ex.parts.find((p) => p.prompt.startsWith('Frecuencia'))!;
+  it('respuesta mal escrita, pero el procedimiento calcula bien el paso → crédito parcial', () => {
+    const g = gradeQuestion(ex, { [nu.id]: '6·10^13 Hz' }, 1, [], 'ν = 3·10^8 / 5·10^-7 = 6·10^14 Hz');
+    const p = g.parts.find((x) => x.part.id === nu.id)!;
+    expect(p.byProcedure).toBe(true);
+    expect(p.credit).toBe(PROCEDURE_CREDIT);
+  });
+  it('procedimiento con error aritmético → sin crédito y error localizado', () => {
+    const g = gradeQuestion(ex, { [nu.id]: '6·10^13 Hz' }, 1, [], 'ν = 3·10^8 / 5·10^-7 = 6·10^13 Hz');
+    expect(g.parts.find((x) => x.part.id === nu.id)!.credit).toBe(0);
+    expect(g.procedure?.issue).toMatchObject({ kind: 'aritmetica', line: 1 });
+  });
+  it('sin procedimiento, nada cambia', () => {
+    expect(gradeQuestion(ex, { [nu.id]: '6·10^13 Hz' }, 1).parts.find((x) => x.part.id === nu.id)!.credit).toBe(0);
+  });
+});

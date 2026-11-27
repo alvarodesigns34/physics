@@ -106,3 +106,18 @@ SwiftShader, calidad media, 1440×900. Datos: `docs/mediciones/perf-atom5-base.j
 - La campaña sigue costando unos 1,4 s por fotograma en SwiftShader. Con solo 163 llamadas y 49 000 triángulos, es rasterización por software de una escena grande; las partículas aportan unos 100 000 px por fotograma, así que no son la causa.
 - La tabla periódica dibuja 69 000 triángulos (cajas redondeadas).
 - Sin medir en una GPU real, en Safari ni en iPadOS: no están disponibles en este entorno.
+
+## 3. Procedimiento escrito con localización del error
+- **Qué hace.** `learning/procedure.ts` analiza las cuentas del alumno línea a línea (una cadena de igualdades por línea) y señala la primera línea en que el cálculo deja de cuadrar. Distingue:
+  - **error aritmético:** dos miembros de la misma igualdad no valen lo mismo;
+  - **error de unidades:** se igualan magnitudes distintas;
+  - **línea no interpretable;**
+  - **error de planteamiento:** las cuentas son coherentes, pero el resultado no es el pedido, lo que apunta a una fórmula o un dato equivocados.
+- **Cómo funciona.**
+  - Los miembros con unidad se comparan en el SI, así que «= 6,562·10⁻⁷ m = 656,2 nm» es válido.
+  - Los puntos de control son los valores de los pasos numéricos del propio ejercicio, de modo que funciona en todas las familias sin datos adicionales.
+  - En la notación de clase «mantisa·10ⁿ» es un solo número: 1/1,524·10⁶ = 1/(1,524·10⁶).
+- **Seguridad.** No se usa `eval`. Un analizador descendente recursivo propio solo admite números, operadores, potencias, √ y π. Las pruebas rechazan entradas como `alert(1)` o `process.exit()` y comparan 200 expresiones aleatorias con su valor calculado de forma independiente.
+- **En práctica.** Panel «Escribe tu procedimiento», con cada línea marcada ✓/✗ y los resultados intermedios correctos.
+- **En los simulacros.** Hay procedimiento opcional por pregunta y se guarda con la sesión. Si un paso numérico está mal escrito, o en blanco, pero el procedimiento llega a su valor correcto, recibe un crédito de 0,75: es un error de transcripción, no de comprensión. El informe muestra el procedimiento con el error localizado.
+- **Pruebas.** `procedure.test.ts` (28), `examSession.test.ts` y un e2e que localiza el error en la línea 3.

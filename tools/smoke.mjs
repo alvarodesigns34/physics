@@ -116,6 +116,15 @@ try {
   check((await page.locator('.feedback--ok').count()) >= 2, 'Entrenamiento: AMP 6 corregido paso a paso');
   await page.screenshot({ path: `${OUT}/04-entrenamiento.png` });
 
+  // ATOM 5.0: procedimiento escrito; ATOM localiza la línea del error.
+  await page.goto(base + '#/entrenamiento?ex=onda-lambda:2:416109');
+  await page.waitForSelector('.procedure summary', { timeout: T });
+  await page.click('.procedure summary');
+  await page.fill('.procedure textarea', 'λ = 250 nm = 2,5·10^-7 m\nν = 3·10^8 / 2,5·10^-7 = 1,2·10^15 Hz\nE = 6,626·10^-34 · 1,2·10^15 = 7,2·10^-19 J');
+  await page.click('button:has-text("Revisar procedimiento")');
+  const procTxt = await page.locator('.procedure').innerText();
+  check(procTxt.includes('Línea 3') && (await page.locator('.procedure__lines li.ok').count()) === 2, 'Procedimiento: dos líneas correctas y el error localizado en la línea 3');
+
   // Cuaderno de errores: el fallo de AMP 6 (primer intento erróneo abajo) o el simulacro dejan entradas.
   await page.goto(base + '#/entrenamiento?gen=onda-lambda');
   await page.waitForSelector('input.input', { timeout: T });

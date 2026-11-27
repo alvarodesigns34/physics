@@ -11,6 +11,7 @@
  *   tiempo no demuestra no saber; hallazgo de la auditoría de ATOM 3.0).
  */
 import { checkAnswer } from './checker';
+import { checkProcedure, procedureCheckpoints, type ProcedureReport } from './procedure';
 import { buildEvidence, type PartRecord } from './evidence';
 import { GENERATOR_BY_ID, SOURCE_EXERCISES } from './registry';
 import type { CheckResult, Exercise, ExercisePart } from './types';
@@ -34,6 +35,8 @@ export interface ExamSession {
    * (P0 de la auditoría de ATOM 4.0). Mover cualquier elemento también confirma.
    */
   confirmed?: Record<number, string[]>;
+  /** Procedimiento escrito por pregunta (opcional): permite crédito parcial y diagnóstico del error */
+  procedures?: Record<number, string>;
   current: number;
   finishedAt?: number;
 }
@@ -85,6 +88,8 @@ export interface GradedPart {
   answered: boolean;
   result: CheckResult;
   credit: number;
+  /** Crédito concedido por el procedimiento escrito (el paso estaba mal o en blanco) */
+  byProcedure?: boolean;
 }
 
 export interface GradedQuestion {
@@ -96,11 +101,17 @@ export interface GradedQuestion {
   state: QuestionState;
   parts: GradedPart[];
   records: PartRecord[];
+  procedure?: ProcedureReport;
 }
 
 /** Corrige un ejercicio: secuencial (arrastre de errores), crédito 1 o 0 por apartado, sin pistas. */
-export function gradeQuestion(ex: Exercise, answers: Record<string, PartValue> | undefined, points: number, confirmed: string[] = []): GradedQuestion {
+/** Crédito de un paso numérico mal escrito (o en blanco) cuyo valor correcto SÍ aparece en el procedimiento. */
+export const PROCEDURE_CREDIT = 0.75;
+
+export function gradeQuestion(ex: Exercise, answers: Record<string, PartValue> | undefined, points: number, confirmed: string[] = [], procedureText = ''): GradedQuestion {
   const prev: Record<string, number> = {};
+  const spec = procedureText.trim() ? procedureCheckpoints(ex) : null;
+  const procedure = spec ? checkProcedure(procedureText, spec.checkpoints, spec.final) : undefined;
   const parts: GradedPart[] = ex.parts.map((p) => {
     const value = answers?.[p.id] ?? (p.answer.kind === 'order' && confirmed.includes(p.id) ? p.answer.items.map((x) => x.id) : undefined);
     const answered = isAnswered(p, value, confirmed.includes(p.id));
@@ -108,8 +119,12 @@ export function gradeQuestion(ex: Exercise, answers: Record<string, PartValue> |
     const result = answered ? checkAnswer(p.answer, input, { previousWrong: { ...prev } }) : ({ status: 'vacio', correct: false, message: 'Sin responder.', warnings: [] } as CheckResult);
     if (answered && (!result.correct || result.status === 'correcto-arrastre') && result.numericValue !== undefined) prev[p.id] = result.numericValue;
     // Desarrollo en examen: no se autoevalúa durante la prueba → sin crédito automático (se excluye de los simulacros).
-    const credit = result.credit ?? (result.correct ? 1 : 0);
-    return { part: p, value, answered, result, credit };
+    let credit = result.credit ?? (result.correct ? 1 : 0);
+    // Crédito por procedimiento: el alumno calculó bien el valor del paso en su procedimiento, pero lo
+    // trasladó mal (o no lo escribió) en la respuesta. Es un error de transcripción, no de comprensión.
+    const byProcedure = !result.correct && p.answer.kind === 'numeric' && !!procedure?.reached.includes(p.prompt);
+    if (byProcedure) credit = Math.max(credit, PROCEDURE_CREDIT);
+    return { part: p, value, answered: answered || byProcedure, result, credit, byProcedure };
   });
   const score = parts.reduce((a, x) => a + x.credit, 0) / Math.max(1, parts.length);
   const records: PartRecord[] = parts.map((g) => ({
@@ -122,7 +137,7 @@ export function gradeQuestion(ex: Exercise, answers: Record<string, PartValue> |
     sigFigIssue: g.result.correct && g.result.errorKind === 'cifras',
     sigFigsAssessed: g.result.correct ? g.result.sigFigsAssessed : undefined,
   }));
-  return { exercise: ex, points, earned: score * points, score, state: questionState(ex, answers, confirmed), parts, records };
+  return { exercise: ex, points, earned: score * points, score, state: questionState(ex, answers, confirmed), parts, records, procedure };
 }
 
 export interface ExamReport {
@@ -139,7 +154,7 @@ export interface ExamReport {
 }
 
 export function gradeSession(session: ExamSession, exercises: Exercise[]): ExamReport {
-  const questions = exercises.map((ex, i) => gradeQuestion(ex, session.answers[i], session.points[i] ?? 1, session.confirmed?.[i] ?? []));
+  const questions = exercises.map((ex, i) => gradeQuestion(ex, session.answers[i], session.points[i] ?? 1, session.confirmed?.[i] ?? [], session.procedures?.[i] ?? ''));
   const totalPoints = questions.reduce((a, q) => a + q.points, 0);
   const earnedPoints = questions.reduce((a, q) => a + q.earned, 0);
   const byNode: ExamReport['byNode'] = {};
@@ -188,6 +203,7 @@ export function isValidSession(v: unknown): v is ExamSession {
     Array.isArray(s.points) && s.points.length === s.exerciseIds.length && s.points.every((x) => typeof x === 'number' && x >= 0) &&
     typeof s.answers === 'object' && s.answers !== null &&
     Array.isArray(s.flagged) &&
+    (s.procedures === undefined || (typeof s.procedures === 'object' && s.procedures !== null && !Array.isArray(s.procedures) && Object.values(s.procedures).every((x) => typeof x === 'string' && x.length <= 5000))) &&
     (s.confirmed === undefined || (typeof s.confirmed === 'object' && s.confirmed !== null && !Array.isArray(s.confirmed) && Object.values(s.confirmed).every((x) => Array.isArray(x) && x.every((y) => typeof y === 'string')))) &&
     Number.isInteger(s.current)
   );

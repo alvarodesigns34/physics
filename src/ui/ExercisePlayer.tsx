@@ -11,6 +11,7 @@ import { Feedback, Rich, announce } from './common';
 import { Icon } from './Icon';
 import { EssayInput, FigureView, ResolutionView } from './Pedagogy';
 import { structuredResolution } from '../learning/autoResolution';
+import { ProcedurePanel } from './Procedure';
 import { sfx } from '../app/sound';
 
 export interface ExerciseOutcome {
@@ -462,6 +463,8 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
           );
         })}
       </ol>
+
+      {!exam && !review && <ProcedurePanel exercise={exercise} />}
 
       {!exam && !allDone && !helpUnlocked && (
         <p className="small faint" style={{ margin: 0 }}>

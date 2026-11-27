@@ -3,6 +3,7 @@
  * navegador, temporizador, entrega con confirmación e informe detallado (crédito parcial, apartados,
  * competencias, preguntas sin responder y recomendaciones).
  */
+import { explainIssue, procedureCheckpoints } from '../../learning/procedure';
 import { structuredResolution } from '../../learning/autoResolution';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -155,6 +156,24 @@ export function ExamRunner({ session, onChange, onFinish }: { session: ExamSessi
             );
           })}
         </ol>
+        {procedureCheckpoints(ex) && (
+          <details className="procedure" open={!!session.procedures?.[i]}>
+            <summary>Procedimiento (opcional): puede darte crédito parcial</summary>
+            <div className="procedure__body">
+              <label className="small muted" htmlFor={`${baseId}-proc-${i}`}>
+                Escribe tus cuentas, una igualdad por línea. No se corrige hasta entregar: si un resultado intermedio está bien calculado aquí pero mal escrito arriba, cuenta en parte.
+              </label>
+              <textarea
+                id={`${baseId}-proc-${i}`}
+                className="input mono procedure__input"
+                rows={4}
+                spellCheck={false}
+                value={session.procedures?.[i] ?? ''}
+                onChange={(e) => onChange({ ...session, procedures: { ...(session.procedures ?? {}), [i]: e.target.value.slice(0, 5000) } })}
+              />
+            </div>
+          </details>
+        )}
         <div className="row row--between">
           <button type="button" className="btn btn--sm" disabled={i === 0} onClick={() => go(i - 1)}>
             <Icon name="arrow-left" size={16} /> Anterior
@@ -383,6 +402,23 @@ export function ExamReportView({ report, session, onNew }: { report: ExamReport;
                     <b>{p.part.prompt}.</b> {p.result.message}
                   </Feedback>
                 ))}
+              {q.procedure && (
+                <div className="stack-8">
+                  <span className="eyebrow">Tu procedimiento</span>
+                  <ol className="procedure__lines">
+                    {q.procedure.lines.map((l, k) => (
+                      <li key={k} className={l.ok ? 'ok' : 'bad'}>
+                        <span className="procedure__mark" aria-hidden="true">{l.ok ? '✓' : '✗'}</span>
+                        <span className="mono">{l.text}</span>
+                      </li>
+                    ))}
+                  </ol>
+                  <p className="small" style={{ margin: 0 }}>
+                    {explainIssue(q.procedure.issue)}
+                    {q.parts.some((p) => p.byProcedure) ? ` Se concede crédito parcial en ${q.parts.filter((p) => p.byProcedure).map((p) => `«${p.part.prompt}»`).join(', ')}: el valor está bien calculado en tu procedimiento.` : ''}
+                  </p>
+                </div>
+              )}
               <ResolutionView steps={q.exercise.resolution ?? structuredResolution(q.exercise)} methods={q.exercise.methods} />
             </div>
           </details>
