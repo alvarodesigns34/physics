@@ -438,10 +438,10 @@ function StationLabels() {
             onFocus={() => setHovered(def.id)}
             onBlur={() => setHovered(null)}
             style={{
-              background: 'rgb(15 14 13 / 0.8)',
+              background: 'rgb(18 23 34 / 0.82)',
               border: `1px solid ${hovered === def.id ? 'var(--accent-line)' : 'var(--hairline-strong)'}`,
               borderRadius: 9,
-              padding: '6px 12px',
+              padding: '4px 10px',
               color: 'var(--ink)',
               cursor: 'pointer',
               whiteSpace: 'nowrap',
@@ -450,7 +450,7 @@ function StationLabels() {
               backdropFilter: 'blur(6px)',
             }}
           >
-            <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 19, lineHeight: 1.1 }}>{def.title}</span>
+            <span style={{ display: 'block', fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 14, lineHeight: 1.2 }}>{def.title}</span>
             {hovered === def.id && <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-muted)', marginTop: 2 }}>{def.subtitle}</span>}
           </button>
         </AnchoredLabel>

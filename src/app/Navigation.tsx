@@ -76,7 +76,10 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
   const input = useRef<HTMLInputElement>(null);
   const hits = useMemo<SearchHit[]>(() => search(q, 12), [q]);
   useEffect(() => {
+    // Al cerrar, el foco vuelve a donde estaba (accesibilidad de diálogos modales).
+    const prev = document.activeElement as HTMLElement | null;
     input.current?.focus();
+    return () => prev?.focus?.();
   }, []);
   useEffect(() => setSel(0), [q]);
   const go = (h: SearchHit) => {
