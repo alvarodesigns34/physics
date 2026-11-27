@@ -4387,3 +4387,88 @@ kbd {
 .ev-legend summary { cursor: pointer; color: var(--ink-muted); }
 .ev-legend ul { margin: 8px 0 0; padding-left: 0; list-style: none; display: grid; gap: 6px; line-height: 1.5; }
 .ev-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; }
+
+/* ATOM 4.0 · Capas didácticas de la guía: por qué, analogía (con sus límites), contraejemplo, dudas */
+.guide-why {
+  position: relative;
+  padding: 2px 0 2px 16px;
+  border-left: 2px solid var(--accent-line);
+  color: var(--ink);
+}
+.guide-why__tag {
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  vertical-align: 1px;
+}
+.callout--analogy {
+  border-color: var(--hairline-strong);
+  background: var(--surface-raised);
+}
+.callout--analogy .callout__title { color: var(--ink-muted); }
+.callout__limit {
+  padding-top: 8px;
+  margin-top: 10px !important;
+  border-top: 1px dashed var(--hairline-strong);
+  color: var(--ink-muted);
+  font-size: 0.875rem !important;
+}
+.callout--counter {
+  border-color: color-mix(in srgb, var(--warn) 35%, transparent);
+  background: var(--warn-quiet);
+}
+.callout--counter .callout__title { color: var(--warn); }
+.callout__sub {
+  display: block;
+  margin-top: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+.doubts {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--hairline);
+}
+.doubts__title {
+  padding: 12px 0 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.doubt {
+  border-bottom: 1px solid var(--hairline);
+}
+.doubt summary {
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 0;
+  cursor: pointer;
+  font-weight: 500;
+  line-height: 1.45;
+}
+.doubt summary::-webkit-details-marker { display: none; }
+.doubt summary::before {
+  content: '+';
+  flex: none;
+  width: 14px;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  transition: transform var(--dur-fast) var(--ease-std);
+}
+.doubt[open] summary::before { content: '−'; }
+.doubt summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.doubt p {
+  margin: 0 0 12px 24px;
+  color: var(--ink-muted);
+  line-height: 1.6;
+  max-width: 68ch;
+}

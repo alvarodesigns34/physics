@@ -54,3 +54,21 @@ La auditoría señaló formas de escribir correctas que el comprobador rechazaba
   - Las entradas abiertas del cuaderno vuelven como variante nueva en torno a 1 de cada 3 ejercicios. Para que no se repitan en caliente, solo vuelven cuando han pasado al menos 10 minutos desde el fallo. El ejercicio explica por qué aparece.
   - El apartado más débil se elige con el θ mostrado (encogido hacia el prior) y con una prima de exploración para los apartados con poca información.
 - **Pruebas.** `selection4.test.ts` y `evidenceBreakdown.test.ts`.
+
+## 4. Teoría con más profundidad (qué, cómo, por qué y para el examen)
+- **Contenido.** `src/learning/guideDepth.ts` añade a las 50 secciones de la guía:
+  - **Por qué**: el mecanismo o la razón física, no solo la regla.
+  - **Cómo lo preguntan** en el examen.
+  - **Dudas frecuentes** con su respuesta.
+  - En 9 secciones, una **analogía** que declara siempre dónde deja de funcionar.
+  - En 14 secciones, un **contraejemplo** o caso límite: Ti²⁺ frente a Ca en especies isoelectrónicas; el salto 2→1 frente al 5→2; el láser rojo frente a la lámpara UV; el Cl frente al F en afinidad electrónica.
+- **Rigor.** Las cifras usadas son valores de referencia habituales, redondeados como en clase:
+  - e/m del electrón ≈ 1,76·10¹¹ C/kg
+  - h·c ≈ 1240 eV·nm
+  - energías de ionización del Mg: 738, 1451 y 7733 kJ/mol
+  - afinidad electrónica: Cl ≈ 349 kJ/mol, F ≈ 328 kJ/mol
+  - radios covalentes: Ne ≈ 58 pm, Na ≈ 166 pm
+  - punto de ebullición del D₂O ≈ 101,4 °C
+
+  Cuando algo es una simplificación del curso (Z_ef ≈ Z − electrones internos, o qué cuenta como electrones de valencia en los metales de transición), el texto lo dice.
+- **Pruebas.** `guideDepth.test.ts` exige que todas las secciones tengan las capas, que no haya entradas huérfanas, que toda analogía declare su límite y que cada duda sea una pregunta con respuesta.

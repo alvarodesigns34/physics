@@ -8,6 +8,7 @@ import { navigate, useRoute } from '../../app/hooks';
 import { Rich } from '../../ui/common';
 import { Icon } from '../../ui/Icon';
 import { GuideWidget } from './widgets';
+import { DEPTH } from '../../learning/guideDepth';
 
 const covered = new Set(COVERED_NODES);
 
@@ -91,6 +92,7 @@ function Worked({ w }: { w: WorkedExample }) {
 export function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) {
   const node = NODES.find((n) => n.id === s.node);
   const mastery = useStore((st) => st.mastery[s.node]);
+  const depth = DEPTH[s.id ?? s.node];
   return (
     <section id={`sec-${s.id ?? s.node}`} className="guide-sec" aria-labelledby={`h-${s.id ?? s.node}`} data-block={s.node.split('.')[0]}>
       <header className="guide-sec__head">
@@ -110,6 +112,12 @@ export function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) 
             <Rich text={p} />
           </p>
         ))}
+        {depth && (
+          <p className="guide-why">
+            <span className="guide-why__tag">Por qué</span>
+            <Rich text={depth.why} />
+          </p>
+        )}
       </div>
       {s.formulas && (
         <div className="formula-grid">
@@ -119,7 +127,26 @@ export function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) 
         </div>
       )}
       {s.widget && <GuideWidget id={s.widget} />}
-      {(s.mistakes || s.tip || TRICKS[s.id ?? s.node]) && (
+      {(depth?.analogy || depth?.counter) && (
+        <div className="guide-callouts">
+          {depth.analogy && (
+            <div className="callout callout--analogy">
+              <span className="callout__title">Analogía</span>
+              <p>{depth.analogy.text}</p>
+              <p className="callout__limit">
+                <strong>Dónde falla:</strong> {depth.analogy.limit}
+              </p>
+            </div>
+          )}
+          {depth.counter && (
+            <div className="callout callout--counter">
+              <span className="callout__title">Contraejemplo</span>
+              <p>{depth.counter}</p>
+            </div>
+          )}
+        </div>
+      )}
+      {(s.mistakes || s.tip || TRICKS[s.id ?? s.node] || depth?.exam.length) && (
         <div className="guide-callouts">
           {s.mistakes && (
             <div className="callout callout--bad">
@@ -141,14 +168,35 @@ export function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) 
               </ul>
             </div>
           )}
-          {s.tip && (
+          {(s.tip || depth?.exam.length) && (
             <div className="callout callout--tip">
               <span className="callout__title">En el examen</span>
-              <p>{s.tip}</p>
+              {s.tip && <p>{s.tip}</p>}
+              {depth?.exam.length ? (
+                <>
+                  <span className="callout__sub">Cómo lo preguntan</span>
+                  <ul>
+                    {depth.exam.map((e) => (
+                      <li key={e}>{e}</li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
             </div>
           )}
         </div>
       )}
+      {depth?.doubts.length ? (
+        <div className="doubts">
+          <span className="doubts__title">Dudas frecuentes</span>
+          {depth.doubts.map((d) => (
+            <details key={d.q} className="doubt">
+              <summary>{d.q}</summary>
+              <p>{d.a}</p>
+            </details>
+          ))}
+        </div>
+      ) : null}
       {RIGOR_NOTES.filter((r) => r.node === s.node && !s.id).map((r) => (
         <details key={r.id} className="rigor">
           <summary>
