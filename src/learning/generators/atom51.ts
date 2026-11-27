@@ -163,7 +163,7 @@ interface TFItem {
 }
 
 export const TF_ITEMS: TFItem[] = [
-  { text: 'Dos isótopos del mismo elemento tienen las mismas propiedades químicas.', truth: true, nodes: ['1.3'], right: 'Tienen los mismos electrones (mismo Z), y la química depende de los electrones.', wrong: ['Tienen la misma masa.', 'Tienen el mismo número de neutrones.'] },
+  { text: 'Dos isótopos del mismo elemento tienen prácticamente las mismas propiedades químicas.', truth: true, nodes: ['1.3'], right: 'Tienen los mismos electrones (mismo Z), y la química depende de los electrones. La masa solo introduce pequeñas diferencias, apreciables sobre todo en el hidrógeno (H₂O frente a D₂O).', wrong: ['Tienen la misma masa.', 'Tienen el mismo número de neutrones.'] },
   { text: 'Un ion Na⁺ tiene más electrones que un átomo de Na.', truth: false, nodes: ['1.4'], right: 'Una carga positiva significa que ha PERDIDO un electrón: Na⁺ tiene 10 y Na, 11.', wrong: ['El signo + indica que ha ganado un electrón.', 'Los iones conservan sus electrones y cambian sus protones.'] },
   { text: 'La luz roja tiene fotones más energéticos que la azul porque es más intensa.', truth: false, nodes: ['3.4'], right: 'La energía por fotón depende solo de la frecuencia (E = hν); el azul tiene mayor ν.', wrong: ['La intensidad decide la energía de cada fotón.', 'El rojo tiene mayor frecuencia.'] },
   { text: 'Un gas frío de hidrógeno muestra en el visible las mismas líneas oscuras que líneas brillantes tiene su emisión.', truth: false, nodes: ['3.5'], right: 'En frío casi todos los átomos están en n = 1 y solo absorben la serie de Lyman, que cae en el ultravioleta.', wrong: ['Todo lo que un átomo emite lo absorbe siempre.', 'El hidrógeno no absorbe luz.'] },

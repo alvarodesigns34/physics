@@ -222,7 +222,10 @@ export const DEPTH: Record<string, SectionDepth> = {
     why: 'Dos electrones en orbitales distintos están más separados y se repelen menos que en el mismo orbital. Además, con espines paralelos la energía baja algo más (energía de intercambio). Por eso primero se ocupan los orbitales de uno en uno.',
     analogy: { text: 'En un autobús vacío la gente ocupa primero un asiento doble cada uno, y solo se sienta al lado de alguien cuando no quedan asientos dobles libres.', limit: 'La analogía explica el «primero separados», pero no por qué los espines son paralelos: eso es un efecto cuántico sin equivalente cotidiano.' },
     exam: ['Dibujar el diagrama de cajas de un subnivel parcialmente lleno.', 'Contar electrones desapareados (paramagnetismo).'],
-    doubts: [{ q: '¿Hund se aplica entre subniveles distintos?', a: 'No: solo dentro de un mismo subnivel, entre orbitales de igual energía (los tres 2p, los cinco 3d…).' }],
+    doubts: [
+      { q: '¿Hund se aplica entre subniveles distintos?', a: 'No: solo dentro de un mismo subnivel, entre orbitales de igual energía (los tres 2p, los cinco 3d…).' },
+      { q: '¿La regla dice en qué orden «entran» los electrones?', a: 'No exactamente: dice cuál es el estado de menor energía, el que tiene más espines paralelos. Colocarlos de uno en uno es solo la forma práctica de construirlo. Y el porqué es más sutil que «se repelen menos»: los cálculos modernos atribuyen buena parte de la estabilización a que cada electrón apantalla peor al otro y ambos sienten más atracción del núcleo.' },
+    ],
   },
   '6.5': {
     why: 'Un estado excitado es posible: el átomo ha absorbido energía y un electrón ocupa un subnivel superior. Uno prohibido viola Pauli (más electrones de los que caben), y uno imposible usa subniveles que no existen (como 2d).',

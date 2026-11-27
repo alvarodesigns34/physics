@@ -24,7 +24,7 @@ const G: Record<string, FamilyGuide> = {
     principle: 'Z fija el elemento y es el número de protones. El número másico cuenta nucleones. Los electrones salen de restar la carga a Z.',
     math: 'A = Z + N \\qquad e^- = Z - q',
     why: 'La carga neta es (protones − electrones) porque cada protón aporta +1 y cada electrón −1; los neutrones no aportan carga.',
-    check: 'A ≥ Z siempre (salvo el H-1, con N = 0); un catión tiene menos electrones que protones y un anión, más. Si te sale un número negativo de partículas, has restado al revés.',
+    check: 'A ≥ Z siempre, porque N no puede ser negativo; la igualdad A = Z solo se da en el protio, ¹H (N = 0), que cumple la regla, no es una excepción. Un catión tiene menos electrones que protones y un anión, más. Si te sale un número negativo de partículas, has restado al revés.',
     errors: 'Sumar la carga en lugar de restarla (e⁻ = Z + q), confundir A con la masa atómica de la tabla (A es entero) y cambiar Z al formar un ion: un ion conserva sus protones.',
   },
   isotopos: {

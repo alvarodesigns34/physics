@@ -7,6 +7,7 @@ import * as guide from './guide';
 import * as depth from './guideDepth';
 import * as prog from './guideProgression';
 import { GENERATORS } from './registry';
+import { FAMILY_GUIDES } from './familyResolutions';
 import { groundState, sameConfiguration, speciesConfiguration } from '../science/configuration';
 
 /** Todo el texto de las capas didácticas, como una cadena por fragmento. */
@@ -20,6 +21,7 @@ function allText(): string[] {
   walk(guide);
   walk(depth);
   walk(prog);
+  walk(FAMILY_GUIDES);
   for (const g of GENERATORS) for (const d of g.difficulties) for (const s of [1, 2, 3]) {
     const e = g.create(s, d);
     walk([e.statement, e.parts.map((p) => [p.explanation, p.answer]), e.solution]);
@@ -60,6 +62,20 @@ describe('modelos históricos: sus imágenes se presentan como del modelo, no co
 describe('masa media: «más cerca del más abundante» solo está garantizado con dos isótopos', () => {
   it('ninguna capa lo afirma sin esa condición', () => {
     const bad = TEXT.filter((t) => /m[aá]s cerca del (is[oó]topo )?m[aá]s abundante/i.test(t) && !/dos/i.test(t));
+    expect(bad).toEqual([]);
+  });
+});
+
+describe('A ≥ Z: el protio cumple la regla (igualdad), no es una excepción', () => {
+  it('ninguna capa presenta el ¹H como excepción a A ≥ Z', () => {
+    const bad = TEXT.filter((t) => /A\s*(≥|>=)\s*Z/.test(t) && /excepci[oó]n/i.test(t) && !/no es una excepci[oó]n/i.test(t));
+    expect(bad).toEqual([]);
+  });
+});
+
+describe('Cr y Cu: excepciones al orden de llenado, no a Hund', () => {
+  it('ninguna capa afirma que sean excepciones a Hund sin negarlo', () => {
+    const bad = TEXT.filter((t) => /excepci[oó]n(es)? a (la regla de )?Hund/i.test(t) && !/no (a|es una excepci[oó]n a) (la regla de )?Hund|no a Hund|¿Excepciones a Hund\?|«excepciones a la regla de Hund»/i.test(t));
     expect(bad).toEqual([]);
   });
 });
