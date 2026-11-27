@@ -374,7 +374,7 @@ const EBAU: SourceExercise3[] = [
     choicePart('b2', 'b) Orbital del electrón (2, 1, −1, −½)', [O('2p', '2p'), O('2s', '2s', 'l = 1 es p.')], ['2p'], 'n = 2, l = 1 → 2p.'),
     choicePart('b3', 'b) Orbital del electrón (1, 0, 0, ½)', [O('1s', '1s'), O('1p', '1p', 'No existe: con n = 1 solo l = 0.')], ['1s'], '1s.'),
     choicePart('c', 'c) ¿Cuál de esos orbitales tiene mayor energía? Justifícalo', [O('3d', '3d (n + l = 5)'), O('2p', '2p (n + l = 3)', 'Compara n + l: el 3d tiene 5.'), O('1s', '1s (n + l = 1)', 'Es el de menor energía.')], ['3d'], 'Regla n + l: 3d (3 + 2 = 5) > 2p (2 + 1 = 3) > 1s (1 + 0 = 1). Mayor n + l → mayor energía (a igual n + l, el de mayor n).'),
-  ], ['(4, 2, 3, ½): |m| ≤ l = 2 no se cumple. (3, 3, −1, ½): l debe ser ≤ n − 1 = 2.', 'El orbital lo dan n y l.', 'Energía: compara n + l.'], { source: 'EBAU La Rioja jul. 2025 (P1A)' }),
+  ], ['Comprueba cada conjunto en este orden: n ≥ 1; 0 ≤ l ≤ n − 1; −l ≤ m ≤ l; m_s = ±½. Basta con que falle una condición.', 'El orbital lo dan n y l (l = 0 s, 1 p, 2 d). Para comparar energías usa n + l (y, si empatan, el de menor n).', '(4, 2, 3, ½) falla porque |m| > l; (3, 3, −1, ½), porque l = n.'], { source: 'EBAU La Rioja jul. 2025 (P1A)' }),
   ex(
     'EBAU-3 a',
     ['6.5'],

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../../state/store';
 import { BLOCKS, NODES, nodeTitle, NODE_BY_ID, type ModuleId } from '../../learning/syllabus';
-import { COVERED_NODES, GENERATORS, SOURCE_EXERCISES, sourceLevel } from '../../learning/registry';
-import { buildExamDetailed, buildMockExam, MOCK_EXAM_PLAN, selectNext, type Selection } from '../../learning/session';
+import { COVERED_NODES, GENERATORS, GENERATOR_BY_ID, SOURCE_EXERCISES, sourceLevel } from '../../learning/registry';
+import { buildExamDetailed, buildProfileExam, MOCK_PROFILES, weakProfile, selectNext, type MockProfile, type Selection } from '../../learning/session';
 import { guideAnchor } from '../../learning/guide';
 import { dueCards, EVIDENCE_LABEL, masteryEstimate, masteryLevel } from '../../learning/mastery';
 import { SKILLS, ERROR_LABEL, buildEvidence, aggregateNodeEvidence } from '../../learning/evidence';
@@ -414,6 +414,9 @@ function runScore(r: ExamRun): number {
 
 function ExamView() {
   const [blocks, setBlocks] = useState<number[]>([]);
+  const [profileId, setProfileId] = useState<MockProfile['id']>('equilibrado');
+  const masteryAll = useStore((st) => st.mastery);
+  const profilePreview = useMemo(() => (profileId === 'debiles' ? weakProfile(masteryAll, 1) : { profile: MOCK_PROFILES.find((p) => p.id === profileId)!, limitation: undefined as string | undefined }), [profileId, masteryAll]);
   const [count, setCount] = useState(8);
   const [minutes, setMinutes] = useState<number | null>(null);
   const [run, setRun] = useState<ExamRun | null>(null);
@@ -456,19 +459,29 @@ function ExamView() {
       <div className="stack-16">
         <div className="card mock-exam">
           <div className="stack-8">
-            <span className="eyebrow eyebrow--accent">Recomendado antes del examen</span>
+            <span className="eyebrow eyebrow--accent">Simulacros completos · sobre 10</span>
             <span className="h2" style={{ fontSize: '1.9rem' }}>
-              Examen tipo
+              Elige el tipo de examen
             </span>
-            <p className="small muted" style={{ margin: 0, maxWidth: '60ch' }}>
-              Una prueba completa del tema: cinco problemas con varios apartados (isótopos y masa atómica, ondas, espectro del hidrógeno, números cuánticos y tres elementos) y tres cuestiones teóricas, sobre 10 y con 50 minutos. La estructura y la ponderación son una propuesta basada en los ejercicios de los apuntes, no los criterios oficiales de tu profesor.
+            <p className="small muted" style={{ margin: 0, maxWidth: '64ch' }}>
+              Composiciones y ponderaciones <strong>propuestas</strong> a partir de los apuntes, la hoja del tema y las cuestiones EBAU: no son los criterios oficiales de tu profesor. Sin pistas durante la prueba; al terminar, nota, informe por apartados y resoluciones.
             </p>
           </div>
+          <div className="profile-grid" role="radiogroup" aria-label="Tipo de simulacro">
+            {[...MOCK_PROFILES, { id: 'debiles' as const, label: 'Mis puntos débiles', description: 'Los apartados donde tu dominio estimado es más bajo.', minutes: 50, plan: [] }].map((p) => (
+              <button key={p.id} type="button" role="radio" aria-checked={profileId === p.id} className="profile-card" onClick={() => setProfileId(p.id)}>
+                <span className="profile-card__label">{p.label}</span>
+                <span className="small muted">{p.description}</span>
+                <span className="small faint num">{p.minutes} min</span>
+              </button>
+            ))}
+          </div>
+          {profilePreview.limitation && <Feedback tone="info">{profilePreview.limitation}</Feedback>}
           <ol className="mock-exam__plan">
-            {MOCK_EXAM_PLAN.map((q, i) => (
+            {profilePreview.profile.plan.map((q, i) => (
               <li key={i}>
                 <span className="mono faint">{i + 1}</span>
-                <span>{GEN_LABEL[q.generator] ?? q.generator}</span>
+                <span>{q.source ? `${q.source} (documento)` : (GEN_LABEL[q.generator!] ?? GENERATOR_BY_ID.get(q.generator!)?.title ?? q.generator)}</span>
                 <span className="mono">{q.points.toLocaleString('es-ES')} p</span>
               </li>
             ))}
@@ -479,12 +492,14 @@ function ExamView() {
             style={{ alignSelf: 'flex-start' }}
             onClick={() => {
               const seed = parseSeed(seedText) ?? Math.floor(Math.random() * 1e6);
-              setRun({ exercises: buildMockExam(seed), index: 0, results: [], startedAt: Date.now(), minutes: 50, scope: [], points: MOCK_EXAM_PLAN.map((q) => q.points), seed, kind: 'tipo' });
+              const prof = profileId === 'debiles' ? weakProfile(masteryAll, seed).profile : profilePreview.profile;
+              const { exercises, points } = buildProfileExam(prof, seed);
+              setRun({ exercises, index: 0, results: [], startedAt: Date.now(), minutes: prof.minutes, scope: [], points, seed, kind: 'tipo', limitation: profileId === 'debiles' ? weakProfile(masteryAll, seed).limitation : undefined });
               setAnswered(false);
               setNow(Date.now());
             }}
           >
-            Empezar el examen tipo
+            Empezar el simulacro {profilePreview.profile.label.toLowerCase()}
           </button>
         </div>
         <div className="field" style={{ maxWidth: 360 }}>

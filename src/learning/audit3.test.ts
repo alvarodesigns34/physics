@@ -366,13 +366,42 @@ describe('8.3 — la primera pista orienta sin revelar', async () => {
           const m = formatNumber(p.answer.value, { sig: 3 }).split(/[·×]/)[0]!.trim();
           if (m.replace(/\D/g, '').replace(/0+$/, '').length >= 2 && h.includes(m)) leaks.push(`${ex.id}/${p.id}: ${m}`);
         } else if (p.answer.kind === 'choice' && !p.answer.multiple) {
-          const texts = p.answer.options.map((o) => o.text);
-          const right = p.answer.options.find((o) => o.id === p.answer.correct[0])!.text;
+          const a = p.answer;
+          const texts = a.options.map((o) => o.text);
+          const right = a.options.find((o) => o.id === a.correct[0])!.text;
           const definesAll = texts.filter((t) => h.includes(t)).length >= 2;
           if (right.length > 3 && h.includes(right) && !definesAll) leaks.push(`${ex.id}/${p.id}: «${right}»`);
         }
       }
     }
     expect(leaks).toEqual([]);
+  });
+});
+
+describe('10 — simulacros por perfil', async () => {
+  const { MOCK_PROFILES, buildProfileExam, weakProfile } = await import('./session');
+  const { initialMastery, updateMasteryY } = await import('./mastery');
+  it.each(MOCK_PROFILES.map((p) => [p.id, p] as const))('%s: 10 puntos, generadores existentes y sin preguntas de desarrollo', (_id, p) => {
+    expect(p.plan.reduce((a, x) => a + x.points, 0)).toBeCloseTo(10, 6);
+    for (const seed of [1, 2, 3]) {
+      const { exercises, points } = buildProfileExam(p, seed);
+      expect(exercises).toHaveLength(p.plan.length);
+      expect(points).toHaveLength(p.plan.length);
+      for (const ex of exercises) expect(ex.parts.every((x) => x.answer.kind !== 'essay')).toBe(true);
+    }
+    // Reproducible con la misma semilla
+    expect(buildProfileExam(p, 77).exercises.map((e) => e.id)).toEqual(buildProfileExam(p, 77).exercises.map((e) => e.id));
+  });
+  it('puntos débiles: prioriza los apartados con menor dominio y suma 10', () => {
+    let weak = initialMastery();
+    for (let i = 0; i < 6; i++) weak = updateMasteryY(weak, 2, 0, 0, 1.75e12 + i);
+    let strong = initialMastery();
+    for (let i = 0; i < 6; i++) strong = updateMasteryY(strong, 2, 1, 0, 1.75e12 + i);
+    const { profile, limitation } = weakProfile({ '3.6': weak, '1.1': strong, '6.3': strong, '7.9': strong }, 5);
+    expect(limitation).toBeUndefined();
+    expect(profile.plan.reduce((a, x) => a + x.points, 0)).toBeCloseTo(10, 6);
+    const { exercises } = buildProfileExam(profile, 5);
+    expect(exercises[0]!.nodeIds).toContain('3.6');
+    expect(weakProfile({}, 1).limitation).toMatch(/poca evidencia/);
   });
 });

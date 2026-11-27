@@ -208,3 +208,127 @@ export function buildMockExam(seed: number): Exercise[] {
     return gen.create(randomSeed(rng), d);
   });
 }
+
+// ── Simulacros por perfil (ATOM 3.0) ─────────────────────────────────────
+//
+// PROPUESTAS de composición basadas en los tipos de ejercicio de los apuntes, la hoja del tema y las
+// cuestiones EBAU de La Rioja. No son los criterios oficiales de ningún profesor: la interfaz lo dice.
+
+export interface MockItem {
+  /** Generador (ejercicio nuevo) o referencia de un ejercicio de los documentos */
+  generator?: string;
+  source?: string;
+  difficulty: Difficulty;
+  points: number;
+}
+
+export interface MockProfile {
+  id: 'equilibrado' | 'numerico' | 'razonamiento' | 'exigente' | 'ebau' | 'debiles';
+  label: string;
+  description: string;
+  minutes: number;
+  plan: MockItem[];
+}
+
+export const MOCK_PROFILES: MockProfile[] = [
+  { id: 'equilibrado', label: 'Equilibrado', description: 'La estructura más habitual: cinco problemas con apartados (uno por gran bloque) y tres cuestiones teóricas.', minutes: 50, plan: MOCK_EXAM_PLAN },
+  {
+    id: 'numerico', label: 'Numérico', description: 'Cálculo con unidades de principio a fin: masa atómica, ondas, Rydberg directo e inverso, Bohr y energía de ionización.', minutes: 55,
+    plan: [
+      { generator: 'examen-masa-iones', difficulty: 2, points: 1.5 },
+      { generator: 'examen-ondas', difficulty: 2, points: 1.5 },
+      { generator: 'examen-espectro', difficulty: 3, points: 2 },
+      { generator: 'serie-inversa', difficulty: 3, points: 1.5 },
+      { generator: 'luz-ionizante', difficulty: 2, points: 1.5 },
+      { generator: 'nivel-energia', difficulty: 2, points: 1 },
+      { generator: 'bohr-proporciones', difficulty: 2, points: 1 },
+    ],
+  },
+  {
+    id: 'razonamiento', label: 'Razonamiento', description: 'Interpretar gráficas y datos, deducir elementos, encontrar errores y predecir con los modelos.', minutes: 50,
+    plan: [
+      { generator: 'grafica-ei', difficulty: 2, points: 1.5 },
+      { generator: 'ei-sucesivas', difficulty: 2, points: 1.5 },
+      { generator: 'pistas-elemento', difficulty: 2, points: 1.5 },
+      { generator: 'error-rydberg', difficulty: 2, points: 1.5 },
+      { generator: 'prediccion-modelos', difficulty: 2, points: 1 },
+      { generator: 'examen-elementos', difficulty: 3, points: 1.5 },
+      { generator: 'estado-configuracion', difficulty: 2, points: 1.5 },
+    ],
+  },
+  {
+    id: 'exigente', label: 'Exigente', description: 'Problemas compuestos y multibloque de nivel alto: líneas sin serie, iones misteriosos y luz ionizante.', minutes: 60,
+    plan: [
+      { generator: 'examen-espectro', difficulty: 3, points: 2 },
+      { generator: 'linea-desconocida', difficulty: 3, points: 2 },
+      { generator: 'ion-misterioso', difficulty: 3, points: 2 },
+      { generator: 'luz-ionizante', difficulty: 3, points: 1.5 },
+      { generator: 'ei-sucesivas', difficulty: 3, points: 1.5 },
+      { generator: 'examen-elementos', difficulty: 3, points: 1 },
+    ],
+  },
+  {
+    id: 'ebau', label: 'Estilo EBAU', description: 'Las cuestiones EBAU de La Rioja del tema (2021 y 2025) y dos problemas del mismo estilo.', minutes: 45,
+    plan: [
+      { source: 'EBAU-1 (2021) a', difficulty: 2, points: 2 },
+      { source: 'EBAU-1 (2021) b', difficulty: 2, points: 1.5 },
+      { source: 'EBAU-2 (2025)', difficulty: 2, points: 2 },
+      { source: 'EBAU-3 a', difficulty: 2, points: 1.5 },
+      { generator: 'examen-cuantico', difficulty: 2, points: 1.5 },
+      { generator: 'examen-elementos', difficulty: 3, points: 1.5 },
+    ],
+  },
+];
+
+/** Generador apto para examen que cubre un apartado (prefiere los compuestos, nunca desarrollo). */
+function examGeneratorFor(node: string, rng: () => number): string | null {
+  const gens = generatorsForNode(node).filter((g) => g.id !== 'desarrollo');
+  if (!gens.length) return null;
+  const composite = gens.filter((g) => g.id.startsWith('examen-') || g.nodeIds.length >= 2);
+  const pool = composite.length ? composite : gens;
+  return pool[Math.floor(rng() * pool.length)]!.id;
+}
+
+/**
+ * Simulacro centrado en los puntos débiles: los apartados con menor dominio estimado (entre los practicados
+ * con evidencia). Si hay menos de 3 apartados practicados, no hay base para personalizar: se dice así.
+ */
+export function weakProfile(mastery: Record<string, NodeMastery>, seed: number): { profile: MockProfile; limitation?: string } {
+  const rng = mulberry32(seed ^ 0x5eed);
+  const practiced = COVERED_NODES.map((n) => ({ n, e: masteryEstimate(mastery[n]) })).filter((x) => x.e.evidence !== 'sin-datos');
+  const limitation = practiced.length < 3 ? 'Aún hay poca evidencia (menos de 3 apartados practicados): este simulacro combina tus apartados débiles con los aún no practicados.' : undefined;
+  const ranked = practiced.sort((a, b) => a.e.mid - b.e.mid).map((x) => x.n);
+  const unseen = shuffle(rng, COVERED_NODES.filter((n) => !ranked.includes(n)));
+  const targets = [...ranked, ...unseen];
+  const plan: MockItem[] = [];
+  const used = new Set<string>();
+  for (const n of targets) {
+    if (plan.length >= 6) break;
+    const g = examGeneratorFor(n, rng);
+    if (g && !used.has(g)) {
+      used.add(g);
+      plan.push({ generator: g, difficulty: 2, points: 0 });
+    }
+  }
+  // 10 puntos repartidos en partes iguales (redondeadas a 0,25 y ajustadas para sumar 10).
+  const base = Math.floor((10 / plan.length) * 4) / 4;
+  plan.forEach((p) => (p.points = base));
+  plan[plan.length - 1]!.points = Math.round((10 - base * (plan.length - 1)) * 100) / 100;
+  return { profile: { id: 'debiles', label: 'Mis puntos débiles', description: 'Los apartados donde tu dominio estimado es más bajo.', minutes: 50, plan }, limitation };
+}
+
+export function buildProfileExam(profile: MockProfile, seed: number): { exercises: Exercise[]; points: number[] } {
+  const rng = mulberry32(seed);
+  const exercises = profile.plan.map((item) => {
+    if (item.source) {
+      const s = SOURCE_EXERCISES.find((x) => x.ref === item.source);
+      if (!s) throw new Error(`Ejercicio de documento desconocido: ${item.source}`);
+      return s.build();
+    }
+    const gen = GENERATOR_BY_ID.get(item.generator!);
+    if (!gen) throw new Error(`Generador desconocido: ${item.generator}`);
+    const d = gen.difficulties.includes(item.difficulty) ? item.difficulty : gen.difficulties[gen.difficulties.length - 1]!;
+    return gen.create(randomSeed(rng), d);
+  });
+  return { exercises, points: profile.plan.map((p) => p.points) };
+}

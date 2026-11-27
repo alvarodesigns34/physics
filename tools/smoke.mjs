@@ -103,10 +103,10 @@ try {
   await page.screenshot({ path: `${OUT}/04-entrenamiento.png` });
 
   await page.goto(base + '#/entrenamiento?v=examen');
-  await page.waitForSelector('button:has-text("Empezar el examen tipo")', { timeout: T });
-  await page.click('button:has-text("Empezar el examen tipo")');
+  await page.waitForSelector('button:has-text("Empezar el simulacro equilibrado")', { timeout: T });
+  await page.click('button:has-text("Empezar el simulacro equilibrado")');
   await page.waitForFunction(() => /de 8/.test(document.querySelector('main')?.textContent ?? ''), null, { timeout: T }).catch(() => {});
-  check((await page.locator('main').innerText()).includes('de 8'), 'Examen tipo: 8 preguntas');
+  check((await page.locator('main').innerText()).includes('de 8'), 'Simulacro equilibrado: 8 preguntas');
 
   // Laboratorios de las fases 2–4
   await page.goto(base + '#/periodico');

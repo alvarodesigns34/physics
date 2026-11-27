@@ -3825,3 +3825,37 @@ kbd {
 .mx-sub .mx-op {
   padding: 0;
 }
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.profile-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: var(--r-inner);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface-raised);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast), background var(--dur-fast);
+}
+.profile-card:hover {
+  border-color: var(--accent-line);
+}
+.profile-card[aria-checked='true'] {
+  border-color: var(--accent);
+  background: var(--surface-tint);
+  box-shadow: var(--glow);
+}
+.profile-card__label {
+  font-weight: 650;
+}
+@media (max-width: 900px) {
+  .profile-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
