@@ -9,6 +9,7 @@ import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { Stage } from '../../render/Stage';
+import { useMergedGeometry } from '../../render/merged';
 import { LabelProjector, type Anchor } from '../../render/labels';
 import { useQuality, useReducedMotion } from '../../app/hooks';
 import { absorptionLines, VISIBLE_SPECTRA, type GasCondition } from '../../science/data/spectralLines';
@@ -282,30 +283,30 @@ function OpticalTable({ center, w, d }: { center: THREE.Vector3; w: number; d: n
     <group position={[center.x, TABLE_Y, center.z]}>
       <mesh position-y={-0.06} receiveShadow>
         <boxGeometry args={[w, 0.12, d]} />
-        <meshPhysicalMaterial color="#5b616b" metalness={0.6} roughness={0.42} clearcoat={0.3} />
+        <meshStandardMaterial color="#5b616b" metalness={0.6} roughness={0.42} />
       </mesh>
       <mesh position-y={0.001} rotation-x={-Math.PI / 2} receiveShadow>
         <planeGeometry args={[w - 0.04, d - 0.04]} />
-        <meshPhysicalMaterial map={tex} metalness={0.55} roughness={0.5} clearcoat={0.25} clearcoatRoughness={0.5} />
+        <meshStandardMaterial map={tex} metalness={0.5} roughness={0.5} />
       </mesh>
     </group>
   );
 }
 
-/** Poste de soporte (acero) desde la mesa hasta y = top, con su base. */
-function Post({ at, top }: { at: THREE.Vector3; top: number }) {
-  const h = top - TABLE_Y;
+/** Postes de soporte (acero) desde la mesa hasta su altura, con su base; fusionados en dos mallas. */
+function Posts({ items }: { items: { at: THREE.Vector3; top: number }[] }) {
+  const key = items.map((p) => `${p.at.x.toFixed(3)},${p.at.z.toFixed(3)},${p.top}`).join('|');
+  const rods = useMergedGeometry(() => items.map(({ at, top }) => ({ geo: new THREE.CylinderGeometry(0.035, 0.035, top - TABLE_Y, 16), position: [at.x, TABLE_Y + (top - TABLE_Y) / 2, at.z] as [number, number, number] })), [key]);
+  const feet = useMergedGeometry(() => items.map(({ at }) => ({ geo: new THREE.CylinderGeometry(0.13, 0.15, 0.06, 32), position: [at.x, TABLE_Y + 0.03, at.z] as [number, number, number] })), [key]);
   return (
-    <group position={[at.x, TABLE_Y, at.z]}>
-      <mesh position-y={h / 2}>
-        <cylinderGeometry args={[0.035, 0.035, h, 16]} />
+    <>
+      <mesh geometry={rods}>
         <meshStandardMaterial color="#c3c8cf" metalness={0.95} roughness={0.2} />
       </mesh>
-      <mesh position-y={0.03}>
-        <cylinderGeometry args={[0.13, 0.15, 0.06, 32]} />
+      <mesh geometry={feet}>
         <meshStandardMaterial color="#2a2e35" metalness={0.7} roughness={0.35} />
       </mesh>
-    </group>
+    </>
   );
 }
 
@@ -315,7 +316,7 @@ function RotationStage({ at }: { at: THREE.Vector3 }) {
     <group position={[at.x, TABLE_Y, at.z]}>
       <mesh position-y={0.1}>
         <cylinderGeometry args={[0.78, 0.82, 0.2, 96]} />
-        <meshPhysicalMaterial color="#9ea5ae" metalness={0.9} roughness={0.28} clearcoat={0.5} />
+        <meshStandardMaterial color="#9ea5ae" metalness={0.9} roughness={0.28} />
       </mesh>
       <mesh position-y={0.205} rotation-x={-Math.PI / 2}>
         <ringGeometry args={[0.68, 0.78, 96]} />
@@ -334,7 +335,7 @@ export const SPECTRO_ANCHORS: Anchor[] = (() => {
   const c = PRISM.screenCenter;
   const dir = PRISM.screenDir;
   return [
-    { id: 'sp-lamp', position: to3(src, 0.95).toArray() as [number, number, number] },
+    { id: 'sp-lamp', position: to3(src, 0.95).toArray() as [number, number, number], offset: [64, 0] },
     { id: 'sp-prism', position: to3(PRISM.vertices[0], 0.72).toArray() as [number, number, number] },
     { id: 'sp-screen', position: to3([c[0] + dir[0] * S_CENTER, c[1] + dir[1] * S_CENTER], SCREEN_H / 2 + 0.22).toArray() as [number, number, number] },
     { id: 'sp-violet', position: to3(PRISM.trace(400)!.hit, -SCREEN_H / 2 - 0.16).toArray() as [number, number, number] },
@@ -384,7 +385,7 @@ export function SpectroscopeScene({ symbol, mode, gas = 'frio' }: { symbol: stri
     return new THREE.Vector3().addVectors(src, scr).multiplyScalar(0.5);
   }, [src]);
   return (
-    <Stage mood="fotones" camera={[target.x - 0.4, 4.6, target.z + 7.6]} fov={36}>
+    <Stage mood="fotones" camera={[target.x - 0.9, 4.8, target.z + 8.4]} fov={36}>
       <ambientLight intensity={0.4} />
       <directionalLight position={[target.x - 3, 6, target.z + 4]} intensity={1.4} color="#fff1dc" />
       <group>
@@ -408,9 +409,7 @@ export function SpectroscopeScene({ symbol, mode, gas = 'frio' }: { symbol: stri
         <Screen tex={tex} />
         <OpticalTable center={bench.center} w={bench.w} d={bench.d} />
         <RotationStage at={prismCenter} />
-        <Post at={src} top={-0.76} />
-        <Post at={slitAt} top={-0.45} />
-        <Post at={screenAt} top={-SCREEN_H / 2 - 0.07} />
+        <Posts items={[{ at: src, top: -0.72 }, { at: slitAt, top: -0.45 }, { at: screenAt, top: -SCREEN_H / 2 - 0.07 }]} />
       </group>
       <LabelProjector anchors={SPECTRO_ANCHORS} />
       <OrbitControls target={target} enablePan={false} enableDamping minDistance={4} maxDistance={13} maxPolarAngle={1.45} />

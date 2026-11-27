@@ -175,3 +175,10 @@ Resumen de lo que cambió en el mapa del código:
 - Herramientas: `tools/shots.mjs` y `tools/perf.mjs` aceptan `DIST` y `PORT` (comparar con un worktree de otra versión).
 
 Pendiente prioritario: ver `docs/11-atom-5-1.md` §7.
+
+## 11. ATOM 5.2 (versión final)
+Informe completo, registro de objetivos y mediciones en `docs/12-atom-5-2.md`. Pendientes honestos: medir en
+GPU real, Safari e iPadOS; latencia de Quantum al cambiar de orbital (≈ 3 s en SwiftShader, sin mejora
+demostrada); vigilar la memoria JS (+≈ 0,15 MB por recorrido completo de los once laboratorios al final de 30
+recorridos, atribuida a código compilado y objetos nativos, sin objetos de la aplicación retenidos); el
+espectroscopio reconstruido cuesta un 17 % más en SwiftShader.

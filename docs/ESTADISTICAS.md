@@ -22,4 +22,4 @@
 | Notas de rigor | 14 |
 | Pruebas unitarias (vitest) | 1358 superadas de 1358 |
 | Llamadas a check() en tools/smoke.mjs (en ejecución pueden ser más: algunas están en bucles) | 47 |
-| Archivos versionados | 443 |
+| Archivos versionados | 444 |
