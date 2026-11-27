@@ -339,7 +339,8 @@ p {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  max-width: min(560px, calc(100% - var(--panel-w) - 3 * var(--gutter)));
+  /* ATOM 3.0: el visor ya no queda bajo el panel; el límite es el propio visor. */
+  max-width: min(620px, calc(100% - 2 * var(--gutter)));
 }
 
 @media (max-width: 760px) {
@@ -2327,7 +2328,7 @@ details.chapter + details.chapter {
   display: none;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 760px) {
   :root {
     --mobile-nav-h: calc(58px + env(safe-area-inset-bottom, 0px));
   }
@@ -3561,4 +3562,25 @@ kbd {
   gap: 12px;
   padding: 10px 16px;
   border-top: 1px solid var(--hairline);
+}
+
+/* iPad en vertical (y ventanas estrechas altas): visor arriba, panel debajo. */
+@media (min-width: 761px) and (max-width: 1100px) and (orientation: portrait) {
+  .app[data-kind='laboratorio'] .workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: 50vh minmax(0, 1fr);
+  }
+  .app[data-kind='laboratorio'] .stage,
+  .app[data-kind='laboratorio'] .label-layer {
+    right: var(--gutter);
+    inset-inline-end: var(--gutter);
+    bottom: auto;
+    height: calc(50vh - var(--viewer-gap));
+  }
+  .app[data-kind='laboratorio'] .workspace > :not(.side):not(.label-layer) {
+    margin: 0 var(--gutter) var(--viewer-gap) var(--viewer-gap);
+  }
+  .app[data-kind='laboratorio'] .side {
+    margin: 0 var(--gutter) var(--gutter) var(--viewer-gap);
+  }
 }

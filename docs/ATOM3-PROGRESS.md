@@ -25,12 +25,16 @@ Rama: `claude/proyecto-atom-interactive-830d7u` · Producción (`main`) intacta 
 | P2.1 documentación | ⏳ cifras autogeneradas pendientes | | |
 | P2.2 regresión visual / a11y / CI | ⏳ | | |
 
-## Ciclo 3 — Sistema de diseño y experiencia ⏳ (siguiente)
-- [ ] Tokens nuevos (tema claro principal, oscuro opcional), escala tipográfica sans (Inter Tight variable ya incluida; retirar Instrument Serif).
-- [ ] Reorganizar `global.css` (2 905 líneas) en capas: tokens → base → componentes → módulos.
-- [ ] Inicio para estudiar (continuar, laboratorios, temario, competencias débiles, examen, fórmulas).
-- [ ] Barra lateral de escritorio + búsqueda global (Ctrl/⌘ K).
-- [ ] Escenas 3D compatibles con fondo claro (o fondo oscuro acotado al lienzo).
+## Ciclo 3 — Sistema de diseño y experiencia ✅ (primera pasada, 6558b6f + siguientes)
+- [x] `src/styles/tokens.css`: tema claro principal, oscuro opcional (Ajustes → Tema), escala tipográfica, espaciado, elevación, movimiento.
+- [x] 101 colores fijos de `global.css` convertidos a tokens; Instrument Serif retirada (dependencia eliminada).
+- [x] Visor de laboratorio (escena 3D en panel pizarra redondeado a la izquierda del panel); tinta del visor por tokens locales.
+- [x] Inicio para estudiar (recomendación del motor, examen, repaso, laboratorios + campaña, temario por bloque, competencias, errores repetidos, accesos).
+- [x] Raíl lateral escritorio/iPad + búsqueda global ⌘K / «/» (`src/learning/search.ts`, 7 pruebas).
+- [x] iPad horizontal y vertical (visor arriba/panel abajo en vertical); barra inferior solo en móvil (≤ 760 px).
+- [x] Aviso falso «contexto gráfico perdido» al cambiar de laboratorio: corregido.
+- [ ] Partir `global.css` (≈ 3 600 líneas) en archivos por capa; retirar reglas muertas (`.topnav`, «capa de diseño 2»).
+- [ ] Revisar contraste AA de todos los tokens con un script (G8).
 
 ## Ciclo 4 — Pedagogía ⏳
 - [ ] Fórmulas renderizadas (evaluar KaTeX: peso vs. beneficio).
@@ -48,4 +52,4 @@ Forge · Photon · Quantum (comparación múltiple) · Time Machine (7 pasos por
 Optimización y medición · inspección visual (escritorio + iPad) · revisión adversarial · refinamiento.
 
 ## Pruebas
-- Línea base: 223. Actual: 615 (vitest) · e2e pendiente de re-ejecutar tras rediseño.
+- Línea base: 223 vitest + 23 e2e. Actual: 622 vitest + 26 e2e (todas en verde).
