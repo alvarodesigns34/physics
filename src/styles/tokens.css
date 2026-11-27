@@ -22,7 +22,7 @@
   /* ── Tinta ── */
   --ink: #17191e;
   --ink-muted: #4f5562; /* ≥ 6:1 sobre todas las superficies claras */
-  --ink-faint: #636977; /* 5,0:1 sobre --surface; 4,6:1 sobre --surface-sunken (AA, comprobado en contrast.test.ts) */
+  --ink-faint: #575d6a; /* ATOM 5.2: margen para fondos tintados (hover, seleccionado): ≥ 5,3:1 sobre --surface-sunken; comprobado en contrast.test.ts */
   --ink-on-viewer: #e9ecf2;
   --ink-on-viewer-muted: #a9b0bf;
   --hairline: rgb(23 25 30 / 0.08);

@@ -33,7 +33,7 @@ const CASES: [string, string, number][] = [
   ['ink-muted', 'surface-sunken', 4.5],
   ['ink-faint', 'surface', 4.5],
   ['ink-faint', 'surface-raised', 4.5],
-  ['ink-faint', 'surface-sunken', 4.5],
+  ['ink-faint', 'surface-sunken', 5.2],
   ['accent', 'surface', 4.5],
   ['accent', 'surface-raised', 4.5],
   ['accent-ink', 'accent', 4.5],
