@@ -46,3 +46,20 @@ describe('simulacro profesional', () => {
     expect(isValidSession(null)).toBe(false);
   });
 });
+
+describe('P0 (auditoría 4.0): ordenación cuyo orden inicial ya es el correcto', async () => {
+  const { gradeQuestion, isAnswered } = await import('./examSession');
+  const ex = {
+    id: 'x', generatorId: 'x', nodeIds: ['7.7'], difficulty: 2 as const, title: '', statement: '', stepwise: false,
+    hints: ['', '', ''] as [string, string, string], solution: [],
+    parts: [{ id: 'o', prompt: 'Ordena', canonical: 'a, b', explanation: '', answer: { kind: 'order' as const, items: [{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }], correctOrder: ['a', 'b'] } }],
+  };
+  it('sin confirmar: sin responder; confirmado: respondida y CORRECTA', () => {
+    expect(isAnswered(ex.parts[0]!, undefined)).toBe(false);
+    expect(isAnswered(ex.parts[0]!, undefined, true)).toBe(true);
+    const g = gradeQuestion(ex, {}, 1, ['o']);
+    expect(g.state).toBe('respondida');
+    expect(g.score).toBe(1);
+    expect(gradeQuestion(ex, {}, 1).state).toBe('sin-responder');
+  });
+});

@@ -82,9 +82,9 @@ describe('P0.4 — cifras significativas con evidencia simétrica', () => {
     const ex = buildWaveExercise({ value: 500, unit: 'nm' }, 2, 't');
     const p = ex.parts[0]!;
     const good = buildEvidence({ ...ex, parts: [p] }, [rec(p.id, { sigFigsAssessed: true })]);
-    expect(good.skills.cifras).toEqual({ y: 1, n: 1 });
+    expect(good.skills.cifras).toMatchObject({ y: 1, n: 1, kind: 'demostrada' });
     const badEv = buildEvidence({ ...ex, parts: [p] }, [rec(p.id, { sigFigIssue: true, sigFigsAssessed: true })]);
-    expect(badEv.skills.cifras).toEqual({ y: 0, n: 1 });
+    expect(badEv.skills.cifras).toMatchObject({ y: 0, n: 1 });
   });
   it('sin criterio de cifras o con número ambiguo no hay evidencia sobre «cifras»', () => {
     const ex = buildWaveExercise({ value: 500, unit: 'nm' }, 2, 't');

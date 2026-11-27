@@ -121,7 +121,7 @@ export function StudyPath({ node }: { node: string }) {
         )}
         {(s.id === 'guiado' || s.id === 'aplicar' || s.id === 'examen') &&
           (exercises[s.id] ? (
-            <ExercisePlayer exercise={exercises[s.id]!} mode="practica" variant={s.id === 'guiado' ? 'guiado' : s.id === 'examen' ? 'desafio' : 'autonomo'} onFinish={finish(s.id)} onNext={() => setStep((x) => Math.min(STEPS.length - 1, x + 1))} nextLabel="Siguiente paso de la ruta" />
+            <ExercisePlayer exercise={exercises[s.id]!} mode="practica" persistKey={`ruta:${node}:${s.id}`} variant={s.id === 'guiado' ? 'guiado' : s.id === 'examen' ? 'desafio' : 'autonomo'} onFinish={finish(s.id)} onNext={() => setStep((x) => Math.min(STEPS.length - 1, x + 1))} nextLabel="Siguiente paso de la ruta" />
           ) : (
             <p className="small muted">No hay ejercicios generados para este apartado.</p>
           ))}

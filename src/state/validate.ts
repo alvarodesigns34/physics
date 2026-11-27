@@ -107,7 +107,7 @@ export function notebookEntry(v: unknown): boolean {
     shortStr(v.exerciseId) && shortStr(v.generatorId, 60) && shortStr(v.title, 200) && nodeList(v.nodeIds) && ts(v.at) &&
     MODES.has(v.mode as string) && intIn(v.retries, 0, 1000) &&
     Array.isArray(v.misses) && v.misses.length > 0 && v.misses.length <= 30 &&
-    v.misses.every((m) => isObj(m) && typeof m.prompt === 'string' && m.prompt.length <= 300 && (ERROR_KINDS.has(m.kind as string) || m.kind === 'revelado') && (m.skill === undefined || SKILL_IDS.has(m.skill as string))) &&
+    v.misses.every((m) => isObj(m) && typeof m.prompt === 'string' && m.prompt.length <= 300 && (ERROR_KINDS.has(m.kind as string) || m.kind === 'revelado') && (m.skill === undefined || SKILL_IDS.has(m.skill as string)) && (m.partId === undefined || shortStr(m.partId))) &&
     (v.resolvedAt === undefined || (ts(v.resolvedAt) && (v.resolvedAt as number) >= (v.at as number))) &&
     (v.resolvedBy === undefined || v.resolvedBy === 'variante' || v.resolvedBy === 'mismo-dias-despues')
   );

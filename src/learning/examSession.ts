@@ -28,6 +28,12 @@ export interface ExamSession {
   /** exerciseIndex → partId → respuesta */
   answers: Record<number, Record<string, PartValue>>;
   flagged: number[];
+  /**
+   * Pasos de ordenación cuya respuesta el alumno ha CONFIRMADO (índice de pregunta → ids de paso). Sin
+   * esto, un orden inicial que ya coincidiera con el correcto se contaba como «sin responder»
+   * (P0 de la auditoría de ATOM 4.0). Mover cualquier elemento también confirma.
+   */
+  confirmed?: Record<number, string[]>;
   current: number;
   finishedAt?: number;
 }
@@ -59,17 +65,17 @@ export function newSession(label: string, exercises: Exercise[], points: number[
 }
 
 /** ¿Se ha escrito algo en este apartado? */
-export function isAnswered(p: ExercisePart, v: PartValue | undefined): boolean {
+export function isAnswered(p: ExercisePart, v: PartValue | undefined, confirmed = false): boolean {
+  if (p.answer.kind === 'order') return confirmed || (Array.isArray(v) && v.length > 0 && (v as string[]).join() !== p.answer.items.map((i) => i.id).join());
   if (v === undefined) return false;
-  if (p.answer.kind === 'order') return Array.isArray(v) && v.length > 0 && (v as string[]).join() !== p.answer.items.map((i) => i.id).join();
   if (Array.isArray(v)) return v.length > 0 && v.some((x) => String(x).trim() !== '');
   return v.trim() !== '';
 }
 
 export type QuestionState = 'sin-responder' | 'parcial' | 'respondida';
 
-export function questionState(ex: Exercise, answers: Record<string, PartValue> | undefined): QuestionState {
-  const n = ex.parts.filter((p) => isAnswered(p, answers?.[p.id])).length;
+export function questionState(ex: Exercise, answers: Record<string, PartValue> | undefined, confirmed: string[] = []): QuestionState {
+  const n = ex.parts.filter((p) => isAnswered(p, answers?.[p.id], confirmed.includes(p.id))).length;
   return n === 0 ? 'sin-responder' : n < ex.parts.length ? 'parcial' : 'respondida';
 }
 
@@ -93,11 +99,11 @@ export interface GradedQuestion {
 }
 
 /** Corrige un ejercicio: secuencial (arrastre de errores), crédito 1 o 0 por apartado, sin pistas. */
-export function gradeQuestion(ex: Exercise, answers: Record<string, PartValue> | undefined, points: number): GradedQuestion {
+export function gradeQuestion(ex: Exercise, answers: Record<string, PartValue> | undefined, points: number, confirmed: string[] = []): GradedQuestion {
   const prev: Record<string, number> = {};
   const parts: GradedPart[] = ex.parts.map((p) => {
-    const value = answers?.[p.id];
-    const answered = isAnswered(p, value);
+    const value = answers?.[p.id] ?? (p.answer.kind === 'order' && confirmed.includes(p.id) ? p.answer.items.map((x) => x.id) : undefined);
+    const answered = isAnswered(p, value, confirmed.includes(p.id));
     const input = value ?? (p.answer.kind === 'choice' ? [] : '');
     const result = answered ? checkAnswer(p.answer, input, { previousWrong: { ...prev } }) : ({ status: 'vacio', correct: false, message: 'Sin responder.', warnings: [] } as CheckResult);
     if (answered && (!result.correct || result.status === 'correcto-arrastre') && result.numericValue !== undefined) prev[p.id] = result.numericValue;
@@ -116,7 +122,7 @@ export function gradeQuestion(ex: Exercise, answers: Record<string, PartValue> |
     sigFigIssue: g.result.correct && g.result.errorKind === 'cifras',
     sigFigsAssessed: g.result.correct ? g.result.sigFigsAssessed : undefined,
   }));
-  return { exercise: ex, points, earned: score * points, score, state: questionState(ex, answers), parts, records };
+  return { exercise: ex, points, earned: score * points, score, state: questionState(ex, answers, confirmed), parts, records };
 }
 
 export interface ExamReport {
@@ -133,7 +139,7 @@ export interface ExamReport {
 }
 
 export function gradeSession(session: ExamSession, exercises: Exercise[]): ExamReport {
-  const questions = exercises.map((ex, i) => gradeQuestion(ex, session.answers[i], session.points[i] ?? 1));
+  const questions = exercises.map((ex, i) => gradeQuestion(ex, session.answers[i], session.points[i] ?? 1, session.confirmed?.[i] ?? []));
   const totalPoints = questions.reduce((a, q) => a + q.points, 0);
   const earnedPoints = questions.reduce((a, q) => a + q.earned, 0);
   const byNode: ExamReport['byNode'] = {};
@@ -182,6 +188,7 @@ export function isValidSession(v: unknown): v is ExamSession {
     Array.isArray(s.points) && s.points.length === s.exerciseIds.length && s.points.every((x) => typeof x === 'number' && x >= 0) &&
     typeof s.answers === 'object' && s.answers !== null &&
     Array.isArray(s.flagged) &&
+    (s.confirmed === undefined || (typeof s.confirmed === 'object' && s.confirmed !== null && !Array.isArray(s.confirmed) && Object.values(s.confirmed).every((x) => Array.isArray(x) && x.every((y) => typeof y === 'string')))) &&
     Number.isInteger(s.current)
   );
 }

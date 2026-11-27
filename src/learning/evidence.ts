@@ -84,6 +84,8 @@ export interface PartRecord {
    * ambiguo). Solo entonces hay evidencia —positiva o negativa— sobre la competencia «cifras».
    */
   sigFigsAssessed?: boolean;
+  /** Había pistas a la vista cuando se resolvió el paso (ATOM 5.0): el acierto no es «demostrado». */
+  hinted?: boolean;
 }
 
 /** Cómo se obtuvo la evidencia de un apartado (ATOM 4.0): no todo acierto demuestra lo mismo. */
@@ -131,7 +133,7 @@ export interface Evidence {
   /** Apartado → resultado medio 0–1 y número de pasos que lo evalúan */
   nodes: Record<string, NodeEvidence>;
   /** Competencia → resultado medio 0–1 y número de observaciones */
-  skills: Partial<Record<SkillId, { y: number; n: number }>>;
+  skills: Partial<Record<SkillId, { y: number; n: number; guess: number; kind: EvidenceKind }>>;
   /** Errores clasificados, con el paso y el apartado en que ocurrieron */
   errors: { kind: ErrorKind; skill?: SkillId; partId: string; nodeIds: string[] }[];
 }
@@ -162,9 +164,14 @@ export function buildEvidence(ex: Exercise, records: PartRecord[]): Evidence {
   const nodes: Evidence['nodes'] = {};
   const skills: Evidence['skills'] = {};
   const errors: Evidence['errors'] = [];
+  const rank: Record<EvidenceKind, number> = { autoevaluada: 3, asistida: 2, 'posible-azar': 1, demostrada: 0 };
+  // Las competencias reciben el MISMO tratamiento del azar, las ayudas y la autoevaluación que los
+  // apartados (ATOM 5.0): media de la probabilidad de acertar al azar y tipo de evidencia más débil.
+  let skillGuess = 0;
+  let skillKind: EvidenceKind = 'demostrada';
   const addSkill = (k: SkillId, y: number) => {
-    const cur = skills[k] ?? { y: 0, n: 0 };
-    skills[k] = { y: (cur.y * cur.n + y) / (cur.n + 1), n: cur.n + 1 };
+    const cur = skills[k] ?? { y: 0, n: 0, guess: 0, kind: 'demostrada' as EvidenceKind };
+    skills[k] = { y: (cur.y * cur.n + y) / (cur.n + 1), n: cur.n + 1, guess: (cur.guess * cur.n + skillGuess) / (cur.n + 1), kind: rank[skillKind] > rank[cur.kind] ? skillKind : cur.kind };
   };
   ex.parts.forEach((part, i) => {
     const r = records.find((x) => x.id === part.id) ?? records[i];
@@ -177,8 +184,9 @@ export function buildEvidence(ex: Exercise, records: PartRecord[]): Evidence {
     let yNode = r.revealed ? 0 : r.credit;
     if (!r.carried && !r.revealed && r.credit > 0 && realErrors.length > 0) yNode = Math.max(yNode, Math.min(...realErrors.map(nodeFloor)));
     const g = guessChance(part);
-    const partKind: EvidenceKind = part.answer.kind === 'essay' ? 'autoevaluada' : r.revealed || r.attempts > 1 || r.carried ? 'asistida' : g >= 0.2 ? 'posible-azar' : 'demostrada';
-    const rank: Record<EvidenceKind, number> = { autoevaluada: 3, asistida: 2, 'posible-azar': 1, demostrada: 0 };
+    const partKind: EvidenceKind = part.answer.kind === 'essay' ? 'autoevaluada' : r.revealed || r.attempts > 1 || r.carried || r.hinted ? 'asistida' : g >= 0.2 ? 'posible-azar' : 'demostrada';
+    skillGuess = g;
+    skillKind = partKind;
     for (const n of partNodes) {
       const cur = nodes[n] ?? { y: 0, n: 0, guess: 0, kind: 'demostrada' as EvidenceKind };
       nodes[n] = {

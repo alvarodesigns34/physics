@@ -78,12 +78,13 @@ interface PartState {
   sigFigsAssessed?: boolean;
   carried: boolean;
   sigFigIssue: boolean;
+  hinted?: boolean;
 }
 
 const freshPart = (p: ExercisePart): PartState => ({ value: initialValue(p), attempts: 0, result: null, done: false, revealed: false, credit: 0, errors: [], carried: false, sigFigIssue: false });
 
 function toRecords(ex: Exercise, parts: PartState[]): PartRecord[] {
-  return parts.map((p, i) => ({ id: ex.parts[i]!.id, credit: p.credit, attempts: p.attempts, revealed: p.revealed, errors: p.errors, carried: p.carried, sigFigIssue: p.sigFigIssue, sigFigsAssessed: p.sigFigsAssessed }));
+  return parts.map((p, i) => ({ id: ex.parts[i]!.id, credit: p.credit, attempts: p.attempts, revealed: p.revealed, errors: p.errors, carried: p.carried, sigFigIssue: p.sigFigIssue, sigFigsAssessed: p.sigFigsAssessed, hinted: p.hinted }));
 }
 
 function initialValue(p: ExercisePart): string | string[] {
@@ -205,25 +206,94 @@ export function PartInput({ part, value, onChange, onSubmit, disabled, labelId }
   );
 }
 
-export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = 'Siguiente', showMeta = true, variant = 'autonomo' }: { exercise: Exercise; mode: Mode; onFinish?: (o: ExerciseOutcome) => void; onNext?: () => void; nextLabel?: string; showMeta?: boolean; variant?: Variant }) {
+// ── Ejercicio en curso: persistencia (ATOM 5.0) ─────────────────────────────
+
+const IN_PROGRESS_KEY = 'atom:en-curso';
+interface InProgress {
+  id: string;
+  parts: PartState[];
+  hints: number;
+  finished: boolean;
+  at?: number;
+}
+
+function readAll(): Record<string, InProgress> {
+  try {
+    const raw = localStorage.getItem(IN_PROGRESS_KEY);
+    const v = raw ? (JSON.parse(raw) as unknown) : {};
+    return typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, InProgress>) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Valida lo guardado (puede estar dañado o ser de otra versión): ante la duda, se empieza de cero. */
+export function validInProgress(v: unknown, ex: Exercise): v is InProgress {
+  if (typeof v !== 'object' || v === null) return false;
+  const x = v as Partial<InProgress>;
+  return (
+    x.id === ex.id &&
+    Number.isInteger(x.hints) && x.hints! >= 0 && x.hints! <= 3 &&
+    typeof x.finished === 'boolean' &&
+    Array.isArray(x.parts) && x.parts.length === ex.parts.length &&
+    x.parts.every((p) => typeof p === 'object' && p !== null && (typeof p.value === 'string' || (Array.isArray(p.value) && p.value.every((y) => typeof y === 'string'))) && Number.isInteger(p.attempts) && p.attempts >= 0 && typeof p.done === 'boolean' && typeof p.revealed === 'boolean' && typeof p.credit === 'number' && p.credit >= 0 && p.credit <= 1 && Array.isArray(p.errors))
+  );
+}
+
+function loadInProgress(key: string, ex: Exercise): InProgress | null {
+  const all = readAll();
+  const v = all[key];
+  if (v === undefined) return null;
+  if (validInProgress(v, ex)) return v;
+  delete all[key];
+  try {
+    localStorage.setItem(IN_PROGRESS_KEY, JSON.stringify(all));
+  } catch {
+    /* almacenamiento no disponible */
+  }
+  return null;
+}
+
+function saveInProgress(key: string, v: InProgress) {
+  const all = readAll();
+  all[key] = { ...v, at: Date.now() };
+  // Se conservan como mucho 20 ejercicios en curso (los más recientes).
+  const keys = Object.keys(all).sort((a, b) => (all[b]!.at ?? 0) - (all[a]!.at ?? 0));
+  for (const k of keys.slice(20)) delete all[k];
+  try {
+    localStorage.setItem(IN_PROGRESS_KEY, JSON.stringify(all));
+  } catch {
+    /* cuota llena o modo privado: se sigue sin persistir */
+  }
+}
+
+export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = 'Siguiente', showMeta = true, variant = 'autonomo', persistKey }: { exercise: Exercise; mode: Mode; onFinish?: (o: ExerciseOutcome) => void; onNext?: () => void; nextLabel?: string; showMeta?: boolean; variant?: Variant; /** Si se da, el ejercicio en curso (respuestas, intentos, pistas) se conserva al salir y volver */ persistKey?: string }) {
   const review = variant === 'revision' && mode !== 'examen';
   const startParts = () => exercise.parts.map((p) => (review ? { ...freshPart(p), done: true, revealed: true } : freshPart(p)));
-  const [parts, setParts] = useState<PartState[]>(startParts);
-  const [hints, setHints] = useState(variant === 'guiado' ? 1 : 0);
+  const restored = useMemo(() => (persistKey && !review && mode !== 'examen' ? loadInProgress(persistKey, exercise) : null), [persistKey, exercise, review, mode]);
+  const [parts, setParts] = useState<PartState[]>(() => restored?.parts ?? startParts());
+  const [hints, setHints] = useState(() => restored?.hints ?? (variant === 'guiado' ? 1 : 0));
   const [showSolution, setShowSolution] = useState(review);
   const [submittedExam, setSubmittedExam] = useState(false);
-  const finished = useRef(false);
+  const finished = useRef(restored?.finished ?? false);
   const baseId = useId();
   const exam = mode === 'examen';
 
   useEffect(() => {
-    setParts(startParts());
-    setHints(variant === 'guiado' ? 1 : 0);
+    setParts(restored?.parts ?? startParts());
+    setHints(restored?.hints ?? (variant === 'guiado' ? 1 : 0));
     setShowSolution(review);
     setSubmittedExam(false);
-    finished.current = false;
+    finished.current = restored?.finished ?? false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercise, variant]);
+
+  // Guarda el progreso del ejercicio en curso (incluido si ya se terminó, para no registrarlo dos veces).
+  useEffect(() => {
+    if (!persistKey || review || exam) return;
+    const touched = hints > (variant === 'guiado' ? 1 : 0) || parts.some((p) => p.attempts > 0 || p.revealed || (typeof p.value === 'string' ? p.value !== '' : false));
+    if (touched) saveInProgress(persistKey, { id: exercise.id, parts, hints, finished: finished.current || parts.every((p) => p.done) });
+  }, [persistKey, parts, hints, exercise.id, review, exam, variant]);
 
   const previousWrong = useMemo(() => {
     const out: Record<string, number> = {};
@@ -266,7 +336,7 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
     }
     if (result.correct) {
       sfx.success();
-      update(i, { result, attempts, done: true, credit: attempts === 1 ? 1 : 0.5, carried: result.status === 'correcto-arrastre', sigFigIssue: result.errorKind === 'cifras', sigFigsAssessed: result.sigFigsAssessed });
+      update(i, { result, attempts, done: true, credit: attempts === 1 ? 1 : 0.5, carried: result.status === 'correcto-arrastre', sigFigIssue: result.errorKind === 'cifras', sigFigsAssessed: result.sigFigsAssessed, hinted: hints > 0 });
     } else {
       sfx.error();
       update(i, { result, attempts, errors: result.errorKind ? [...st.errors, { kind: result.errorKind, skill: result.errorSkill, valueCorrect: result.valueCorrect }, ...(result.secondary ?? [])] : st.errors });

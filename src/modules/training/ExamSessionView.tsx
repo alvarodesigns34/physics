@@ -63,8 +63,12 @@ export function ExamRunner({ session, onChange, onFinish }: { session: ExamSessi
   }
   const i = Math.min(session.current, exercises.length - 1);
   const ex = exercises[i]!;
-  const states = exercises.map((e, k) => questionState(e, session.answers[k]));
-  const setAnswer = (partId: string, v: PartValue) => onChange({ ...session, answers: { ...session.answers, [i]: { ...(session.answers[i] ?? {}), [partId]: v } } });
+  const states = exercises.map((e, k) => questionState(e, session.answers[k], session.confirmed?.[k] ?? []));
+  const confirmedHere = session.confirmed?.[i] ?? [];
+  const withConfirm = (partId: string, on: boolean) => ({ ...(session.confirmed ?? {}), [i]: on ? [...new Set([...confirmedHere, partId])] : confirmedHere.filter((x) => x !== partId) });
+  const setAnswer = (partId: string, v: PartValue, isOrder = false) =>
+    onChange({ ...session, answers: { ...session.answers, [i]: { ...(session.answers[i] ?? {}), [partId]: v } }, ...(isOrder ? { confirmed: withConfirm(partId, true) } : {}) });
+  const toggleConfirm = (partId: string) => onChange({ ...session, confirmed: withConfirm(partId, !confirmedHere.includes(partId)) });
   const go = (k: number) => onChange({ ...session, current: Math.max(0, Math.min(exercises.length - 1, k)) });
   const flagged = session.flagged.includes(i);
   const pending = states.filter((s) => s !== 'respondida').length;
@@ -141,7 +145,12 @@ export function ExamRunner({ session, onChange, onFinish }: { session: ExamSessi
                   {ex.parts.length > 1 && <span className="mono faint" style={{ marginRight: 8 }}>{String.fromCharCode(97 + k)})</span>}
                   {p.prompt}
                 </span>
-                <PartInput part={p} value={v} onChange={(nv) => setAnswer(p.id, nv)} onSubmit={() => {}} disabled={false} labelId={labelId} />
+                <PartInput part={p} value={v} onChange={(nv) => setAnswer(p.id, nv, p.answer.kind === 'order')} onSubmit={() => {}} disabled={false} labelId={labelId} />
+                {p.answer.kind === 'order' && (
+                  <button type="button" className="btn btn--sm confirm-order" aria-pressed={confirmedHere.includes(p.id)} onClick={() => toggleConfirm(p.id)}>
+                    {confirmedHere.includes(p.id) ? '✓ Orden confirmado' : 'Confirmo este orden'}
+                  </button>
+                )}
               </li>
             );
           })}

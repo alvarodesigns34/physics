@@ -41,24 +41,52 @@ export function updateMastery(m: NodeMastery, difficulty: Difficulty, correct: b
 }
 
 /**
- * Actualización con resultado continuo y ∈ [0, 1] (crédito parcial de un problema compuesto):
- * Δθ = K·(y − p), con la ganancia reducida por las pistas cuando y > p. Acumula la información de Fisher
- * p(1 − p) para poder expresar la incertidumbre de la estimación.
+ * Modelo 3PL con discriminación 1: P(θ) = c + (1 − c)·s, con s = σ(θ − b).
+ *
+ * Derivación (y ∈ [0, 1] como resultado fraccionario de Bernoulli):
+ *   ℓ(θ) = y·ln P + (1 − y)·ln(1 − P)
+ *   dP/dθ = (1 − c)·s·(1 − s)        y        1 − P = (1 − c)·(1 − s)
+ *   dℓ/dθ = (y − P)·(dP/dθ) / [P·(1 − P)] = (y − P)·s / P
+ *   I(θ) = (dP/dθ)² / [P·(1 − P)] = (1 − c)·s²·(1 − s) / P
+ * Con c = 0 se recupera el modelo de Rasch: dℓ/dθ = y − s, I = s·(1 − s).
+ * (Corrección de la auditoría de ATOM 4.0: el gradiente llevaba un factor (1 − c) de más y solo se
+ * aplicaba a los aciertos; la información llevaba (1 − c)³.) Verificado numéricamente en model5.test.ts.
+ */
+export function p3pl(theta: number, b: number, c: number): number {
+  return c + (1 - c) / (1 + Math.exp(-(theta - b)));
+}
+export function loglik3pl(theta: number, b: number, c: number, y: number): number {
+  const P = p3pl(theta, b, c);
+  return y * Math.log(P) + (1 - y) * Math.log(1 - P);
+}
+export function grad3pl(theta: number, b: number, c: number, y: number): number {
+  const s = 1 / (1 + Math.exp(-(theta - b)));
+  const P = c + (1 - c) * s;
+  return ((y - P) * s) / P;
+}
+export function fisher3pl(theta: number, b: number, c: number): number {
+  const s = 1 / (1 + Math.exp(-(theta - b)));
+  const P = c + (1 - c) * s;
+  return ((1 - c) * s * s * (1 - s)) / P;
+}
+
+/**
+ * Actualización con resultado continuo y ∈ [0, 1] (crédito parcial de un problema compuesto): un paso de
+ * ascenso del gradiente de la log-verosimilitud, Δθ = K·w·(y − P)·s/P, con la ganancia reducida por las
+ * pistas cuando el resultado es mejor de lo esperado. Acumula la información de Fisher para expresar la
+ * incertidumbre de la estimación.
  */
 export function updateMasteryY(m: NodeMastery, difficulty: Difficulty, y: number, hintsUsed: number, now: number, weight = 1, guess = 0): NodeMastery {
   const yy = Math.min(1, Math.max(0, Number.isFinite(y) ? y : 0));
-  const w = Math.min(1, Math.max(0, weight));
+  const w = Math.min(1, Math.max(0, Number.isFinite(weight) ? weight : 0));
   const c = Math.min(0.9, Math.max(0, Number.isFinite(guess) ? guess : 0));
-  // Modelo con probabilidad de adivinar (3PL con discriminación 1): P = c + (1 − c)·σ(θ − b).
-  const s = pCorrect(m.theta, difficulty);
-  const p = c + (1 - c) * s;
+  const b = ITEM_DIFFICULTY[difficulty];
+  const P = p3pl(m.theta, b, c);
   const K = Math.max(0.35, 1.2 / Math.sqrt(1 + m.attempts / 3));
   const hintFactor = [1, 0.7, 0.45, 0.25][Math.min(3, Math.max(0, hintsUsed))]!;
-  // Gradiente de la log-verosimilitud del 3PL: un acierto en un ítem adivinable informa menos sobre θ.
-  const slope = p > 0 && p < 1 ? (s * (1 - c)) / p : 1;
-  const raw = yy > p ? K * w * hintFactor * (yy - p) : K * w * (yy - p);
-  const delta = yy > p ? raw * slope : raw;
-  const info = (m.info ?? estimatedInfo(m)) + w * ((1 - c) * s) ** 2 * ((1 - p) / Math.max(1e-9, p));
+  const g = grad3pl(m.theta, b, c, yy);
+  const delta = K * w * (yy > P ? hintFactor : 1) * g;
+  const info = (m.info ?? estimatedInfo(m)) + w * fisher3pl(m.theta, b, c);
   return {
     theta: Math.max(-3, Math.min(3, m.theta + delta)),
     attempts: m.attempts + 1,

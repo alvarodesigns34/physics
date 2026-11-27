@@ -146,6 +146,8 @@ try {
   await page.click('.path-steps button:has-text("Practicar guiado")');
   await page.waitForSelector('article', { timeout: T });
   check((await page.locator('.path-steps button').count()) === 6 && (await page.locator('article').count()) === 1, 'Ruta de estudio 3.6: seis pasos y ejercicio guiado');
+  // ATOM 5.0: el ejercicio en curso de la ruta (respuesta a medio escribir incluida) se conserva al salir.
+  await page.locator('article input.input:not([disabled])').first().fill('12345');
   await page.click('.path-steps button:has-text("Observar")');
   await page.click('a:has-text("Abrir Photon Lab")');
   await page.waitForSelector('.path-return', { timeout: T });
@@ -153,6 +155,9 @@ try {
   await page.click('.path-return__link');
   await page.waitForSelector('.path-steps', { timeout: T });
   check((await page.locator('.path-steps button[aria-current=step]').innerText()).includes('Observar') && (await page.locator('.path-steps button.done').count()) >= 1, 'Ruta de estudio: al volver, el paso y lo hecho se conservan');
+  await page.click('.path-steps button:has-text("Practicar guiado")');
+  await page.waitForSelector('article input.input', { timeout: T });
+  check((await page.locator('article input.input').first().inputValue()) === '12345', 'Ruta de estudio: la respuesta a medio escribir sigue ahí al volver del laboratorio');
   await page.goto(base + '#/entrenamiento?v=examen');
   await page.waitForSelector('button:has-text("Empezar el simulacro equilibrado")', { timeout: T });
   await page.click('button:has-text("Empezar el simulacro equilibrado")');

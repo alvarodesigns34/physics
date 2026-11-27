@@ -522,3 +522,5 @@
 }
 .prediction__q { margin: 0; font-weight: 500; line-height: 1.45; }
 .prediction .btn { justify-self: start; }
+.confirm-order { justify-self: start; align-self: flex-start; }
+.confirm-order[aria-pressed='true'] { border-color: var(--ok); color: var(--ok); background: var(--ok-quiet); }

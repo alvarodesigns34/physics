@@ -26,7 +26,7 @@ export interface NotebookEntry {
   at: number;
   mode: 'practica' | 'examen' | 'campana';
   /** Pasos fallados con su diagnóstico */
-  misses: { prompt: string; kind: ErrorKind | 'revelado'; skill?: SkillId }[];
+  misses: { prompt: string; kind: ErrorKind | 'revelado'; skill?: SkillId; /** Id del paso (ATOM 5.0) */ partId?: string }[];
   /** Intentos de recuperación (variantes) */
   retries: number;
   resolvedAt?: number;
@@ -49,15 +49,40 @@ export function addMiss(list: NotebookEntry[], e: Omit<NotebookEntry, 'retries'>
   return [...rest, merged].slice(-NOTEBOOK_MAX);
 }
 
+/** Dificultad codificada en el id «generador:d:semilla» (null en los ejercicios de los documentos). */
+function difficultyOf(id: string): number | null {
+  const m = id.match(/:([123]):\d+$/);
+  return m ? Number(m[1]) : null;
+}
+
+export interface CleanExercise {
+  id: string;
+  generatorId: string;
+  difficulty?: number;
+  /** Pasos RESUELTOS limpiamente en este intento (id y enunciado) */
+  steps: { id?: string; prompt: string }[];
+}
+
+/** ¿Contiene el ejercicio limpio cada uno de los pasos que se fallaron en la entrada? */
+function coversMisses(e: NotebookEntry, ex: CleanExercise): boolean {
+  return e.misses.every((m) => ex.steps.some((st) => (m.partId && st.id ? st.id === m.partId : st.prompt === m.prompt)));
+}
+
 /**
  * Registra un ejercicio superado al primer intento y sin ayuda: resuelve las entradas abiertas que
- * cumplan la regla de superación. Devuelve la lista nueva y cuántas se resolvieron.
+ * cumplan la regla de superación (ATOM 5.0, endurecida tras la auditoría de 4.0):
+ * - variante nueva del mismo generador, de dificultad igual o mayor, que contenga CADA paso fallado en la
+ *   entrada resuelto limpiamente (acertar otro paso distinto del mismo generador no supera el error, y un
+ *   examen respondido a medias no puede cerrar los pasos que no se respondieron);
+ * - para los ejercicios de los documentos, el mismo enunciado completo pasados ≥ 2 días.
  */
-export function registerClean(list: NotebookEntry[], ex: { id: string; generatorId: string }, now: number): { list: NotebookEntry[]; resolved: number } {
+export function registerClean(list: NotebookEntry[], ex: CleanExercise, now: number): { list: NotebookEntry[]; resolved: number } {
   let resolved = 0;
   const out = list.map((x) => {
-    if (x.resolvedAt) return x;
-    if (x.exerciseId !== ex.id && isVariantOf(x, ex.generatorId)) {
+    if (x.resolvedAt || !coversMisses(x, ex)) return x;
+    const dEntry = difficultyOf(x.exerciseId);
+    const hardEnough = dEntry === null || (ex.difficulty ?? difficultyOf(ex.id) ?? 0) >= dEntry;
+    if (x.exerciseId !== ex.id && isVariantOf(x, ex.generatorId) && hardEnough) {
       resolved++;
       return { ...x, resolvedAt: now, resolvedBy: 'variante' as const };
     }

@@ -14,15 +14,15 @@ describe('cuaderno de errores', () => {
   });
   it('se supera con una VARIANTE nueva, no repitiendo el mismo enunciado', () => {
     const l = addMiss([], miss('rydberg:2:1', 'rydberg', ['3.6'], 'calculo'));
-    expect(registerClean(l, { id: 'rydberg:2:1', generatorId: 'rydberg' }, 10).resolved).toBe(0);
-    const r = registerClean(l, { id: 'rydberg:2:99', generatorId: 'rydberg' }, 10);
+    expect(registerClean(l, { id: 'rydberg:2:1', generatorId: 'rydberg', steps: [{ prompt: 'p' }] }, 10).resolved).toBe(0);
+    const r = registerClean(l, { id: 'rydberg:2:99', generatorId: 'rydberg', steps: [{ prompt: 'p' }] }, 10);
     expect(r.resolved).toBe(1);
     expect(r.list[0]!.resolvedBy).toBe('variante');
   });
   it('los ejercicios de los documentos (sin variantes) se superan repitiéndolos días después', () => {
     const l = addMiss([], miss('src:HOJ 12', 'fuentes', ['7.2'], 'concepto', 0));
-    expect(registerClean(l, { id: 'src:HOJ 12', generatorId: 'fuentes' }, DAY).resolved).toBe(0);
-    expect(registerClean(l, { id: 'src:HOJ 12', generatorId: 'fuentes' }, 3 * DAY).list[0]!.resolvedBy).toBe('mismo-dias-despues');
+    expect(registerClean(l, { id: 'src:HOJ 12', generatorId: 'fuentes', steps: [{ prompt: 'p' }] }, DAY).resolved).toBe(0);
+    expect(registerClean(l, { id: 'src:HOJ 12', generatorId: 'fuentes', steps: [{ prompt: 'p' }] }, 3 * DAY).list[0]!.resolvedBy).toBe('mismo-dias-despues');
   });
   it('dificultades recurrentes: el mismo error en varios ejercicios abiertos', () => {
     let l: NotebookEntry[] = [];
@@ -43,5 +43,20 @@ describe('cuaderno de errores', () => {
     const g = conceptualGaps(l, {});
     expect(g.find((x) => x.node === '6.4')?.reason).toBe('conceptual');
     expect(g.find((x) => x.node === '3.7')).toMatchObject({ reason: 'prerrequisito', study: '3.6' });
+  });
+  it('ATOM 5.0: acertar OTRO paso del mismo generador no supera el error', () => {
+    const l = addMiss([], { ...miss('rydberg:2:1', 'rydberg', ['3.6'], 'calculo'), misses: [{ prompt: 'Frecuencia', partId: 'f', kind: 'calculo' }] });
+    expect(registerClean(l, { id: 'rydberg:2:5', generatorId: 'rydberg', difficulty: 2, steps: [{ id: 'l', prompt: 'Longitud de onda' }] }, 10).resolved).toBe(0);
+    expect(registerClean(l, { id: 'rydberg:2:5', generatorId: 'rydberg', difficulty: 2, steps: [{ id: 'l', prompt: 'Longitud de onda' }, { id: 'f', prompt: 'Frecuencia' }] }, 10).resolved).toBe(1);
+  });
+  it('ATOM 5.0: una variante MÁS FÁCIL no supera un error de nivel superior', () => {
+    const l = addMiss([], { ...miss('rydberg:3:1', 'rydberg', ['3.6'], 'calculo'), misses: [{ prompt: 'p', partId: 'a', kind: 'calculo' }] });
+    expect(registerClean(l, { id: 'rydberg:1:7', generatorId: 'rydberg', difficulty: 1, steps: [{ id: 'a', prompt: 'p' }] }, 10).resolved).toBe(0);
+    expect(registerClean(l, { id: 'rydberg:3:7', generatorId: 'rydberg', difficulty: 3, steps: [{ id: 'a', prompt: 'p' }] }, 10).resolved).toBe(1);
+  });
+  it('ATOM 5.0: un examen respondido a medias no cierra el paso que quedó sin responder', () => {
+    const l = addMiss([], { ...miss('onda-lambda:2:1', 'onda-lambda', ['3.2'], 'calculo'), misses: [{ prompt: 'E', partId: 'E', kind: 'calculo' }] });
+    // Solo se respondieron (bien) los pasos 'l' y 'nu'
+    expect(registerClean(l, { id: 'onda-lambda:2:9', generatorId: 'onda-lambda', difficulty: 2, steps: [{ id: 'l', prompt: 'λ' }, { id: 'nu', prompt: 'ν' }] }, 10).resolved).toBe(0);
   });
 });

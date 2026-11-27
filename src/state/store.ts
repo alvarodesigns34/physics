@@ -50,6 +50,19 @@ export interface Attempt {
   nodeEvidence?: Record<string, { y: number; kind: EvidenceKind }>;
 }
 
+/**
+ * Peso de un intento según si el MISMO enunciado ya se había resuelto: 1 la primera vez; 0,35 si se repite
+ * (0,15 a partir de la tercera); 0,6 si la vez anterior fue hace ≥ 2 días (recuperación espaciada, que sí
+ * es aprendizaje, aunque no demuestra transferencia a datos nuevos).
+ */
+export function repetitionFactor(history: { exerciseId: string; at: number }[], id: string, now: number): number {
+  const prev = history.filter((h) => h.exerciseId === id);
+  if (!prev.length) return 1;
+  const last = Math.max(...prev.map((h) => h.at));
+  if (now - last >= 2 * 86_400_000) return 0.6;
+  return prev.length === 1 ? 0.35 : 0.15;
+}
+
 const KIND_RANK: Record<EvidenceKind, number> = { demostrada: 0, 'posible-azar': 1, asistida: 2, autoevaluada: 3 };
 function weakestKind(ks: EvidenceKind[]): EvidenceKind {
   return ks.reduce<EvidenceKind>((a, k) => (KIND_RANK[k] > KIND_RANK[a] ? k : a), 'demostrada');
@@ -195,17 +208,24 @@ export const useStore = create<AppState>()(
           }
           const now = Date.now();
           const ev = buildEvidence(ex, o.parts);
+          // Repetir el MISMO enunciado (mismo id) puede ser memoria, no comprensión (auditoría de ATOM 4.0:
+          // inflación por repetición). Pesa mucho menos y nunca cuenta como evidencia «demostrada».
+          const rep = repetitionFactor(s.history, ex.id, now);
+          if (rep < 1) {
+            for (const v of Object.values(ev.nodes)) if (v.kind === 'demostrada' || v.kind === 'posible-azar') v.kind = 'asistida';
+            for (const v of Object.values(ev.skills)) if (v && (v.kind === 'demostrada' || v.kind === 'posible-azar')) v.kind = 'asistida';
+          }
           const mastery = { ...s.mastery };
           const cards = { ...s.cards };
           for (const [node, { y, guess, kind }] of Object.entries(ev.nodes)) {
-            mastery[node] = updateMasteryY(mastery[node] ?? initialMastery(), ex.difficulty, y, o.hintsUsed, now, EVIDENCE_WEIGHT[kind], guess);
+            mastery[node] = updateMasteryY(mastery[node] ?? initialMastery(), ex.difficulty, y, o.hintsUsed, now, EVIDENCE_WEIGHT[kind] * rep, guess);
             const ok = y >= 0.75;
             if (mode !== 'examen' || !ok) cards[node] = updateCard(cards[node], node, ok, now, kind);
           }
           const skills = { ...s.skills };
           const skillY: Partial<Record<SkillId, number>> = {};
-          for (const [k, v] of Object.entries(ev.skills) as [SkillId, { y: number; n: number }][]) {
-            skills[k] = updateMasteryY(skills[k] ?? initialMastery(), 2, v.y, o.hintsUsed, now, Math.min(1, 0.5 + v.n * 0.25));
+          for (const [k, v] of Object.entries(ev.skills) as [SkillId, { y: number; n: number; guess: number; kind: EvidenceKind }][]) {
+            skills[k] = updateMasteryY(skills[k] ?? initialMastery(), 2, v.y, o.hintsUsed, now, Math.min(1, 0.5 + v.n * 0.25) * EVIDENCE_WEIGHT[v.kind] * rep, v.guess);
             skillY[k] = Math.round(v.y * 100) / 100;
           }
           const attempt: Attempt = {
@@ -232,10 +252,11 @@ export const useStore = create<AppState>()(
               // El diagnóstico real (p. ej. «unidades») es más útil que «revelado»: solo si no hubo error
               // diagnosticado se anota que el paso se tuvo que ver resuelto.
               const diag = r.errors.find((e) => e.kind !== 'formato' && e.kind !== 'incompleto');
-              return { prompt: part.prompt, kind: diag?.kind ?? (r.revealed ? ('revelado' as const) : 'incompleto'), skill: diag?.skill ?? r.errors[0]?.skill };
+              return { prompt: part.prompt, partId: part.id, kind: diag?.kind ?? (r.revealed ? ('revelado' as const) : 'incompleto'), skill: diag?.skill ?? r.errors[0]?.skill };
             });
           if (misses.length) notebook = addMiss(notebook, { exerciseId: ex.id, generatorId: ex.generatorId, title: ex.title, nodeIds: Object.keys(ev.nodes), at: now, mode, misses });
-          else if (o.hintsUsed === 0 && o.parts.every((r) => r.attempts <= 1 && !r.revealed)) notebook = registerClean(notebook, ex, now).list;
+          else if (o.hintsUsed === 0 && rep === 1 && o.parts.every((r) => r.attempts <= 1 && !r.revealed && !r.hinted && r.credit >= 1))
+            notebook = registerClean(notebook, { id: ex.id, generatorId: ex.generatorId, difficulty: ex.difficulty, steps: o.parts.map((r, k) => ({ id: r.id, prompt: ex.parts.find((p) => p.id === r.id)?.prompt ?? ex.parts[k]!.prompt })) }, now).list;
           return { mastery, skills, cards, notebook, history: [...s.history, attempt].slice(-400) };
         }),
       recordExam: (r) => set((s) => ({ exams: [...s.exams, { ...r, at: Date.now() }].slice(-30) })),
