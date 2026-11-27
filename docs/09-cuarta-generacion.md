@@ -124,3 +124,22 @@ Revisé los siete laboratorios con capturas, en calidad alta y baja. Defectos en
   - La caja redondeada no tiene aristas vivas, así que `EdgesGeometry` no devolvía contorno; ahora se toma de una caja recta de las mismas medidas.
   - Materiales más claros, menos brillo especular y una luz de relleno lateral (una luz frontal producía un reflejo deslumbrante).
 - **Calidad baja: escenas planas.** Sin mapa de entorno, las escenas sin luces propias, como el orbital cuántico, se veían como recortes planos. `Stage` añade en ese nivel un juego de luces sin sombras (hemisférica y dos direccionales).
+
+## 9. Mediciones (SwiftShader; solo comparativas)
+Medido con la misma herramienta (`tools/perf.mjs`) y el mismo renderizador por software que en ATOM 3.0. Datos: `docs/mediciones/perf-atom3-ciclo6.json` → `perf-atom4.json`.
+
+| Vista | fps 3.0 → 4.0 | p95 fotograma (ms) | memoria JS (MB) |
+|---|---|---|---|
+| Forja | 6,8 → 10,4 | 183 → 133 | 20 → 25 |
+| Photon (ondas) | 7,4 → 9,0 | 150 → 133 | 18 → 18 |
+| Masas | 6,0 → 7,9 | 217 → 150 | 30 → 30 |
+| Quantum | 4,7 → 6,5 | 250 → 200 | 16 → 25 |
+| Periódico | 3,4 → 5,4 | 367 → 233 | 21 → 21 |
+| Arquitecto | 6,9 → 9,7 | 183 → 133 | 24 → 24 |
+| Historia | 5,8 → 8,1 | 217 → 150 | 24 → 31 |
+| Inicio / Guía / Entrenamiento | 60 → 60 | 16,7 → 16,7 | 9 / 23 / 18 → 9 / 23 / 16 |
+
+- **Fotogramas.** Mejoran en todos los laboratorios. Lo atribuyo sobre todo al renderizado bajo demanda: en reposo no se dibuja, y la CPU queda libre para el renderizado por software.
+- **Memoria.** Sube en Forja, Quantum e Historia. Es una lectura puntual del heap, que depende del momento de la recolección de basura, así que no concluyo que haya una fuga. Los recursos de GPU sí se midieron de forma determinista (§1.5) y permanecen estables tras interacciones repetidas.
+- **Interacción en Quantum.** Tarea larga máxima en torno a 1 s, como en 3.0: es la rasterización síncrona de SwiftShader, no código propio.
+- **Sin medir en GPU real ni en iPad.** El entorno no dispone de ellos.
