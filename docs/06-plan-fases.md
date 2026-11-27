@@ -50,3 +50,6 @@ Cada fase deja el producto **ejecutable, integrado, probado y visualmente cohere
 
 ## Fase 5 · Pulido y producción
 - Auditoría de accesibilidad con lectores de pantalla, presupuesto de rendimiento en dispositivos de gama baja, PWA sin conexión, informe de progreso exportable en PDF y modo docente (asignar misiones y exámenes).
+
+## Actualización ATOM 3.0
+El plan por ciclos de la tercera generación y su estado están en [ATOM3-PROGRESS.md](ATOM3-PROGRESS.md); los criterios de aceptación, en [ATOM3-QUALITY-GATES.md](ATOM3-QUALITY-GATES.md).

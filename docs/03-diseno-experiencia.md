@@ -79,3 +79,7 @@ Cada ejercicio es **verificable** y está **parametrizado**: un generador crea v
 ## 3.7 Progresión y recompensa
 
 Sin puntos arbitrarios ni instrumentos bloqueados: la recompensa es **iluminar la matriz del temario** (cada nodo dominado se enciende en el mapa de progreso) y obtener hasta 3 **marcas de precisión** por misión: sin pistas, al primer intento y todos los pasos correctos. La campaña sugiere un orden, pero la experimentación libre nunca se restringe: todos los instrumentos de los laboratorios están disponibles desde el principio.
+
+## Actualización ATOM 3.0
+- El inicio es una página para estudiar; el atrio 3D pasa a `#/campana`.
+- Ruta de estudio integrada por concepto, modos de resolución (guiado, autónomo, desafío, revisión), simulacros por perfil y 41 misiones (revisión en [ATOM3-MISIONES.md](ATOM3-MISIONES.md)).

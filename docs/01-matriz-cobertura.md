@@ -153,3 +153,8 @@ Ninguna corrección altera los objetivos académicos. ATOM explica el contenido 
 ## 1.4 Constantes: valores de los ejercicios frente a valores de referencia
 
 Los ejercicios fijan sus propios datos: h = 6,626·10⁻³⁴ J·s; c = 3·10⁸ m/s; R = 1,097·10⁷ m⁻¹ o 109 740 cm⁻¹; 1 eV = 1,602·10⁻¹⁹ J. El motor de ejercicios **calcula con los datos del enunciado** para que la solución esperada coincida con la del alumno. Las simulaciones usan CODATA 2018 y lo indican. Por ejemplo, en el hidrógeno R_H = R∞/(1 + m_e/m_p) = 1,096 776·10⁷ m⁻¹. Así se evita penalizar al alumno por discrepancias en la cuarta cifra.
+
+## Actualización ATOM 3.0
+- Los 54 apartados siguen con ejercicios; las cifras vivas están en [ESTADISTICAS.md](ESTADISTICAS.md) (generadas con `npm run stats`).
+- Nuevas familias que cruzan apartados: detectar el error en Rydberg (3.6, 3.9), pistas para identificar elementos (7.2, 6.3, 6.4), EI sucesivas (7.9, 6.9, 7.2), línea sin serie (3.7, 3.6, 3.3), gráfica de EI₁ (7.9, 7.13, 6.4), proporciones de Bohr (4.2, 4.3), luz ionizante (7.9, 3.4, 3.9, 3.3), ion misterioso (1.4, 1.2, 6.8, 6.4, 6.3), predicciones de modelos (2.3–2.6, 3.5, 4.1, 4.3, 4.4), espectro problema (3.5, 4.3), conversiones (3.9) y nueve preguntas de desarrollo.
+- Cada paso de un ejercicio declara sus apartados (`attribution.ts`); véase 08-tercera-generacion.md §2 (P1.6).
