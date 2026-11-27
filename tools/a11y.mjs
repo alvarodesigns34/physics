@@ -44,6 +44,19 @@ try {
       await page.click('button:has-text("Empezar el simulacro equilibrado")');
       await page.waitForSelector('.exam-q', { timeout: 30000 });
     }
+    // Esperar a que terminen las animaciones FINITAS (entradas con opacidad): auditar a mitad de una
+    // aparición mide texto semitransparente y da falsos fallos de contraste según la velocidad de la máquina.
+    await page.evaluate(() =>
+      Promise.race([
+        Promise.all(
+          document
+            .getAnimations()
+            .filter((a) => Number.isFinite(a.effect?.getComputedTiming().endTime ?? Infinity))
+            .map((a) => a.finished.catch(() => {})),
+        ),
+        new Promise((r) => setTimeout(r, 4000)),
+      ]),
+    );
     await page.addScriptTag({ content: axeSource });
     const res = await page.evaluate(async () => {
       // El lienzo WebGL es decorativo (aria-hidden) y las etiquetas de escena se describen en el panel.

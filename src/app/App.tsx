@@ -433,7 +433,7 @@ export function App() {
       <a href="#contenido" className="sr-only">
         Saltar al contenido
       </a>
-      <div className="stage" key={effectiveRoute}>
+      <section className="stage" key={effectiveRoute} aria-label="Escena 3D del laboratorio">
         {webgl ? (
           <ErrorBoundary label="la escena 3D">
             <Suspense fallback={<div className="loading">Preparando el laboratorio…</div>}>
@@ -448,7 +448,7 @@ export function App() {
           )
         )}
         {(effectiveRoute === '/entrenamiento' || effectiveRoute === '/guia' || effectiveRoute === '/') && <div aria-hidden="true" className="page-bg" />}
-      </div>
+      </section>
       <div className="overlay">
         <TopBar route={effectiveRoute} onSettings={() => setSettingsOpen(true)} onSearch={openSearch} />
         <main id="contenido" style={{ minHeight: 0, display: 'grid' }}>
