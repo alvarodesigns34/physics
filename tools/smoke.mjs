@@ -102,6 +102,11 @@ try {
   check((await page.locator('.feedback--ok').count()) >= 2, 'Entrenamiento: AMP 6 corregido paso a paso');
   await page.screenshot({ path: `${OUT}/04-entrenamiento.png` });
 
+  await page.goto(base + '#/entrenamiento?v=ruta&n=3.6');
+  await page.waitForSelector('.path-steps', { timeout: T });
+  await page.click('.path-steps button:has-text("Practicar guiado")');
+  await page.waitForSelector('article', { timeout: T });
+  check((await page.locator('.path-steps button').count()) === 6 && (await page.locator('article').count()) === 1, 'Ruta de estudio 3.6: seis pasos y ejercicio guiado');
   await page.goto(base + '#/entrenamiento?v=examen');
   await page.waitForSelector('button:has-text("Empezar el simulacro equilibrado")', { timeout: T });
   await page.click('button:has-text("Empezar el simulacro equilibrado")');

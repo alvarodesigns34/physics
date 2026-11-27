@@ -88,7 +88,7 @@ function Worked({ w }: { w: WorkedExample }) {
   );
 }
 
-function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) {
+export function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) {
   const node = NODES.find((n) => n.id === s.node);
   const mastery = useStore((st) => st.mastery[s.node]);
   return (
@@ -174,6 +174,11 @@ function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) {
         {covered.has(s.node) && (
           <a className="btn btn--sm" href={`#${practiceUrl([s.node])}`}>
             <Icon name="target" size={14} /> Practicar este apartado
+          </a>
+        )}
+        {covered.has(s.node) && !s.id && (
+          <a className="btn btn--sm btn--primary" href={`#/entrenamiento?v=ruta&n=${s.node}`}>
+            Ruta de estudio completa
           </a>
         )}
         {node && node.modules.length > 0 && node.modules[0] !== 'entrenamiento' && (

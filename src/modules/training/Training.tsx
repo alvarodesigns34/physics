@@ -10,13 +10,15 @@ import { weakSkills, explainWeakSkill } from '../../learning/diagnosis';
 import type { ErrorKind, SkillId } from '../../learning/types';
 import type { Exercise } from '../../learning/types';
 import { ExercisePlayer, type ExerciseOutcome, type Variant } from '../../ui/ExercisePlayer';
+import { StudyPath } from './StudyPath';
 import { Feedback } from '../../ui/common';
 import { Icon } from '../../ui/Icon';
 import { navigate, useRoute } from '../../app/hooks';
 
-type View = 'practica' | 'repaso' | 'examen' | 'progreso' | 'fuentes';
+type View = 'practica' | 'ruta' | 'repaso' | 'examen' | 'progreso' | 'fuentes';
 const VIEWS: { id: View; label: string }[] = [
   { id: 'practica', label: 'Práctica' },
+  { id: 'ruta', label: 'Ruta de estudio' },
   { id: 'repaso', label: 'Repaso' },
   { id: 'examen', label: 'Examen' },
   { id: 'progreso', label: 'Progreso' },
@@ -73,6 +75,32 @@ function exerciseForGenerator(id: string | null): Exercise | null {
   if (!g) return null;
   const d = g.difficulties.includes(2) ? 2 : g.difficulties[g.difficulties.length - 1]!;
   return g.create(Math.floor(Math.random() * 1e6), d);
+}
+
+/** Elegir el apartado para la ruta de estudio. */
+function RoutePicker() {
+  const mastery = useStore((st) => st.mastery);
+  return (
+    <div className="route-picker">
+      {BLOCKS.map((b) => (
+        <section key={b.id} className="stack-8">
+          <span className="eyebrow" style={{ color: `var(--b${b.id})` }}>
+            {b.id}. {b.title}
+          </span>
+          <div className="row row--wrap" style={{ gap: 6 }}>
+            {NODES.filter((n) => n.block === b.id && COVERED_NODES.includes(n.id)).map((n) => {
+              const e = masteryEstimate(mastery[n.id]);
+              return (
+                <a key={n.id} className="challenge-chip" href={`#/entrenamiento?v=ruta&n=${n.id}`} title={e.evidence === 'sin-datos' ? 'Sin practicar' : `Dominio estimado ${e.low}–${e.high} %`}>
+                  <span className="mono faint">{n.id}</span> {n.title}
+                </a>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
 }
 
 const VARIANTS: { id: Variant; label: string; help: string }[] = [
@@ -766,6 +794,7 @@ function ProgressView() {
 
 const MODE_HELP: Record<View, string> = {
   practica: 'Ejercicios nuevos elegidos por tu nivel: cada uno te dice por qué te toca. Si fallas, tienes pistas graduadas y un enlace a la teoría.',
+  ruta: 'Un concepto de principio a fin: comprender, observarlo en el laboratorio, practicar guiado, aplicar solo, nivel examen y consolidar según tus errores.',
   repaso: 'Lo que ya practicaste vuelve justo antes de que lo olvides (repetición espaciada). Cinco minutos al día bastan.',
   examen: 'Sin pistas ni correcciones hasta el final. Al terminar, verás la nota y exactamente qué estudiar para mejorarla.',
   progreso: 'Tu dominio por apartado y por competencia, con su margen de incertidumbre.',
@@ -918,6 +947,7 @@ export function TrainingOverlay() {
           )}
           {view === 'examen' && <ExamView />}
           {view === 'progreso' && <ProgressView />}
+          {view === 'ruta' && (query.get('n') && COVERED_NODES.includes(query.get('n')!) ? <StudyPath key={query.get('n')} node={query.get('n')!} /> : <RoutePicker />)}
           {view === 'fuentes' && (
             <Sources
               onPick={(e) => {

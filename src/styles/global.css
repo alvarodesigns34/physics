@@ -1156,9 +1156,9 @@ details.chapter + details.chapter {
 }
 
 .formula__expr {
-  font-family: var(--font-display);
-  font-weight: 650;
-  letter-spacing: var(--tracking-display);
+  /* Tipografía matemática del sistema (STIX/Cambria) en peso normal: las fórmulas no son titulares. */
+  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif;
+  font-weight: 400;
   font-size: 1.6rem;
   line-height: 1.15;
   color: var(--ink);
@@ -3988,4 +3988,70 @@ kbd {
   border-radius: var(--r-inner);
   background: var(--surface-tint);
   border: 1px solid var(--accent-line);
+}
+
+/* Ruta de estudio integrada */
+.path-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.path-steps button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--r-inner);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface-raised);
+  font-size: var(--fs-sm);
+  font-weight: 560;
+  color: var(--ink-muted);
+  cursor: pointer;
+  text-align: left;
+}
+.path-steps button[aria-current='step'] {
+  border-color: var(--accent);
+  color: var(--ink);
+  box-shadow: var(--glow);
+}
+.path-steps button.done {
+  color: var(--ok);
+}
+.path-steps__n {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-sunken);
+  font-size: 12px;
+  font-weight: 700;
+}
+.path-steps button[aria-current='step'] .path-steps__n {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.path-steps button.done .path-steps__n {
+  background: var(--ok-quiet);
+  color: var(--ok);
+}
+.route-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.route-picker .challenge-chip {
+  text-decoration: none;
+  color: var(--ink);
+}
+@media (max-width: 1100px) {
+  .path-steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
