@@ -3,17 +3,22 @@
  * Las trayectorias y la posición de cada línea en la pantalla se calculan con la ley de Snell y el
  * índice de refracción real del vidrio (Sellmeier); no son un dibujo.
  */
+import { GlassMaterial } from '../../render/Glass';
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { Stage } from '../../render/Stage';
+import { useMergedGeometry } from '../../render/merged';
 import { LabelProjector, type Anchor } from '../../render/labels';
 import { useQuality, useReducedMotion } from '../../app/hooks';
-import { VISIBLE_SPECTRA } from '../../science/data/spectralLines';
+import { absorptionLines, VISIBLE_SPECTRA, type GasCondition } from '../../science/data/spectralLines';
 import { prismGeometry, type PrismRay } from '../../science/prism';
 import { wavelengthToLinearRGB } from '../../science/photon';
 import { lampColor, lineColor } from './scenes';
+
+/** Geometría compartida del bulbo de la lámpara (antes se creaba una nueva en cada render y no se liberaba). */
+const LAMP_BOX = new THREE.BoxGeometry(0.5, 0.55, 0.42);
 
 export const PRISM = prismGeometry();
 // Plano del haz: (u, v) → (x, z) con z = v, de modo que el abanico se aleja de la cámara y la pantalla la mira.
@@ -51,7 +56,7 @@ function srgb(c: number) {
 }
 
 /** Textura de la pantalla: continuo (absorción) o líneas brillantes (emisión) en su posición exacta. */
-function screenTexture(symbol: string, mode: 'emision' | 'absorcion'): THREE.CanvasTexture {
+function screenTexture(symbol: string, mode: 'emision' | 'absorcion', gas: GasCondition = 'frio'): THREE.CanvasTexture {
   const W = 1024;
   const H = 64;
   const c = document.createElement('canvas');
@@ -61,7 +66,8 @@ function screenTexture(symbol: string, mode: 'emision' | 'absorcion'): THREE.Can
   ctx.fillStyle = '#050404';
   ctx.fillRect(0, 0, W, H);
   const xOfS = (s: number) => ((s - (S_CENTER - SCREEN_W / 2)) / SCREEN_W) * W;
-  const lines = VISIBLE_SPECTRA.find((x) => x.symbol === symbol)?.lines ?? [];
+  const spec = VISIBLE_SPECTRA.find((x) => x.symbol === symbol);
+  const lines = !spec ? [] : mode === 'absorcion' ? absorptionLines(spec, gas) : spec.lines;
   if (mode === 'absorcion') {
     for (let x = 0; x < W; x++) {
       const s = S_CENTER - SCREEN_W / 2 + (x / W) * SCREEN_W;
@@ -171,7 +177,7 @@ function Prism({ glassy }: { glassy: boolean }) {
     <group>
       <mesh geometry={geo}>
         {glassy ? (
-          <meshPhysicalMaterial color="#eef4fb" roughness={0.04} metalness={0} transmission={1} thickness={1.2} ior={1.785} attenuationColor="#dfe9f3" attenuationDistance={6} clearcoat={1} specularIntensity={1} envMapIntensity={1.4} />
+          <GlassMaterial color="#eef4fb" roughness={0.04} transmission={1} thickness={1.2} ior={1.785} attenuationColor="#dfe9f3" attenuationDistance={6} opacity={0.32} envMapIntensity={1.4} />
         ) : (
           <meshStandardMaterial color="#cfdbe7" roughness={0.1} transparent opacity={0.28} />
         )}
@@ -245,12 +251,91 @@ function Screen({ tex }: { tex: THREE.Texture }) {
   );
 }
 
+/** Mesa óptica: tablero de taladros roscados cada 25 mm (textura procedural, sin descargas). */
+const TABLE_Y = -0.76;
+function OpticalTable({ center, w, d }: { center: THREE.Vector3; w: number; d: number }) {
+  const tex = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 256;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#3a3f47';
+    g.fillRect(0, 0, 256, 256);
+    for (let y = 16; y < 256; y += 32)
+      for (let x = 16; x < 256; x += 32) {
+        g.fillStyle = '#1d2026';
+        g.beginPath();
+        g.arc(x, y, 4.2, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = 'rgba(255,255,255,0.12)';
+        g.beginPath();
+        g.arc(x, y, 5.4, Math.PI * 0.9, Math.PI * 1.6);
+        g.stroke();
+      }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(w / 1.6, d / 1.6);
+    t.anisotropy = 8;
+    return t;
+  }, [w, d]);
+  useEffect(() => () => tex.dispose(), [tex]);
+  return (
+    <group position={[center.x, TABLE_Y, center.z]}>
+      <mesh position-y={-0.06} receiveShadow>
+        <boxGeometry args={[w, 0.12, d]} />
+        <meshStandardMaterial color="#5b616b" metalness={0.6} roughness={0.42} />
+      </mesh>
+      <mesh position-y={0.001} rotation-x={-Math.PI / 2} receiveShadow>
+        <planeGeometry args={[w - 0.04, d - 0.04]} />
+        <meshStandardMaterial map={tex} metalness={0.5} roughness={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Postes de soporte (acero) desde la mesa hasta su altura, con su base; fusionados en dos mallas. */
+function Posts({ items }: { items: { at: THREE.Vector3; top: number }[] }) {
+  const key = items.map((p) => `${p.at.x.toFixed(3)},${p.at.z.toFixed(3)},${p.top}`).join('|');
+  const rods = useMergedGeometry(() => items.map(({ at, top }) => ({ geo: new THREE.CylinderGeometry(0.035, 0.035, top - TABLE_Y, 16), position: [at.x, TABLE_Y + (top - TABLE_Y) / 2, at.z] as [number, number, number] })), [key]);
+  const feet = useMergedGeometry(() => items.map(({ at }) => ({ geo: new THREE.CylinderGeometry(0.13, 0.15, 0.06, 32), position: [at.x, TABLE_Y + 0.03, at.z] as [number, number, number] })), [key]);
+  return (
+    <>
+      <mesh geometry={rods}>
+        <meshStandardMaterial color="#c3c8cf" metalness={0.95} roughness={0.2} />
+      </mesh>
+      <mesh geometry={feet}>
+        <meshStandardMaterial color="#2a2e35" metalness={0.7} roughness={0.35} />
+      </mesh>
+    </>
+  );
+}
+
+/** Platina giratoria graduada bajo el prisma. */
+function RotationStage({ at }: { at: THREE.Vector3 }) {
+  return (
+    <group position={[at.x, TABLE_Y, at.z]}>
+      <mesh position-y={0.1}>
+        <cylinderGeometry args={[0.78, 0.82, 0.2, 96]} />
+        <meshStandardMaterial color="#9ea5ae" metalness={0.9} roughness={0.28} />
+      </mesh>
+      <mesh position-y={0.205} rotation-x={-Math.PI / 2}>
+        <ringGeometry args={[0.68, 0.78, 96]} />
+        <meshStandardMaterial color="#2b2f36" metalness={0.5} roughness={0.4} />
+      </mesh>
+      <mesh position-y={0.2}>
+        <cylinderGeometry args={[0.66, 0.66, 0.04, 96]} />
+        <meshStandardMaterial color="#1f2328" metalness={0.4} roughness={0.6} />
+      </mesh>
+    </group>
+  );
+}
+
 export const SPECTRO_ANCHORS: Anchor[] = (() => {
   const src = PRISM.trace(550)!.source;
   const c = PRISM.screenCenter;
   const dir = PRISM.screenDir;
   return [
-    { id: 'sp-lamp', position: to3(src, 0.95).toArray() as [number, number, number] },
+    { id: 'sp-lamp', position: to3(src, 0.95).toArray() as [number, number, number], offset: [64, 0] },
     { id: 'sp-prism', position: to3(PRISM.vertices[0], 0.72).toArray() as [number, number, number] },
     { id: 'sp-screen', position: to3([c[0] + dir[0] * S_CENTER, c[1] + dir[1] * S_CENTER], SCREEN_H / 2 + 0.22).toArray() as [number, number, number] },
     { id: 'sp-violet', position: to3(PRISM.trace(400)!.hit, -SCREEN_H / 2 - 0.16).toArray() as [number, number, number] },
@@ -258,11 +343,11 @@ export const SPECTRO_ANCHORS: Anchor[] = (() => {
   ];
 })();
 
-export function SpectroscopeScene({ symbol, mode }: { symbol: string; mode: 'emision' | 'absorcion' }) {
+export function SpectroscopeScene({ symbol, mode, gas = 'frio' }: { symbol: string; mode: 'emision' | 'absorcion'; gas?: GasCondition }) {
   const reduced = useReducedMotion();
   const q = useQuality();
   const lamp = useMemo(() => (mode === 'emision' ? lampColor(symbol).multiplyScalar(3) : new THREE.Color('#fff4e6').multiplyScalar(3)), [symbol, mode]);
-  const tex = useMemo(() => screenTexture(symbol, mode), [symbol, mode]);
+  const tex = useMemo(() => screenTexture(symbol, mode, gas), [symbol, mode, gas]);
   useEffect(() => () => tex.dispose(), [tex]);
   const rays = useMemo(() => {
     if (mode === 'emision') {
@@ -280,13 +365,29 @@ export function SpectroscopeScene({ symbol, mode }: { symbol: string; mode: 'emi
   const slitAt = entry.clone().addScaledVector(inc, -0.9);
   const cellAt = entry.clone().addScaledVector(inc, -1.65);
   const quatCell = useMemo(() => new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(1, 0, 0), inc.clone().normalize()), [inc]);
+  const prismCenter = useMemo(() => {
+    const v = PRISM.vertices;
+    return to3([(v[0][0] + v[1][0] + v[2][0]) / 3, (v[0][1] + v[1][1] + v[2][1]) / 3]);
+  }, []);
+  const screenAt = to3([PRISM.screenCenter[0] + PRISM.screenDir[0] * S_CENTER, PRISM.screenCenter[1] + PRISM.screenDir[1] * S_CENTER]);
+  const bench = useMemo(() => {
+    const pts = [src, screenAt, prismCenter, slitAt];
+    const xs = pts.map((p) => p.x);
+    const zs = pts.map((p) => p.z);
+    const x0 = Math.min(...xs) - 1.1;
+    const x1 = Math.max(...xs) + 1.1;
+    const z0 = Math.min(...zs) - 1.3;
+    const z1 = Math.max(...zs) + 1.3;
+    return { center: new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), w: x1 - x0, d: z1 - z0 };
+  }, [src.x, src.z, screenAt.x, screenAt.z, prismCenter, slitAt.x, slitAt.z]); // eslint-disable-line react-hooks/exhaustive-deps
   const target = useMemo(() => {
     const scr = to3(PRISM.screenCenter);
     return new THREE.Vector3().addVectors(src, scr).multiplyScalar(0.5);
   }, [src]);
   return (
-    <Stage camera={[target.x - 0.2, 5.4, target.z + 9.4]} fov={36}>
-      <ambientLight intensity={0.25} />
+    <Stage mood="fotones" camera={[target.x - 0.9, 4.8, target.z + 8.4]} fov={36}>
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[target.x - 3, 6, target.z + 4]} intensity={1.4} color="#fff1dc" />
       <group>
         <Lamp color={lamp} flicker={!reduced} position={src} />
         <Beam a={src} b={entry} color={lamp.clone().multiplyScalar(0.8)} radius={0.012} />
@@ -298,7 +399,7 @@ export function SpectroscopeScene({ symbol, mode }: { symbol: string; mode: 'emi
               <meshPhysicalMaterial color={lampColor(symbol)} roughness={0.08} transparent opacity={0.3} />
             </mesh>
             <lineSegments>
-              <edgesGeometry args={[new THREE.BoxGeometry(0.5, 0.55, 0.42)]} />
+              <edgesGeometry args={[LAMP_BOX]} />
               <lineBasicMaterial color="#e8eef5" transparent opacity={0.4} />
             </lineSegments>
           </group>
@@ -306,10 +407,9 @@ export function SpectroscopeScene({ symbol, mode }: { symbol: string; mode: 'emi
         <Prism glassy={q.tier !== 'baja'} />
         <RayFan rays={rays} thick={mode === 'emision'} />
         <Screen tex={tex} />
-        <mesh position={[target.x, -0.75, target.z]} rotation-x={-Math.PI / 2}>
-          <planeGeometry args={[16, 9]} />
-          <meshStandardMaterial color="#0e0d0c" metalness={0.2} roughness={0.85} />
-        </mesh>
+        <OpticalTable center={bench.center} w={bench.w} d={bench.d} />
+        <RotationStage at={prismCenter} />
+        <Posts items={[{ at: src, top: -0.72 }, { at: slitAt, top: -0.45 }, { at: screenAt, top: -SCREEN_H / 2 - 0.07 }]} />
       </group>
       <LabelProjector anchors={SPECTRO_ANCHORS} />
       <OrbitControls target={target} enablePan={false} enableDamping minDistance={4} maxDistance={13} maxPolarAngle={1.45} />

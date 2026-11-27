@@ -1,0 +1,91 @@
+{
+  "date": "2026-11-27T17:24:11.377Z",
+  "renderer": "SwiftShader (software)",
+  "method": "ATOM 5.0: fotogramas dibujados, no rAF; heap tras gc()",
+  "results": [
+    {
+      "route": "/forja",
+      "readyMs": 226,
+      "rafHz": 60.1,
+      "idleFrames": 0,
+      "dragFps": 8.2,
+      "dragP95Ms": 150,
+      "longTasks": 90,
+      "longMaxMs": 168,
+      "calls": 34,
+      "triangles": 18713,
+      "programs": 16,
+      "geometries": 21,
+      "textures": 21,
+      "heapMB": 12.4
+    },
+    {
+      "route": "cuantico:n=3",
+      "interactionMs": 2626,
+      "longTasks": 18,
+      "longMaxMs": 1021
+    },
+    {
+      "route": "cuantico:l=2",
+      "interactionMs": 3053,
+      "longTasks": 18,
+      "longMaxMs": 1127
+    },
+    {
+      "route": "cuantico:subnivel",
+      "interactionMs": 2774,
+      "longTasks": 14,
+      "longMaxMs": 978
+    }
+  ],
+  "stability": [
+    {
+      "ciclo": 1,
+      "heapMB": 16.7,
+      "gpu": {
+        "geometries": 21,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1
+    },
+    {
+      "ciclo": 2,
+      "heapMB": 17.5,
+      "gpu": {
+        "geometries": 21,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1
+    },
+    {
+      "ciclo": 3,
+      "heapMB": 17.8,
+      "gpu": {
+        "geometries": 21,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1
+    },
+    {
+      "ciclo": 4,
+      "heapMB": 18.3,
+      "gpu": {
+        "geometries": 21,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1
+    }
+  ]
+}

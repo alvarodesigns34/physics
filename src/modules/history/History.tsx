@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { CalmOrbitControls } from '../../render/CalmControls';
+import { AnchoredLabel, LabelLayer, LabelProjector } from '../../render/labels';
+import { DRIFT, PLATE_GAP, PLATE_LEN, ThomsonTubeScene, type TubeView } from './ThomsonTube';
+import { Prediction } from '../../ui/Prediction';
+import { flashPosition, SCREEN_H, SCREEN_R, SCREEN_TICKS, tickPosition } from './geigerGeometry';
+import { useContinuousRender } from '../../render/demand';
+import { ModelStoryView, ModelMatrix } from './Story';
+import type { ModelKey } from '../../learning/history';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -35,6 +43,7 @@ interface HState {
   plates: number;
   B: number;
   gas: 'aire' | 'neon' | 'hidrogeno';
+  tubeView: TubeView;
   scModel: 'rutherford' | 'thomson';
   energy: number;
   thicknessUm: number;
@@ -56,6 +65,7 @@ export const useHistory = create<HState>((set) => ({
   plates: 150,
   B: 0,
   gas: 'aire',
+  tubeView: 'perspectiva',
   scModel: 'thomson',
   energy: 4.8,
   thicknessUm: 0.4,
@@ -83,7 +93,7 @@ interface ModelInfo {
 export const MODELS: ModelInfo[] = [
   { id: 'dalton', year: '1808', who: 'Dalton (a partir de Demócrito)', title: 'Esfera maciza', idea: 'El átomo es una esfera maciza, indivisible e indestructible. Cada elemento tiene átomos de masa propia.', evidence: 'Explica las leyes de las proporciones en las reacciones químicas.', limit: 'La radiactividad (Becquerel, 1896) y el electrón (Thomson, 1897) muestran que el átomo tiene partes.', epi: 'historico' },
   { id: 'thomson', year: '1904', who: 'J. J. Thomson', title: 'Pastel de pasas', idea: 'Una esfera de carga positiva repartida con los electrones incrustados, como pasas en un pastel. En conjunto, neutro.', evidence: 'Incorpora el electrón descubierto con el tubo de rayos catódicos (1897).', limit: 'No explica que algunas partículas α reboten en una lámina de oro (Geiger–Marsden, 1911).', epi: 'historico' },
-  { id: 'rutherford', year: '1911', who: 'E. Rutherford', title: 'Modelo nuclear', idea: 'Un núcleo diminuto, positivo y con casi toda la masa; los electrones giran a su alrededor como planetas.', evidence: 'Explica la dispersión de partículas α por la lámina de oro.', limit: 'Según Maxwell, un electrón acelerado radia: caería en espiral al núcleo en ≈ 10⁻¹¹ s, con un espectro continuo. Tampoco explica la estabilidad del núcleo.', epi: 'historico' },
+  { id: 'rutherford', year: '1911', who: 'E. Rutherford', title: 'Modelo nuclear', idea: 'Un núcleo diminuto, positivo y con casi toda la masa; en el modelo, los electrones giran a su alrededor como planetas.', evidence: 'Explica la dispersión de partículas α por la lámina de oro.', limit: 'Según Maxwell, un electrón acelerado radia: caería en espiral al núcleo en ≈ 10⁻¹¹ s, con un espectro continuo. Tampoco explica la estabilidad del núcleo.', epi: 'historico' },
   { id: 'bohr', year: '1913', who: 'N. Bohr', title: 'Órbitas cuantizadas', idea: 'El electrón solo puede estar en órbitas estacionarias (L = n·h/2π) sin radiar; emite o absorbe un fotón al saltar entre ellas.', evidence: 'Explica la estabilidad y el espectro del hidrógeno (Rydberg) con radios rₙ = n²·r₀.', limit: 'Solo funciona para el hidrógeno; no explica la estructura fina ni los átomos con varios electrones. Sommerfeld, Zeeman y el espín lo amplían.', epi: 'historico' },
   { id: 'chadwick', year: '1932', who: 'J. Chadwick', title: 'El neutrón', idea: 'El núcleo contiene protones y neutrones (partículas sin carga). La fuerza nuclear fuerte los mantiene unidos.', evidence: 'Resuelve la masa del núcleo y su estabilidad pese a la repulsión entre protones.', limit: '—', epi: 'historico' },
   { id: 'actual', year: '1926–', who: 'De Broglie, Heisenberg, Schrödinger', title: 'Modelo mecanocuántico', idea: 'El electrón no sigue trayectorias: se describe con orbitales, regiones de probabilidad definidas por n, l, m y s.', evidence: 'Explica la tabla periódica, los enlaces y los espectros de todos los átomos.', limit: 'Es el modelo vigente.', epi: 'calculo' },
@@ -98,30 +108,65 @@ function DaltonSphere() {
   );
 }
 
+/**
+ * Modelo de Thomson (1904), como él lo propuso: una esfera de carga positiva uniforme (la «gelatina») y
+ * los electrones en ANILLOS concéntricos que giran en su interior (Thomson buscaba configuraciones
+ * estables así). ESQUEMA histórico: 12 electrones en anillos de 3 y 9.
+ */
 function ThomsonPudding({ reduced }: { reduced: boolean }) {
-  const pts = useMemo(() => {
-    const rng = mulberry32(5);
-    return Array.from({ length: 12 }, () => {
-      const v = new THREE.Vector3(rng() * 2 - 1, rng() * 2 - 1, rng() * 2 - 1).normalize().multiplyScalar(0.45 + rng() * 0.75);
-      return { base: v, ph: rng() * 6 };
-    });
-  }, []);
-  const refs = useRef<(THREE.Mesh | null)[]>([]);
-  useFrame((s) => {
+  const rings = useMemo(() => [{ r: 0.42, n: 3, speed: 0.9, tilt: 0.2 }, { r: 0.98, n: 9, speed: -0.5, tilt: -0.15 }], []);
+  const groups = useRef<(THREE.Group | null)[]>([]);
+  const rim = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: { uColor: { value: new THREE.Color('#ff8a5c') } },
+        vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
+        fragmentShader: `uniform vec3 uColor; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.2); gl_FragColor = vec4(uColor * (0.35 + 1.4 * f), 0.12 + 0.7 * f); }`,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        toneMapped: false,
+      }),
+    [],
+  );
+  useEffect(() => () => rim.dispose(), [rim]);
+  useFrame((_, dt) => {
     if (reduced) return;
-    pts.forEach((p, i) => refs.current[i]?.position.copy(p.base).addScalar(Math.sin(s.clock.elapsedTime * 1.5 + p.ph) * 0.015));
+    rings.forEach((r, i) => {
+      const g = groups.current[i];
+      if (g) g.rotation.y += dt * r.speed;
+    });
   });
   return (
     <group>
-      <mesh>
-        <sphereGeometry args={[1.4, 64, 48]} />
-        <meshPhysicalMaterial color="#e8775c" roughness={0.4} transparent opacity={0.28} depthWrite={false} />
-      </mesh>
-      {pts.map((p, i) => (
-        <mesh key={i} ref={(m) => (refs.current[i] = m)} position={p.base}>
-          <sphereGeometry args={[0.07, 20, 14]} />
-          <meshBasicMaterial color={new THREE.Color('#bfe0ff').multiplyScalar(2)} toneMapped={false} />
+      {/* Carga positiva repartida: capas concéntricas tenues + borde luminoso */}
+      {[0.55, 0.95, 1.25].map((r) => (
+        <mesh key={r}>
+          <sphereGeometry args={[r, 40, 28]} />
+          <meshBasicMaterial color="#ff8a5c" transparent opacity={0.045} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} />
         </mesh>
+      ))}
+      <mesh material={rim}>
+        <sphereGeometry args={[1.4, 64, 48]} />
+      </mesh>
+      {rings.map((r, i) => (
+        <group key={i} rotation-x={r.tilt}>
+          <mesh rotation-x={Math.PI / 2}>
+            <torusGeometry args={[r.r, 0.003, 6, 96]} />
+            <meshBasicMaterial color="#bfe0ff" transparent opacity={0.25} />
+          </mesh>
+          <group ref={(g) => (groups.current[i] = g)}>
+            {Array.from({ length: r.n }, (_, k) => {
+              const a = (k / r.n) * Math.PI * 2;
+              return (
+                <mesh key={k} position={[Math.cos(a) * r.r, 0, Math.sin(a) * r.r]}>
+                  <sphereGeometry args={[0.075, 20, 14]} />
+                  <meshBasicMaterial color={new THREE.Color('#bfe0ff').multiplyScalar(2.2)} toneMapped={false} />
+                </mesh>
+              );
+            })}
+          </group>
+        </group>
       ))}
     </group>
   );
@@ -238,7 +283,7 @@ function ModelScene() {
   const reduced = useReducedMotion();
   const cloud = useMemo(() => atomDensity(1, groundState(1), 9000, mulberry32(1)), []);
   return (
-    <Stage camera={[0, 1.2, 5.6]} fov={40} key={model}>
+    <Stage mood="historia" camera={[0, 1.2, 5.6]} fov={40} key={model}>
       <ambientLight intensity={0.45} />
       <directionalLight position={[3, 4, 5]} intensity={2} color="#ffe6c8" />
       <directionalLight position={[-4, -1, -3]} intensity={0.8} color="#a8c4ea" />
@@ -252,88 +297,37 @@ function ModelScene() {
         </group>
       )}
       {model === 'actual' && <ElectronCloud density={cloud} scale={0.95} size={70} opacity={0.22} animate={!reduced} />}
-      <OrbitControls enablePan={false} enableDamping minDistance={3} maxDistance={10} autoRotate={!reduced && model !== 'bohr'} autoRotateSpeed={0.4} />
+      <CalmOrbitControls enablePan={false} enableDamping minDistance={3} maxDistance={10} autoRotate={!reduced && model !== 'bohr'} autoRotateSpeed={0.4} />
     </Stage>
   );
 }
 
 // ── Tubo de rayos catódicos ───────────────────────────────────────────────
 
-const TUBE: Omit<CathodeSetup, 'accel' | 'plates' | 'B'> = { gap: 0.02, length: 0.05, drift: 0.15 };
-const SX = 24; // unidades de escena por metro (x)
-const SY = 24;
-const X0 = -0.8; // inicio de las placas
+// Una sola fuente de las dimensiones: la escena dibuja exactamente el tubo que se calcula.
+const TUBE: Omit<CathodeSetup, 'accel' | 'plates' | 'B'> = { gap: PLATE_GAP, length: PLATE_LEN, drift: DRIFT };
 
 function setupFrom(s: Pick<HState, 'accel' | 'plates' | 'B'>): CathodeSetup {
   return { ...TUBE, accel: s.accel, plates: s.plates, B: s.B / 1000 };
 }
 
-const GAS_GLOW: Record<HState['gas'], string> = { aire: '#b9a7d6', neon: '#ff8a4c', hidrogeno: '#d9a0ff' };
 
 function TubeScene() {
-  const { accel, plates, B, gas } = useHistory();
+  const { accel, plates, B, gas, tubeView } = useHistory();
   const res = useMemo(() => cathodeBeam(setupFrom({ accel, plates, B })), [accel, plates, B]);
-  const line = useMemo(() => {
-    const pts: THREE.Vector3[] = [new THREE.Vector3(-2.3, 0, 0)];
-    for (let i = 0; i < res.path.length / 2; i += 4) pts.push(new THREE.Vector3(X0 + res.path[i * 2]! * SX, res.path[i * 2 + 1]! * SY, 0));
-    const g = new THREE.BufferGeometry().setFromPoints(pts);
-    return new THREE.Line(g, new THREE.LineBasicMaterial({ color: new THREE.Color('#9ff0c4').multiplyScalar(2.2), toneMapped: false }));
-  }, [res]);
-  useEffect(() => () => line.geometry.dispose(), [line]);
-  const screenX = X0 + (TUBE.length + TUBE.drift) * SX;
-  const spotY = Number.isFinite(res.screenY) ? res.screenY * SY : null;
-  return (
-    <Stage camera={[0.8, 1.6, 7.2]} fov={40}>
-      <ambientLight intensity={0.35} />
-      <directionalLight position={[2, 5, 6]} intensity={1.8} color="#ffe6c8" />
-      <mesh rotation-z={Math.PI / 2} position={[(screenX - 2.6) / 2 + 0.2, 0, 0]}>
-        <cylinderGeometry args={[0.62, 0.62, screenX + 2.9, 48, 1, true]} />
-        <meshPhysicalMaterial color="#e6eef5" roughness={0.05} transparent opacity={0.13} side={THREE.DoubleSide} depthWrite={false} />
-      </mesh>
-      <mesh rotation-z={Math.PI / 2} position={[(screenX - 2.6) / 2 + 0.2, 0, 0]}>
-        <cylinderGeometry args={[0.6, 0.6, screenX + 2.8, 48, 1, true]} />
-        <meshBasicMaterial color={GAS_GLOW[gas]} transparent opacity={0.04} side={THREE.BackSide} depthWrite={false} />
-      </mesh>
-      <mesh position={[-2.4, 0, 0]} rotation-z={Math.PI / 2}>
-        <cylinderGeometry args={[0.32, 0.32, 0.08, 32]} />
-        <meshStandardMaterial color="#5c564e" metalness={0.8} roughness={0.3} />
-      </mesh>
-      <mesh position={[-1.5, 0, 0]} rotation-y={Math.PI / 2}>
-        <ringGeometry args={[0.06, 0.45, 32]} />
-        <meshStandardMaterial color="#8d857a" metalness={0.8} roughness={0.3} side={THREE.DoubleSide} />
-      </mesh>
-      {[1, -1].map((s) => (
-        <mesh key={s} position={[X0 + (TUBE.length * SX) / 2, (s * TUBE.gap * SY) / 2 + s * 0.03, 0]}>
-          <boxGeometry args={[TUBE.length * SX, 0.04, 0.6]} />
-          <meshStandardMaterial color={s > 0 ? '#c0782c' : '#4a5a70'} metalness={0.7} roughness={0.35} />
-        </mesh>
-      ))}
-      {B > 0 && (
-        <mesh position={[X0 + (TUBE.length * SX) / 2, 0, 0]}>
-          <boxGeometry args={[TUBE.length * SX, TUBE.gap * SY, 0.62]} />
-          <meshBasicMaterial color="#8fc3f2" transparent opacity={0.06 + Math.min(0.12, B * 0.08)} depthWrite={false} />
-        </mesh>
-      )}
-      <primitive object={line} />
-      <mesh position={[screenX, 0, 0]} rotation-y={-Math.PI / 2}>
-        <circleGeometry args={[0.6, 48]} />
-        <meshStandardMaterial color="#1d2a22" roughness={0.8} side={THREE.DoubleSide} />
-      </mesh>
-      {spotY !== null && Math.abs(spotY) < 0.6 && (
-        <mesh position={[screenX - 0.01, spotY, 0]}>
-          <sphereGeometry args={[0.06, 16, 12]} />
-          <meshBasicMaterial color={new THREE.Color('#9ff0c4').multiplyScalar(3)} toneMapped={false} />
-        </mesh>
-      )}
-      <OrbitControls enablePan={false} enableDamping minDistance={3} maxDistance={12} target={[0.8, 0, 0]} />
-    </Stage>
-  );
+  return <ThomsonTubeScene res={res} plates={plates} B={B} accel={accel} gas={gas} view={tubeView} />;
 }
 
 // ── Geiger–Marsden ────────────────────────────────────────────────────────
 
-const RING_R = 2.6;
 const MAX_FLASH = 600;
+
+const GEIGER_ANCHORS = [
+  ...SCREEN_TICKS.map((d) => ({ id: `gm-${d}`, position: tickPosition(d, 1).map((v, i) => (i === 2 ? SCREEN_H / 2 + 0.15 : v * 1.08)) as [number, number, number] })),
+  { id: 'gm-src', position: [-4.3, 0.6, 0] as [number, number, number] },
+  { id: 'gm-foil', position: [0, -0.75, 0] as [number, number, number] },
+  { id: 'gm-screen', position: [0, -SCREEN_R - 0.25, SCREEN_H / 2] as [number, number, number] },
+];
 
 function GeigerContent() {
   const reduced = useReducedMotion();
@@ -345,6 +339,14 @@ function GeigerContent() {
   const m4 = useMemo(() => new THREE.Matrix4(), []);
   const q = useMemo(() => new THREE.Quaternion(), []);
   const sc = useMemo(() => new THREE.Vector3(), []);
+  const flashTint = useMemo(() => new THREE.Color(), []);
+  // El color por instancia debe existir antes de compilar el material (si no, el shader lo ignora).
+  useLayoutEffect(() => {
+    const fm = flashes.current;
+    if (!fm) return;
+    for (let i = 0; i < MAX_FLASH; i++) fm.setColorAt(i, flashTint.setRGB(0, 0, 0));
+    if (fm.instanceColor) fm.instanceColor.needsUpdate = true;
+  }, [flashTint]);
   useFrame((state, dt) => {
     const st = useHistory.getState();
     const S = store.current;
@@ -360,12 +362,12 @@ function GeigerContent() {
         const deg = (th * 180) / Math.PI;
         const b = BINS.findIndex((x, i) => deg >= x && deg < BINS[i + 1]!);
         if (b >= 0) bins[b]! += 1;
-        // Visualiza todas las desviaciones > 2° y una muestra de las pequeñas
-        if (deg > 2 || rng() < 0.012) {
+        // Se visualizan todas las desviaciones > 10° y una muestra de las pequeñas (si no, se apelotonan en 0°).
+        if (deg > 10 || rng() < (deg > 2 ? 0.04 : 0.003)) {
           sfx.geiger();
           const phi = rng() * Math.PI * 2;
-          const dir = new THREE.Vector3(Math.cos(th), Math.sin(th) * Math.cos(phi), Math.sin(th) * Math.sin(phi));
-          S.pos[S.i]!.copy(dir).multiplyScalar(RING_R);
+          flashPosition(th, phi, S.pos[S.i]!);
+          const dir = S.pos[S.i]!.clone().normalize();
           S.life[S.i] = 1;
           S.i = (S.i + 1) % MAX_FLASH;
           if (deg > 10) {
@@ -379,20 +381,24 @@ function GeigerContent() {
     }
     const fm = flashes.current;
     if (fm) {
+      // ATOM 5.2 · Centelleos sobrios (la auditoría los vio demasiado intensos): el brillo de cada uno cae
+      // con su vida (color por instancia, sobre mezcla aditiva) y el tamaño es menor.
       for (let i = 0; i < MAX_FLASH; i++) {
-        S.life[i] = Math.max(0, S.life[i]! - dt * 0.7);
-        sc.setScalar(0.02 + 0.05 * S.life[i]!);
+        const life = (S.life[i] = Math.max(0, S.life[i]! - dt * 1.1));
+        sc.setScalar(life > 0 ? 0.012 + 0.026 * life : 0);
         m4.compose(S.pos[i]!, q, sc);
         fm.setMatrixAt(i, m4);
+        fm.setColorAt(i, flashTint.setRGB(0.45, 0.85, 0.6).multiplyScalar(life * life * 0.9));
       }
       fm.instanceMatrix.needsUpdate = true;
+      if (fm.instanceColor) fm.instanceColor.needsUpdate = true;
     }
     const tm = tracks.current;
     if (tm) {
       for (let i = 0; i < 40; i++) {
         S.tlife[i] = Math.max(0, S.tlife[i]! - dt * 0.5);
         const d = S.tdir[i]!;
-        const len = RING_R * (S.tlife[i]! > 0 ? 1 : 0);
+        const len = SCREEN_R * (S.tlife[i]! > 0 ? 1 : 0);
         q.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.lengthSq() ? d.clone().normalize() : new THREE.Vector3(0, 1, 0));
         m4.compose(d.clone().multiplyScalar(len / 2), q, new THREE.Vector3(S.tlife[i]!, len, S.tlife[i]!));
         tm.setMatrixAt(i, m4);
@@ -414,25 +420,49 @@ function GeigerContent() {
     <>
       <ambientLight intensity={0.35} />
       <directionalLight position={[3, 6, 5]} intensity={2} color="#ffe6c8" />
+      <LabelProjector anchors={GEIGER_ANCHORS} />
+      {/* Fuente radiactiva en un bloque de plomo; el emisor se ve por la boca del colimador */}
       <mesh position={[-4.3, 0, 0]}>
-        <boxGeometry args={[0.6, 0.6, 0.6]} />
-        <meshStandardMaterial color="#3a3a40" metalness={0.6} roughness={0.5} />
+        <boxGeometry args={[0.66, 0.66, 0.66]} />
+        <meshPhysicalMaterial color="#5d6068" metalness={0.35} roughness={0.72} clearcoat={0.2} />
       </mesh>
+      <mesh position={[-3.96, 0, 0]} rotation-y={Math.PI / 2}>
+        <circleGeometry args={[0.07, 24]} />
+        <meshBasicMaterial color={new THREE.Color('#ffb15c').multiplyScalar(2.4)} toneMapped={false} />
+      </mesh>
+      <mesh position={[-3.84, 0, 0]} rotation-z={Math.PI / 2}>
+        <cylinderGeometry args={[0.12, 0.12, 0.28, 32, 1, true]} />
+        <meshStandardMaterial color="#3d4048" metalness={0.7} roughness={0.35} side={THREE.DoubleSide} />
+      </mesh>
+      <GeigerBase />
       <instancedMesh ref={beam} args={[undefined, undefined, 30]}>
         <sphereGeometry args={[0.025, 8, 6]} />
         <meshBasicMaterial color={new THREE.Color('#ffcf8a').multiplyScalar(2.5)} toneMapped={false} />
       </instancedMesh>
-      <mesh rotation-y={Math.PI / 2}>
-        <planeGeometry args={[1.1, 1.1]} />
-        <meshStandardMaterial color="#d4a641" metalness={1} roughness={0.25} side={THREE.DoubleSide} />
-      </mesh>
+      <GoldFoil />
+      {/* Pantalla de ZnS: banda cilíndrica de eje z, graduada en ángulo de desviación */}
       <mesh rotation-x={Math.PI / 2}>
-        <cylinderGeometry args={[RING_R + 0.02, RING_R + 0.02, 1.2, 96, 1, true]} />
-        <meshBasicMaterial color="#5a8f6a" transparent opacity={0.07} side={THREE.DoubleSide} depthWrite={false} />
+        <cylinderGeometry args={[SCREEN_R + 0.02, SCREEN_R + 0.02, SCREEN_H, 128, 1, true]} />
+        <meshBasicMaterial color="#5a8f6a" transparent opacity={0.1} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
+      {[-SCREEN_H / 2, SCREEN_H / 2].map((z) => (
+        <mesh key={z} position-z={z}>
+          <torusGeometry args={[SCREEN_R + 0.02, 0.006, 6, 192]} />
+          <meshBasicMaterial color="#8fd0a5" transparent opacity={0.5} />
+        </mesh>
+      ))}
+      {SCREEN_TICKS.flatMap((d) => (d === 0 || d === 180 ? [1] : [1, -1]).map((side) => ({ d, side }))).map(({ d, side }) => {
+        const [x, y] = tickPosition(d, side);
+        return (
+          <mesh key={`${d}-${side}`} position={[x, y, 0]}>
+            <boxGeometry args={[0.02, 0.02, SCREEN_H]} />
+            <meshBasicMaterial color="#8fd0a5" transparent opacity={0.55} />
+          </mesh>
+        );
+      })}
       <instancedMesh ref={flashes} args={[undefined, undefined, MAX_FLASH]} frustumCulled={false}>
         <sphereGeometry args={[1, 8, 6]} />
-        <meshBasicMaterial color={new THREE.Color('#b5ffcf').multiplyScalar(3)} toneMapped={false} />
+        <meshBasicMaterial color="#ffffff" toneMapped={false} transparent blending={THREE.AdditiveBlending} depthWrite={false} />
       </instancedMesh>
       <instancedMesh ref={tracks} args={[undefined, undefined, 40]} frustumCulled={false}>
         <cylinderGeometry args={[0.008, 0.008, 1, 6]} />
@@ -443,9 +473,127 @@ function GeigerContent() {
   );
 }
 
+/** Lámina de oro (de unos 0,4 µm en el experimento: aquí ampliada) arrugada, sobre un marco de latón. */
+function GoldFoil() {
+  const geo = useMemo(() => {
+    const g = new THREE.PlaneGeometry(1.1, 1.1, 24, 24);
+    const pos = g.attributes.position as THREE.BufferAttribute;
+    const rng = mulberry32(11);
+    for (let i = 0; i < pos.count; i++) pos.setZ(i, (rng() - 0.5) * 0.012 + Math.sin(pos.getX(i) * 9) * 0.004);
+    g.computeVertexNormals();
+    return g;
+  }, []);
+  useEffect(() => () => geo.dispose(), [geo]);
+  return (
+    <group rotation-y={Math.PI / 2}>
+      <mesh geometry={geo}>
+        <meshPhysicalMaterial color="#e3b24a" metalness={1} roughness={0.22} clearcoat={0.5} side={THREE.DoubleSide} emissive="#6b4a10" emissiveIntensity={0.15} />
+      </mesh>
+      {[0.6, -0.6].map((y) => (
+        <mesh key={y} position-y={y}>
+          <boxGeometry args={[1.26, 0.08, 0.05]} />
+          <meshStandardMaterial color="#b38a4a" metalness={1} roughness={0.32} />
+        </mesh>
+      ))}
+      {[0.6, -0.6].map((x) => (
+        <mesh key={x} position-x={x}>
+          <boxGeometry args={[0.08, 1.26, 0.05]} />
+          <meshStandardMaterial color="#b38a4a" metalness={1} roughness={0.32} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** Base de la cámara de vacío con la escala angular grabada: el ángulo de desviación se lee desde arriba. */
+/**
+ * ATOM 5.2 · Cámara de vacío del experimento: placa trasera de metal cepillado (antes, un disco casi negro que
+ * se leía como un agujero), brida con pernos y pedestal. La graduación angular va impresa en la placa.
+ */
+function GeigerBase() {
+  const tex = useMemo(() => {
+    const S = 1024;
+    const c = document.createElement('canvas');
+    c.width = c.height = S;
+    const g = c.getContext('2d')!;
+    const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    grad.addColorStop(0, '#7a8089');
+    grad.addColorStop(1, '#4b5058');
+    g.fillStyle = grad;
+    g.beginPath();
+    g.arc(S / 2, S / 2, S / 2, 0, Math.PI * 2);
+    g.fill();
+    // Cepillado concéntrico (torneado): círculos finos de alfa aleatorio con semilla fija.
+    const rng = mulberry32(5);
+    for (let r = 4; r < S / 2; r += 2.2) {
+      g.strokeStyle = rng() < 0.5 ? `rgba(255,255,255,${0.02 + rng() * 0.05})` : `rgba(0,0,0,${0.03 + rng() * 0.06})`;
+      g.lineWidth = 1;
+      g.beginPath();
+      g.arc(S / 2, S / 2, r, 0, Math.PI * 2);
+      g.stroke();
+    }
+    const R = (SCREEN_R / (SCREEN_R + 0.4)) * (S / 2);
+    for (let d = 0; d <= 360; d += 5) {
+      const a = (d * Math.PI) / 180;
+      const major = d % 30 === 0;
+      g.strokeStyle = major ? 'rgba(18,20,24,0.75)' : 'rgba(18,20,24,0.35)';
+      g.lineWidth = major ? 3 : 1.5;
+      g.beginPath();
+      g.moveTo(S / 2 + Math.cos(a) * (R - (major ? 34 : 14)), S / 2 - Math.sin(a) * (R - (major ? 34 : 14)));
+      g.lineTo(S / 2 + Math.cos(a) * (R - 2), S / 2 - Math.sin(a) * (R - 2));
+      g.stroke();
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 8;
+    return t;
+  }, []);
+  useEffect(() => () => tex.dispose(), [tex]);
+  const bolts = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const m = bolts.current;
+    if (!m) return;
+    const o = new THREE.Object3D();
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      o.position.set(Math.cos(a) * (SCREEN_R + 0.3), Math.sin(a) * (SCREEN_R + 0.3), -SCREEN_H / 2 + 0.02);
+      o.rotation.set(Math.PI / 2, 0, 0);
+      o.updateMatrix();
+      m.setMatrixAt(i, o.matrix);
+    }
+    m.instanceMatrix.needsUpdate = true;
+  }, []);
+  return (
+    <group>
+      <mesh position-z={-SCREEN_H / 2 - 0.03} receiveShadow>
+        <circleGeometry args={[SCREEN_R + 0.4, 128]} />
+        <meshPhysicalMaterial map={tex} roughness={0.38} metalness={0.75} clearcoat={0.3} clearcoatRoughness={0.4} />
+      </mesh>
+      {/* Brida: anillo grueso en el borde */}
+      <mesh position-z={-SCREEN_H / 2 - 0.02}>
+        <torusGeometry args={[SCREEN_R + 0.4, 0.06, 16, 128]} />
+        <meshPhysicalMaterial color="#9aa1ab" metalness={0.9} roughness={0.25} clearcoat={0.5} />
+      </mesh>
+      <instancedMesh ref={bolts} args={[undefined, undefined, 24]}>
+        <cylinderGeometry args={[0.035, 0.035, 0.05, 6]} />
+        <meshStandardMaterial color="#c9ced6" metalness={0.95} roughness={0.22} />
+      </instancedMesh>
+      {/* Pedestal */}
+      <mesh position={[0, -SCREEN_R - 0.75, -SCREEN_H / 2 + 0.1]}>
+        <boxGeometry args={[0.5, 0.7, 0.45]} />
+        <meshPhysicalMaterial color="#3a3f47" metalness={0.7} roughness={0.4} clearcoat={0.4} />
+      </mesh>
+      <mesh position={[0, -SCREEN_R - 1.12, -SCREEN_H / 2 + 0.1]}>
+        <cylinderGeometry args={[1.1, 1.2, 0.08, 64]} />
+        <meshPhysicalMaterial color="#2c3037" metalness={0.6} roughness={0.45} clearcoat={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
 function GeigerScene() {
   return (
-    <Stage camera={[2.2, 3.2, 6.4]} fov={42}>
+    <Stage mood="historia" camera={[2.2, 3.2, 6.4]} fov={42}>
       <GeigerContent />
     </Stage>
   );
@@ -453,6 +601,10 @@ function GeigerScene() {
 
 export function HistoryScene() {
   const tab = useHistory((s) => s.tab);
+  const running = useHistory((s) => s.running);
+  const collapsing = useHistory((s) => s.collapse > 0 && !s.collapsed);
+  // Simulaciones que avanzan solas: Monte Carlo de Geiger–Marsden y la espiral del colapso clásico.
+  useContinuousRender((tab === 'geiger' && running) || collapsing);
   if (tab === 'tubo') return <TubeScene />;
   if (tab === 'geiger') return <GeigerScene />;
   return <ModelScene />;
@@ -530,7 +682,7 @@ function Histogram() {
           <span style={{ color: '#a497db' }}>■</span> Thomson
         </span>
         <span className="muted">
-          <span style={{ color: 'var(--accent)' }}>■</span> núcleo
+          <span style={{ color: '#f2a93b' }}>■</span> núcleo
         </span>
         <span className="muted">┄ fórmula de Rutherford</span>
         <span className="faint">escala logarítmica</span>
@@ -553,7 +705,7 @@ function ModelsPanel() {
                 <span className="mono" style={{ width: 56, textAlign: 'left', color: 'var(--accent)' }}>
                   {m.year}
                 </span>
-                <span style={{ textAlign: 'left' }}>
+                <span style={{ textAlign: 'left', whiteSpace: 'normal', lineHeight: 1.3, minWidth: 0 }}>
                   {m.title} <span className="faint small">· {m.who}</span>
                 </span>
               </button>
@@ -566,16 +718,7 @@ function ModelsPanel() {
           {info.title}
         </h2>
         <p className="small">{info.idea}</p>
-        <p className="small muted">
-          <b style={{ color: 'var(--ok)', fontWeight: 600 }}>Explica: </b>
-          {info.evidence}
-        </p>
-        {info.limit !== '—' && (
-          <p className="small muted">
-            <b style={{ color: 'var(--bad)', fontWeight: 600 }}>Limitación: </b>
-            {info.limit}
-          </p>
-        )}
+        <ModelStoryView model={model as ModelKey} />
         {model === 'rutherford' && (
           <div className="stack-8">
             <button type="button" className="btn btn--primary btn--sm" style={{ alignSelf: 'flex-start' }} disabled={!!collapse && !collapsed} onClick={() => set({ collapse: performance.now(), collapsed: false })}>
@@ -594,7 +737,7 @@ function ModelsPanel() {
             <span className="small muted">Haz saltar al electrón entre órbitas permitidas:</span>
             <div className="segmented" role="radiogroup" aria-label="Órbita">
               {[1, 2, 3].map((n) => (
-                <button key={n} type="button" role="radio" aria-checked={n === bohrLevel} aria-pressed={n === bohrLevel} onClick={() => set({ bohrLevel: n })}>
+                <button key={n} type="button" role="radio" aria-checked={n === bohrLevel} onClick={() => set({ bohrLevel: n })}>
                   n = {n}
                 </button>
               ))}
@@ -604,6 +747,7 @@ function ModelsPanel() {
         )}
         <EpiTag kind={info.epi}>{info.epi === 'historico' ? 'Representación del modelo histórico, no del átomo real' : 'Densidad electrónica 1s calculada'}</EpiTag>
       </section>
+      <ModelMatrix current={model as ModelKey} />
     </>
   );
 }
@@ -617,6 +761,35 @@ function TubePanel() {
   const em = vMeasured ? (2 * y1 * vMeasured * vMeasured) / (E * TUBE.length * TUBE.length) : null;
   return (
     <>
+      <section className="section">
+        <span className="eyebrow">Vista del instrumento</span>
+        <div className="segmented" role="radiogroup" aria-label="Vista del tubo">
+          {([
+            ['perspectiva', 'Perspectiva'],
+            ['lateral', 'Lateral (2D)'],
+            ['pantalla', 'Pantalla'],
+          ] as const).map(([v, l]) => (
+            <button key={v} type="button" role="radio" aria-checked={st.tubeView === v} onClick={() => st.set({ tubeView: v })}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </section>
+      <section className="section">
+        <Prediction
+          resetKey="tubo-placas"
+          question="La placa de arriba es positiva. Al subir la tensión entre placas, ¿hacia dónde se desviará el haz?"
+          options={[
+            { id: 'arriba', label: 'Hacia arriba' },
+            { id: 'abajo', label: 'Hacia abajo' },
+            { id: 'recto', label: 'Sigue recto' },
+          ]}
+          correct="arriba"
+          explanation="Los rayos catódicos son atraídos por la placa positiva: su carga es negativa. Ese fue el primer argumento de Thomson para decir que están hechos de partículas con carga, no de luz (la luz no se desvía en un campo eléctrico)."
+          onRun={() => st.set({ plates: 250, B: 0, tubeView: 'lateral' })}
+          runLabel="Aplicar 250 V y mirar de lado"
+        />
+      </section>
       <section className="section">
         <span className="eyebrow">Tubo de rayos catódicos</span>
         <div className="field">
@@ -641,7 +814,7 @@ function TubePanel() {
         </div>
         <div className="segmented" role="radiogroup" aria-label="Gas del tubo">
           {(['aire', 'neon', 'hidrogeno'] as const).map((g) => (
-            <button key={g} type="button" role="radio" aria-checked={st.gas === g} aria-pressed={st.gas === g} onClick={() => st.set({ gas: g })}>
+            <button key={g} type="button" role="radio" aria-checked={st.gas === g} onClick={() => st.set({ gas: g })}>
               {g === 'aire' ? 'Aire' : g === 'neon' ? 'Neón' : 'Hidrógeno'}
             </button>
           ))}
@@ -689,10 +862,10 @@ function GeigerPanel() {
       <section className="section">
         <span className="eyebrow">Experimento de Geiger–Marsden</span>
         <div className="segmented" role="radiogroup" aria-label="Modelo atómico del oro">
-          <button type="button" role="radio" aria-checked={st.scModel === 'thomson'} aria-pressed={st.scModel === 'thomson'} onClick={() => st.set({ scModel: 'thomson' })}>
+          <button type="button" role="radio" aria-checked={st.scModel === 'thomson'} onClick={() => st.set({ scModel: 'thomson' })}>
             Átomo de Thomson
           </button>
-          <button type="button" role="radio" aria-checked={st.scModel === 'rutherford'} aria-pressed={st.scModel === 'rutherford'} onClick={() => st.set({ scModel: 'rutherford' })}>
+          <button type="button" role="radio" aria-checked={st.scModel === 'rutherford'} onClick={() => st.set({ scModel: 'rutherford' })}>
             Átomo nuclear
           </button>
         </div>
@@ -767,12 +940,45 @@ export function HistoryOverlay() {
   );
   const TABS: { id: Tab; label: string }[] = [
     { id: 'modelos', label: 'Modelos' },
-    { id: 'tubo', label: 'Tubo de Thomson' },
+    { id: 'tubo', label: 'Tubo catódico' },
     { id: 'geiger', label: 'Lámina de oro' },
   ];
   const info = MODELS.find((m) => m.id === st.model)!;
   return (
     <div className="workspace">
+      {st.tab === 'tubo' && (
+        <LabelLayer>
+          {[
+            ['tb-catodo', 'Cátodo caliente (−)'],
+            ['tb-anodo', 'Ánodo y colimadores'],
+            ['tb-placas', 'Placas: campo E'],
+            ['tb-bobinas', 'Bobinas: campo B'],
+            ['tb-pantalla', 'Pantalla fluorescente (mm)'],
+          ].map(([id, text]) => (
+            <AnchoredLabel key={id} id={id!}>
+              <span className="scene-label scene-label--part">{text}</span>
+            </AnchoredLabel>
+          ))}
+        </LabelLayer>
+      )}
+      {st.tab === 'geiger' && (
+        <LabelLayer>
+          {SCREEN_TICKS.map((d) => (
+            <AnchoredLabel key={d} id={`gm-${d}`}>
+              <span className="scene-label">{d}°</span>
+            </AnchoredLabel>
+          ))}
+          {[
+            ['gm-src', 'Fuente de partículas α'],
+            ['gm-foil', 'Lámina de oro'],
+            ['gm-screen', 'Pantalla de ZnS: cada destello es una α detectada'],
+          ].map(([id, text]) => (
+            <AnchoredLabel key={id} id={id!}>
+              <span className="scene-label scene-label--part">{text}</span>
+            </AnchoredLabel>
+          ))}
+        </LabelLayer>
+      )}
       <div style={{ position: 'relative' }}>
         {st.tab === 'modelos' && (
           <div className="desktop-only" style={{ position: 'absolute', left: 'var(--gutter)', top: 8 }}>
@@ -797,7 +1003,7 @@ export function HistoryOverlay() {
         <div className="side__scroll">
           <div className="segmented" role="tablist" style={{ alignSelf: 'stretch' }}>
             {TABS.map((t) => (
-              <button key={t.id} type="button" role="tab" aria-selected={st.tab === t.id} style={{ flex: 1, padding: '7px 6px' }} onClick={() => st.set({ tab: t.id })}>
+              <button key={t.id} type="button" role="tab" aria-selected={st.tab === t.id} style={{ flex: 1, padding: '7px 6px', whiteSpace: 'nowrap' }} onClick={() => st.set({ tab: t.id })}>
                 {t.label}
               </button>
             ))}

@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Prediction } from '../../ui/Prediction';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
-import { cachedSurface, requestSurface } from './surfaceClient';
+import { cachedSurface as cachedSurfaceA, requestSurface as requestSurfaceA, cachedSurfaceB, requestSurfaceB, cachedCloud, requestCloud, cancelCloud } from './surfaceClient';
 import type { SurfaceResult } from '../../science/orbitalSurfaces';
 import * as THREE from 'three';
 import { create } from 'zustand';
 import { Stage } from '../../render/Stage';
 import { AnchoredLabel, LabelLayer, LabelProjector } from '../../render/labels';
-import { sampleOrbital, radialWavefunction, realYlm, radialProbability, radialCutoff, meanRadius, REAL_ORBITAL_NAMES } from '../../science/orbitals';
+import { radialProbability, radialCutoff, meanRadius, REAL_ORBITAL_NAMES } from '../../science/orbitals';
 import { lLetter, validateQuantumSet } from '../../science/quantum';
 import { levelEnergyEV } from '../../science/hydrogen';
-import { mulberry32, formatNumber } from '../../science/numbers';
+import { formatNumber } from '../../science/numbers';
+import { radius90, CLOUD_M_COLORS, CLOUD_PHASE_POS, CLOUD_PHASE_NEG, type CloudRequest, type CloudResult } from '../../science/orbitalCloud';
 import { gaussian, momentumSpread, packetReal, HBAR } from '../../science/uncertainty';
 import { parseQuantumTuple } from '../../learning/checker';
 import { useQuality, useReducedMotion, useMediaQuery, useRoute } from '../../app/hooks';
@@ -33,13 +35,15 @@ interface QState {
   fraction: number;
   tab: Tab;
   sigmaNm: number;
+  /** Orbital de comparación (se dibuja a la derecha con la MISMA escala) */
+  compare: { n: number; l: number; m: number } | null;
   set: (p: Partial<Omit<QState, 'set'>>) => void;
 }
 
 /** Estado del cálculo de la superficie (para informar en la interfaz). */
 export const useSurfaceInfo = create<{ enclosed: number; res: number; computing: boolean; set: (i: { enclosed: number; res: number; computing: boolean }) => void }>((set) => ({ enclosed: NaN, res: 0, computing: false, set: (i) => set(i) }));
 
-export const useQuantum = create<QState>((set) => ({ n: 2, l: 1, m: 0, slice: false, bohr: false, subshell: false, view: 'superficie', fraction: 0.9, tab: 'orbitales', sigmaNm: 0.1, set: (p) => set(p) }));
+export const useQuantum = create<QState>((set) => ({ n: 2, l: 1, m: 0, slice: false, bohr: false, subshell: false, view: 'superficie', fraction: 0.9, tab: 'orbitales', sigmaNm: 0.1, compare: null, set: (p) => set(p) }));
 
 const fmt = (v: number, sig = 3) => formatNumber(v, { sig });
 
@@ -64,46 +68,38 @@ export function mostProbableRadius(n: number, l: number): number {
   return arg;
 }
 
-interface CloudData {
-  positions: Float32Array;
-  tint: Float32Array;
-  r90: number;
-}
+type CloudData = CloudResult;
 
-const PHASE_POS = new THREE.Color('#f2a93b');
-const PHASE_NEG = new THREE.Color('#8fc3f2');
-const M_COLORS = ['#f2a93b', '#8fc3f2', '#d9785a', '#9fd3a6', '#b892c2', '#e6c56d', '#7fb0c9'].map((c) => new THREE.Color(c));
-
-function buildCloud(n: number, l: number, m: number, subshell: boolean, count: number): CloudData {
-  const rng = mulberry32(n * 100 + l * 10 + m + (subshell ? 7 : 0));
-  const ms = subshell ? Array.from({ length: 2 * l + 1 }, (_, i) => i - l) : [m];
-  const per = Math.floor(count / ms.length);
-  const positions = new Float32Array(per * ms.length * 3);
-  const tint = new Float32Array(per * ms.length * 3);
-  const radii: number[] = [];
-  ms.forEach((mm, k) => {
-    const pts = sampleOrbital(n, l, mm, 1, per, rng);
-    positions.set(pts, k * per * 3);
-    for (let i = 0; i < per; i++) {
-      const x = pts[i * 3]!;
-      const y = pts[i * 3 + 1]!;
-      const z = pts[i * 3 + 2]!;
-      const r = Math.hypot(x, y, z) || 1e-9;
-      if (i % 8 === 0) radii.push(r);
-      let c: THREE.Color;
-      if (subshell) c = M_COLORS[k % M_COLORS.length]!;
-      else {
-        const psi = radialWavefunction(n, l, 1, r) * realYlm(l, mm, x / r, y / r, z / r);
-        c = psi >= 0 ? PHASE_POS : PHASE_NEG;
-      }
-      const o = (k * per + i) * 3;
-      tint[o] = c.r;
-      tint[o + 1] = c.g;
-      tint[o + 2] = c.b;
+/**
+ * Nube calculada en un Web Worker (P1.2): vista previa de 6 000 puntos inmediata y, después, la nube
+ * completa. Solo se pide cuando la vista activa es «nube»; al desmontar se cancela lo pendiente.
+ */
+function useCloud(n: number, l: number, m: number, subshell: boolean, count: number): CloudData | null {
+  const full: CloudRequest = { n, l, m, subshell, count };
+  const preview: CloudRequest = { ...full, count: Math.min(6000, count) };
+  const [data, setData] = useState<CloudData | null>(() => cachedCloud(full) ?? cachedCloud(preview) ?? null);
+  useEffect(() => {
+    let alive = true;
+    const hit = cachedCloud(full);
+    if (hit) {
+      setData(hit);
+      return;
     }
-  });
-  radii.sort((a, b) => a - b);
-  return { positions, tint, r90: radii[Math.floor(radii.length * 0.9)] ?? 1 };
+    requestCloud(preview)
+      .then((r) => {
+        if (!alive) return;
+        if (r) setData(r);
+        return requestCloud(full);
+      })
+      .then((r) => alive && r && setData(r))
+      .catch(() => {});
+    return () => {
+      alive = false;
+      cancelCloud();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [n, l, m, subshell, count]);
+  return data;
 }
 
 const vertex = /* glsl */ `
@@ -120,7 +116,8 @@ const vertex = /* glsl */ `
     vKeep = (uSlice > 0.0 && abs(p.z) > uSlice) ? 0.0 : 1.0;
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
-    gl_PointSize = min(uSize * uPixelRatio / -mv.z, 14.0 * uPixelRatio);
+    // Límite bajo: los puntos cercanos a la cámara eran manchas de 14 px que tapaban la estructura.
+    gl_PointSize = min(uSize * uPixelRatio / -mv.z, 7.0 * uPixelRatio);
   }
 `;
 const fragment = /* glsl */ `
@@ -172,15 +169,47 @@ function OrbitalCloud({ data, scale, slice, reduced, size }: { data: CloudData; 
   );
 }
 
+function CloudView({ n, l, m, subshell, count, ...rest }: { n: number; l: number; m: number; subshell: boolean; count: number; scale: number; slice: boolean; reduced: boolean; size: number }) {
+  const data = useCloud(n, l, m, subshell, count);
+  return data ? <OrbitalCloud data={data} {...rest} /> : null;
+}
+
 // ── Superficie de contorno (fracción de probabilidad elegible) ───────────
 
 /** Materiales compartidos: uno por color, creados una sola vez (no se reconstruyen al cambiar de orbital). */
 const SURFACE_MATERIALS = new Map<string, THREE.MeshPhysicalMaterial>();
-function surfaceMaterial(color: string) {
-  let m = SURFACE_MATERIALS.get(color);
+/**
+ * ATOM 5.1: el barniz y el brillo aterciopelado (sheen) evalúan BRDF adicionales en cada píxel de una
+ * superficie que ocupa media pantalla; eran la causa principal de la latencia al cambiar de orbital
+ * (regresión de 5.0). Solo se usan en calidad alta.
+ */
+/**
+ * ATOM 5.2 · Superficies con acabado satinado (antes, plástico saturado): poca emisión, brillo de capa
+ * transparente y un realce de borde (Fresnel) que dibuja el contorno de cada lóbulo sin oscurecerlo.
+ */
+function surfaceMaterial(color: string, rich: boolean) {
+  const key = `${color}|${rich ? 1 : 0}`;
+  let m = SURFACE_MATERIALS.get(key);
   if (!m) {
-    m = new THREE.MeshPhysicalMaterial({ color, emissive: color, emissiveIntensity: 0.32, roughness: 0.26, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.18, envMapIntensity: 1.3, sheen: 0.4, sheenColor: new THREE.Color(color), side: THREE.DoubleSide });
-    SURFACE_MATERIALS.set(color, m);
+    const base = new THREE.Color(color);
+    const light = base.clone().lerp(new THREE.Color('#ffffff'), 0.55);
+    m = rich
+      ? new THREE.MeshPhysicalMaterial({ color: base, emissive: base, emissiveIntensity: 0.1, roughness: 0.38, metalness: 0, clearcoat: 0.8, clearcoatRoughness: 0.12, envMapIntensity: 1.15, sheen: 0.8, sheenRoughness: 0.45, sheenColor: light, side: THREE.DoubleSide })
+      : new THREE.MeshPhysicalMaterial({ color: base, emissive: base, emissiveIntensity: 0.14, roughness: 0.4, metalness: 0, envMapIntensity: 1.2, side: THREE.DoubleSide });
+    const rim = light;
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.uRim = { value: rim };
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform vec3 uRim;')
+        .replace(
+          '#include <emissivemap_fragment>',
+          `#include <emissivemap_fragment>
+          float fres = pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 3.0);
+          totalEmissiveRadiance += uRim * fres * 0.55;`,
+        );
+    };
+    m.customProgramCacheKey = () => `atom-orbital-rim-${rich ? 1 : 0}`;
+    SURFACE_MATERIALS.set(key, m);
   }
   return m;
 }
@@ -191,7 +220,9 @@ const PREVIEW_RES = 32;
  * Superficie calculada en un Web Worker. Primero aparece una vista previa rápida (32³) y, cuando los
  * controles dejan de cambiar durante 220 ms, la versión refinada. Las peticiones obsoletas se descartan.
  */
-function OrbitalSurface({ n, l, m, subshell, scale, slice, res, p, onInfo }: { n: number; l: number; m: number; subshell: boolean; scale: number; slice: boolean; res: number; p: number; onInfo?: (i: { enclosed: number; res: number; computing: boolean }) => void }) {
+function OrbitalSurface({ n, l, m, subshell, scale, slice, res, p, onInfo, slot = 'a' }: { n: number; l: number; m: number; subshell: boolean; scale: number; slice: boolean; res: number; p: number; onInfo?: (i: { enclosed: number; res: number; computing: boolean }) => void; slot?: 'a' | 'b' }) {
+  const requestSurface = slot === 'a' ? requestSurfaceA : requestSurfaceB;
+  const cachedSurface = slot === 'a' ? cachedSurfaceA : cachedSurfaceB;
   const gl = useThree((s) => s.gl);
   useEffect(() => {
     gl.localClippingEnabled = true;
@@ -234,7 +265,7 @@ function OrbitalSurface({ n, l, m, subshell, scale, slice, res, p, onInfo }: { n
       g.setAttribute('position', new THREE.BufferAttribute(mesh.positions, 3));
       g.setAttribute('normal', new THREE.BufferAttribute(mesh.normals, 3));
       g.computeBoundingSphere();
-      const color = mesh.sign === 0 ? `#${M_COLORS[k % M_COLORS.length]!.getHexString()}` : mesh.sign === 1 ? '#ffb54d' : '#86c2f7';
+      const color = mesh.sign === 0 ? CLOUD_M_COLORS[k % CLOUD_M_COLORS.length]! : mesh.sign === 1 ? CLOUD_PHASE_POS : CLOUD_PHASE_NEG;
       return { g, color, key: `${result.res}-${k}-${mesh.sign}-${mesh.m}` };
     });
   }, [result]);
@@ -244,8 +275,17 @@ function OrbitalSurface({ n, l, m, subshell, scale, slice, res, p, onInfo }: { n
       mat.clippingPlanes = slice ? clip : [];
       mat.needsUpdate = true;
     }
-  }, [slice, clip, meshes]);
+  }, [slice, clip]);
   const reduced = useReducedMotion();
+  const rich = useQuality().tier === 'alta';
+  useEffect(() => {
+    for (const mat of SURFACE_MATERIALS.values()) {
+      if (mat.clippingPlanes?.length !== (slice ? 1 : 0)) {
+        mat.clippingPlanes = slice ? clip : [];
+        mat.needsUpdate = true;
+      }
+    }
+  }, [meshes, slice, clip, rich]);
   useFrame((_, dt) => {
     if (!group.current) return;
     group.current.scale.setScalar(scale * 0.74);
@@ -255,7 +295,7 @@ function OrbitalSurface({ n, l, m, subshell, scale, slice, res, p, onInfo }: { n
   return (
     <group ref={group}>
       {meshes.map(({ g, color, key }) => (
-        <mesh key={key} geometry={g} material={surfaceMaterial(color)} />
+        <mesh key={key} geometry={g} material={surfaceMaterial(color, rich)} />
       ))}
     </group>
   );
@@ -306,20 +346,39 @@ const AXIS_ANCHORS = [
 ];
 
 export function QuantumScene() {
-  const { n, l, m, slice, bohr, subshell, view, fraction } = useQuantum();
+  const { n, l, m, slice, bohr, subshell, view, fraction, compare } = useQuantum();
   const setInfo = useSurfaceInfo((st) => st.set);
   const q = useQuality();
   const reduced = useReducedMotion();
-  const data = useMemo(() => buildCloud(n, l, m, subshell, Math.min(60000, q.points * 2.2)), [n, l, m, subshell, q.points]);
-  const scale = 3.2 / data.r90;
+  const res = q.tier === 'alta' ? 72 : q.tier === 'media' ? 56 : 40;
+  if (compare) {
+    // Comparación: la MISMA escala para los dos (la del mayor), para que los tamaños relativos sean reales.
+    const common = 2.0 / Math.max(radius90(n, l), radius90(compare.n, compare.l));
+    return (
+      <Stage mood="cuantico" camera={slice ? [0, 11, 0.01] : [0, 3.2, 10.5]} fov={40} key={slice ? 'corte-c' : 'libre-c'}>
+        <group position={[-2.35, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <OrbitalSurface n={n} l={l} m={m} subshell={false} scale={common} slice={slice} res={Math.min(res, 56)} p={fraction} onInfo={setInfo} />
+        </group>
+        <group position={[2.35, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <OrbitalSurface n={compare.n} l={compare.l} m={compare.m} subshell={false} scale={common} slice={slice} res={Math.min(res, 56)} p={fraction} slot="b" />
+        </group>
+        <OrbitControls enablePan={false} enableDamping minDistance={5} maxDistance={20} />
+      </Stage>
+    );
+  }
+  // Escala a partir del radio que encierra el 90 % de la probabilidad radial (analítico, sin muestrear).
+  const scale = 3.2 / radius90(n, l);
   // Las coordenadas químicas (z hacia arriba) se dibujan con el eje y de la escena hacia arriba.
   return (
-    <Stage camera={slice ? [0, 9, 0.01] : [5.2, 3.4, 6.2]} fov={40} key={slice ? 'corte' : 'libre'}>
+    // La nube incluye también el 10 % exterior de la probabilidad (llega a ~2 veces el radio del 90 %): la
+    // cámara se aleja un 25 % en esa vista, sin cambiar la escala del mundo, para que nube y superficie
+    // sigan siendo comparables.
+    <Stage mood="cuantico" camera={slice ? (view === 'nube' ? [0, 11.5, 0.01] : [0, 9, 0.01]) : view === 'nube' ? [6.5, 4.25, 7.75] : [5.2, 3.4, 6.2]} fov={40} key={`${slice ? 'corte' : 'libre'}-${view}`}>
       <group rotation={[-Math.PI / 2, 0, 0]}>
         {view === 'nube' ? (
-          <OrbitalCloud data={data} scale={scale} slice={slice} reduced={reduced} size={q.tier === 'baja' ? 60 : 42} />
+          <CloudView n={n} l={l} m={m} subshell={subshell} count={Math.min(60000, Math.round(q.points * 2.2))} scale={scale} slice={slice} reduced={reduced} size={q.tier === 'baja' ? 44 : 30} />
         ) : (
-          <OrbitalSurface n={n} l={l} m={m} subshell={subshell} scale={scale} slice={slice} res={q.tier === 'alta' ? 72 : q.tier === 'media' ? 56 : 40} p={fraction} onInfo={setInfo} />
+          <OrbitalSurface n={n} l={l} m={m} subshell={subshell} scale={scale} slice={slice} res={res} p={fraction} onInfo={setInfo} />
         )}
         {bohr && (
           <mesh>
@@ -341,10 +400,83 @@ export function QuantumScene() {
 
 // ── Interfaz ─────────────────────────────────────────────────────────────
 
-function RadialPlot({ n, l, scaleBohr }: { n: number; l: number; scaleBohr: boolean }) {
+const COMPARE_PRESETS: { label: string; a: [number, number, number]; b: [number, number, number]; why: string }[] = [
+  { label: '1s ↔ 2s', a: [1, 0, 0], b: [2, 0, 0], why: 'Mismo l, distinto n: el 2s es mayor y tiene un nodo radial.' },
+  { label: '2p ↔ 3p', a: [2, 1, 0], b: [3, 1, 0], why: 'Misma forma (l = 1); al subir n crece el tamaño y aparece un nodo radial más.' },
+  { label: '2s ↔ 2p', a: [2, 0, 0], b: [2, 1, 0], why: 'Mismo n, distinto l: cambia la forma y el número de nodos angulares.' },
+  { label: '3d_z² ↔ 3d_xy', a: [3, 2, 0], b: [3, 2, -2], why: 'Mismo subnivel, distinta orientación (m): misma energía en el átomo de hidrógeno.' },
+];
+
+/** Comparar dos orbitales con la misma escala (tamaños relativos reales) y sus P(r) superpuestas. */
+function CompareSection() {
+  const st = useQuantum();
+  const c = st.compare;
+  const set = (a: [number, number, number], b: [number, number, number]) => st.set({ n: a[0], l: a[1], m: a[2], subshell: false, view: 'superficie', compare: { n: b[0], l: b[1], m: b[2] } });
+  return (
+    <section className="section">
+      <div className="row row--between">
+        <span className="eyebrow">Comparar orbitales</span>
+        {c && (
+          <button type="button" className="btn btn--ghost btn--sm" onClick={() => st.set({ compare: null })}>
+            Quitar
+          </button>
+        )}
+      </div>
+      <div className="row row--wrap" style={{ gap: 6 }}>
+        {COMPARE_PRESETS.map((p) => (
+          <button key={p.label} type="button" className="btn btn--sm mono" aria-pressed={!!c && st.n === p.a[0] && st.l === p.a[1] && st.m === p.a[2] && c.n === p.b[0] && c.l === p.b[1] && c.m === p.b[2]} onClick={() => set(p.a, p.b)}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+      {c ? (
+        <>
+          <p className="small muted" style={{ margin: 0 }}>
+            Izquierda: <b>{orbitalName(st.n, st.l, st.m).replace('_', '')}</b> · derecha: <b>{orbitalName(c.n, c.l, c.m).replace('_', '')}</b>. Misma escala: los tamaños relativos son reales.
+            {' '}
+            {COMPARE_PRESETS.find((p) => st.n === p.a[0] && st.l === p.a[1] && st.m === p.a[2] && c.n === p.b[0] && c.l === p.b[1] && c.m === p.b[2])?.why ?? ''}
+          </p>
+          <div className="row row--wrap" style={{ gap: 6 }}>
+            <span className="small faint">Derecha: n</span>
+            {[1, 2, 3, 4, 5].map((v) => (
+              <button key={v} type="button" className="btn btn--sm mono" aria-pressed={c.n === v} onClick={() => st.set({ compare: { n: v, l: Math.min(c.l, v - 1), m: Math.max(-Math.min(c.l, v - 1), Math.min(c.m, Math.min(c.l, v - 1))) } })}>
+                {v}
+              </button>
+            ))}
+            <span className="small faint">l</span>
+            {Array.from({ length: c.n }, (_, v) => v).map((v) => (
+              <button key={v} type="button" className="btn btn--sm mono" aria-pressed={c.l === v} onClick={() => st.set({ compare: { ...c, l: v, m: Math.max(-v, Math.min(c.m, v)) } })}>
+                {lLetter(v)}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="small faint" style={{ margin: 0 }}>
+          Elige una pareja para ver los dos orbitales a la vez, con la misma escala y sus distribuciones radiales superpuestas.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function RadialPlot({ n, l, scaleBohr, other }: { n: number; l: number; scaleBohr: boolean; other?: { n: number; l: number } | null }) {
   const W = 340;
   const H = 120;
-  const rmax = radialCutoff(n, 1) * 0.75;
+  const rmax = Math.max(radialCutoff(n, 1), other ? radialCutoff(other.n, 1) : 0) * 0.75;
+  // Curva del orbital de comparación (misma escala de r; cada curva normalizada a su máximo).
+  let dOther = '';
+  if (other) {
+    const po: [number, number][] = [];
+    let mo = 0;
+    for (let i = 0; i <= 240; i++) {
+      const r = (rmax * i) / 240;
+      const p = radialProbability(other.n, other.l, 1, r);
+      mo = Math.max(mo, p);
+      po.push([r, p]);
+    }
+    dOther = 'M' + po.map(([r, p]) => `${((r / rmax) * W).toFixed(1)},${(H - (p / mo) * (H - 10)).toFixed(1)}`).join(' L');
+  }
   const pts: [number, number][] = [];
   let max = 0;
   for (let i = 0; i <= 240; i++) {
@@ -361,7 +493,8 @@ function RadialPlot({ n, l, scaleBohr }: { n: number; l: number; scaleBohr: bool
   return (
     <figure style={{ margin: 0 }}>
       <svg viewBox={`0 0 ${W} ${H + 18}`} style={{ width: '100%', display: 'block' }} role="img" aria-label={`Distribución radial P(r) del orbital ${n}${lLetter(l)}: radio más probable ${fmt(mp, 3)} a₀, radio medio ${fmt(mean, 3)} a₀`}>
-        <path d={d} fill="rgb(242 169 59 / 0.18)" stroke="var(--accent)" strokeWidth="1.5" />
+        <path d={d} fill="color-mix(in srgb, var(--b4) 16%, transparent)" stroke="var(--b4)" strokeWidth="1.5" />
+        {other && <path d={dOther} fill="none" stroke="var(--b5)" strokeWidth="1.8" strokeDasharray="5 3" />}
         <line x1={x(mp)} x2={x(mp)} y1={0} y2={H} stroke="var(--ink)" strokeDasharray="3 3" strokeWidth="1" />
         <line x1={x(mean)} x2={x(mean)} y1={0} y2={H} stroke="var(--electron)" strokeDasharray="2 4" strokeWidth="1" />
         {scaleBohr && n * n < rmax && <line x1={x(n * n)} x2={x(n * n)} y1={0} y2={H} stroke="var(--proton)" strokeWidth="1.5" />}
@@ -373,6 +506,13 @@ function RadialPlot({ n, l, scaleBohr }: { n: number; l: number; scaleBohr: bool
         ))}
       </svg>
       <figcaption className="row row--wrap small" style={{ gap: 12, marginTop: 6 }}>
+        {other && (
+          <span className="muted">
+            <span style={{ color: 'var(--b4)' }}>━</span> {n}
+            {lLetter(l)} · <span style={{ color: 'var(--b5)' }}>╍</span> {other.n}
+            {lLetter(other.l)} (cada curva escalada a su máximo)
+          </span>
+        )}
         <span className="muted">
           <span style={{ color: 'var(--ink)' }}>┆</span> más probable {fmt(mp, 3)} a₀
         </span>
@@ -397,7 +537,7 @@ function Picker({ label, values, value, onChange, render }: { label: string; val
       </span>
       <div className="segmented" role="radiogroup" aria-labelledby={`qp-${label}`} style={{ flexWrap: 'wrap' }}>
         {values.map((v) => (
-          <button key={v} type="button" role="radio" aria-checked={v === value} aria-pressed={v === value} className="mono" onClick={() => onChange(v)} style={{ minWidth: 40 }}>
+          <button key={v} type="button" role="radio" aria-checked={v === value} className="mono" onClick={() => onChange(v)} style={{ minWidth: 40 }}>
             {render ? render(v) : v}
           </button>
         ))}
@@ -517,13 +657,15 @@ export function QuantumOverlay() {
   const [collapsed, setCollapsed] = useState(false);
   const [tuple, setTuple] = useState('');
   const [tupleMsg, setTupleMsg] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [predictNodes, setPredictNodes] = useState(false);
+  const [nodesRevealed, setNodesRevealed] = useState<string | null>(null);
   useEffect(() => {
     const t = query.get('tab');
     if (t === 'orbitales' || t === 'incertidumbre') st.set({ tab: t });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.get('tab')]);
   const { n, l, m } = st;
-  const signal = useMemo(() => ({ quantum: { n, l, m, slice: st.slice, bohr: st.bohr, tab: st.tab, sigmaNm: st.sigmaNm } }), [n, l, m, st.slice, st.bohr, st.tab, st.sigmaNm]);
+  const signal = useMemo(() => ({ quantum: { n, l, m, slice: st.slice, bohr: st.bohr, tab: st.tab, sigmaNm: st.sigmaNm, compare: st.compare } }), [n, l, m, st.slice, st.bohr, st.tab, st.sigmaNm, st.compare]);
   const tryTuple = () => {
     const t = parseQuantumTuple(tuple);
     if (!t) return setTupleMsg({ ok: false, msg: 'Escribe cuatro números: (n, l, m_l, m_s).' });
@@ -536,7 +678,7 @@ export function QuantumOverlay() {
   return (
     <div className="workspace">
       <LabelLayer>
-        {(['x', 'y', 'z'] as const).map((a) => (
+        {!st.compare && (['x', 'y', 'z'] as const).map((a) => (
           <AnchoredLabel key={a} id={`ax-${a}`}>
             <span className="scene-label">{a}</span>
           </AnchoredLabel>
@@ -546,6 +688,7 @@ export function QuantumOverlay() {
         <div className="desktop-only" style={{ position: 'absolute', left: 'var(--gutter)', top: 8 }}>
           <span style={{ fontFamily: 'var(--font-display)', fontSize: '3.5rem', lineHeight: 1 }}>
             {st.subshell ? `${n}${lLetter(l)}` : orbitalName(n, l, m).replace('_', '')}
+            {st.compare && <span style={{ color: 'var(--ink-faint)' }}> ↔ {orbitalName(st.compare.n, st.compare.l, st.compare.m).replace('_', '')}</span>}
           </span>
           <p className="small muted" style={{ marginTop: 6 }}>
             n = {n} · l = {l} · {st.subshell ? `m = −${l}…+${l}` : `m = ${m}`} · E = {fmt(levelEnergyEV(n), 3)} eV
@@ -581,10 +724,10 @@ export function QuantumOverlay() {
                 <div className="field">
                   <span className="label" id="q-view">Representación</span>
                   <div className="segmented" role="radiogroup" aria-labelledby="q-view">
-                    <button type="button" role="radio" aria-checked={st.view === 'superficie'} aria-pressed={st.view === 'superficie'} onClick={() => st.set({ view: 'superficie' })}>
+                    <button type="button" role="radio" aria-checked={st.view === 'superficie'} onClick={() => st.set({ view: 'superficie' })}>
                       Superficie de probabilidad
                     </button>
-                    <button type="button" role="radio" aria-checked={st.view === 'nube'} aria-pressed={st.view === 'nube'} onClick={() => st.set({ view: 'nube' })}>
+                    <button type="button" role="radio" aria-checked={st.view === 'nube'} onClick={() => st.set({ view: 'nube' })}>
                       Nube de probabilidad
                     </button>
                   </div>
@@ -607,7 +750,27 @@ export function QuantumOverlay() {
                   </button>
                 </div>
               </section>
+              <CompareSection />
               <section className="section">
+                <label className="row small" style={{ gap: 8 }}>
+                  <input type="checkbox" checked={predictNodes} onChange={(e) => setPredictNodes(e.target.checked)} />
+                  Predecir los nodos antes de verlos
+                </label>
+                {predictNodes && (
+                  <Prediction
+                    resetKey={`${n}-${l}`}
+                    question={`¿Cuántos nodos en total (radiales + angulares) tiene un orbital ${n}${lLetter(l)}?`}
+                    options={[0, 1, 2, 3, 4].map((k) => ({ id: String(k), label: String(k) }))}
+                    correct={String(n - 1)}
+                    explanation={`Nodos totales = n − 1 = ${n - 1}: ${l} angular${l === 1 ? '' : 'es'} (= l) y ${n - l - 1} radial${n - l - 1 === 1 ? '' : 'es'} (= n − l − 1). Con el corte activado se ven ${n - l - 1 > 0 ? 'las capas concéntricas (radiales)' : 'que no hay capas concéntricas'}${l > 0 ? ' y los planos o conos donde ψ cambia de signo (angulares)' : ''}.`}
+                    onRun={() => {
+                      st.set({ slice: true });
+                      setNodesRevealed(`${n}-${l}`);
+                    }}
+                    runLabel="Ver el corte y comprobar"
+                  />
+                )}
+                {(!predictNodes || nodesRevealed === `${n}-${l}`) && (
                 <dl className="kv" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
                   <div>
                     <dt>nodos radiales</dt>
@@ -622,8 +785,9 @@ export function QuantumOverlay() {
                     <dd>{2 * l + 1}</dd>
                   </div>
                 </dl>
+                )}
                 <span className="small muted">Distribución radial de probabilidad P(r) = r²·R²(r)</span>
-                <RadialPlot n={n} l={l} scaleBohr={st.bohr} />
+                <RadialPlot n={n} l={l} scaleBohr={st.bohr} other={st.compare} />
                 {n === 1 && st.bohr && <Feedback tone="info">En el 1s el radio más probable coincide con el radio de Bohr (a₀ = 52,9 pm), pero el electrón no está «en» la órbita: puede encontrarse más cerca o más lejos.</Feedback>}
                 {st.subshell && <Feedback tone="info">Cada color es un orbital del subnivel {n}{lLetter(l)}. Juntos forman una distribución con simetría esférica (teorema de Unsöld): por eso un subnivel lleno no tiene dirección preferente.</Feedback>}
                 {st.slice && <Feedback tone="info">{st.view === 'nube' ? 'Corte por el plano xy: las zonas vacías son nodos, superficies donde ψ = 0 y la probabilidad es nula. Al cruzar un nodo, ψ cambia de signo (de color).' : 'Corte por el plano xy: se ve el interior de las superficies. Los nodos radiales aparecen como capas concéntricas separadas por huecos.'}</Feedback>}

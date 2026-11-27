@@ -7,18 +7,31 @@ Laboratorio interactivo de **estructura atómica y sistema periódico** para 1.�
 ```bash
 npm install
 npm run dev        # desarrollo en http://localhost:5173
-npm test           # 223 pruebas del núcleo científico y del motor de aprendizaje
+npm test           # pruebas del núcleo científico, del motor de aprendizaje y de la auditoría
+npm run stats      # regenera docs/ESTADISTICAS.md (cifras sacadas del código)
 npm run build      # comprobación de tipos + compilación en dist/
 npm run e2e        # prueba de humo en navegador (requiere build previo; también en CI)
 npm run bench      # tiempos de los cálculos científicos más costosos
 node tools/perf.mjs salida.json   # fotogramas, tareas largas y memoria por laboratorio
+node tools/shots.mjs etiqueta     # capturas de escritorio e iPad en docs/capturas/etiqueta/
 ```
 
-## Qué incluye
+> **Cifras actualizadas**: [docs/ESTADISTICAS.md](docs/ESTADISTICAS.md) se genera desde el código (`npm run stats`); este README no repite números que puedan quedar desfasados.
+
+## Qué incluye (ATOM 3.0)
+
+- **Identidad clara**: tema claro por defecto (oscuro opcional), tipografía sans única, sistema de tokens en `src/styles/tokens.css`; los laboratorios muestran su escena en un visor de tono pizarra.
+- **Inicio para estudiar**: qué hacer ahora (recomendación explicada del motor, repaso, simulacro), laboratorios, temario por bloque, competencias y errores que repites.
+- **Navegación**: raíl lateral en escritorio e iPad y búsqueda global de conceptos (⌘K, Ctrl K o «/») que devuelve teoría, laboratorio y práctica.
+- **Ejercicios que obligan a pensar**: detectar errores en una resolución, deducir elementos por pistas, energías de ionización sucesivas, líneas sin serie conocida (dos métodos), gráficas, proporciones de Bohr, problemas multibloque y preguntas de desarrollo con rúbrica y autoevaluación.
+- **Resoluciones explicadas** por bloques con fórmulas renderizadas, pistas progresivas y modos guiado, autónomo, desafío y revisión.
+- **Simulacros por perfil**: equilibrado, numérico, razonamiento, exigente, estilo EBAU y puntos débiles (ponderaciones declaradas como propuesta).
+
+### Detalle por área (heredado de ATOM 2.0)
 
 | Área | Contenido |
 |---|---|
-| **Atrio** | Mundo central 3D (columnata, suelo reflectante) con la densidad electrónica *calculada* del neón, nueve estaciones, acceso directo a la guía y al examen tipo, y bienvenida en la primera visita |
+| **Campaña (atrio 3D)** | Mundo central 3D (columnata, suelo reflectante) con la densidad electrónica *calculada* del neón, nueve estaciones, acceso directo a la guía y al examen tipo, y bienvenida en la primera visita |
 | **Guía de estudio** | 7 lecciones por bloque: lo esencial, fórmulas con el significado y la unidad de cada símbolo, errores típicos de examen, consejos y ejercicios resueltos paso a paso; formulario completo. 10 widgets interactivos: anatomía de una onda (cuerda y onda EM: λ, ν, T, A, v), espectro electromagnético, Rydberg con diagrama de niveles, notación de nucleidos, números cuánticos, Möller, tendencias periódicas, masa atómica media, modelos y partículas |
 | **Atomic Forge** | Construcción de átomos e iones con botones, arrastre o teclado (P, N, E); identidad, estabilidad nuclear (NUBASE), isótopos naturales, configuración e isoelectrónicos. Nube electrónica con Z efectiva de Slater y visor de escala real (R = 1,2·A^⅓ fm frente al radio atómico) |
 | **Photon Lab** | Banco de ondas (λ, ν, T, E), escalera de niveles del hidrógeno con Rydberg, emisión, absorción y cascadas, detector UV-visible-IR y espectroscopio de prisma 3D: vidrio SF11 (Sellmeier), trazado de rayos con Snell y líneas NIST en su posición calculada |
@@ -43,6 +56,8 @@ node tools/perf.mjs salida.json   # fotogramas, tareas largas y memoria por labo
 5. [Propuesta visual y tecnológica](docs/05-propuesta-visual-tecnologica.md)
 6. [Plan de desarrollo por fases](docs/06-plan-fases.md)
 7. [Segunda generación: auditoría, decisiones, mediciones y pendientes](docs/07-segunda-generacion.md)
+8. [Tercera generación (ATOM 3.0): informe](docs/08-tercera-generacion.md) · [progreso](docs/ATOM3-PROGRESS.md) · [criterios de aceptación](docs/ATOM3-QUALITY-GATES.md) · [reanudación](docs/ATOM3-RESUME.md)
+9. [Estadísticas generadas desde el código](docs/ESTADISTICAS.md)
 
 ## Estructura
 

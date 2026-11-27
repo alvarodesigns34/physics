@@ -63,7 +63,7 @@ export function slater(z: number, conf: Configuration, target: Subshell): Slater
       factor = 1;
     }
     if (electrons > 0 && factor > 0) {
-      contributions.push({ group: g.kind === 'sp' ? `${g.n}s,${g.n}p` : `${g.n}${g.kind}`, electrons, factor });
+      contributions.push({ group: g.kind === 'sp' ? (g.n === 1 ? '1s' : `${g.n}s,${g.n}p`) : `${g.n}${g.kind}`, electrons, factor });
       shielding += electrons * factor;
     }
   }

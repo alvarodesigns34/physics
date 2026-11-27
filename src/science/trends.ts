@@ -1,7 +1,7 @@
 /**
  * Propiedades periódicas con datos reales y razonamiento de tendencias, incluidas las excepciones.
  */
-import { elementByZ, ieKJPerMol, type ElementRecord } from './elements';
+import { affinityStatus, elementByZ, ieKJPerMol, type ElementRecord } from './elements';
 import { groundState, formatConfiguration } from './configuration';
 import { outerZeff } from './slater';
 
@@ -21,8 +21,8 @@ export interface PropertyDef {
 export const PROPERTIES: Record<PropertyId, PropertyDef> = {
   radio: { id: 'radio', label: 'Radio atómico (covalente)', short: 'Radio', unit: 'pm', get: (e) => e.covalentRadius, digits: 3, note: 'Radios covalentes de enlace simple (Pyykkö y Atsumi, 2009).' },
   ei1: { id: 'ei1', label: '1.ª energía de ionización', short: 'EI₁', unit: 'kJ/mol', get: (e) => (e.ie1 === null ? null : ieKJPerMol(e.ie1)), digits: 4, note: 'NIST ASD. 1 eV por átomo = 96,485 kJ/mol.' },
-  ae: { id: 'ae', label: 'Afinidad electrónica', short: 'AE', unit: 'kJ/mol', get: (e) => (e.electronAffinity === null ? (e.ie1 === null ? null : 0) : ieKJPerMol(e.electronAffinity)), digits: 3, note: 'Energía liberada al captar un electrón. 0 indica que el anión no es estable (AE ≤ 0).' },
-  en: { id: 'en', label: 'Electronegatividad (Pauling)', short: 'χ', unit: '', get: (e) => e.electronegativity, digits: 3, note: 'Escala de Pauling (CRC). Sin valor para He, Ne y Ar.' },
+  ae: { id: 'ae', label: 'Afinidad electrónica', short: 'AE', unit: 'kJ/mol', get: (e) => (e.electronAffinity !== null ? ieKJPerMol(e.electronAffinity) : affinityStatus(e) === 'no-ligado' ? 0 : null), digits: 3, note: 'Energía liberada al captar un electrón. 0 = el anión no es estable (AE ≤ 0); los elementos sin valor en la fuente se muestran como «sin datos», no como 0.' },
+  en: { id: 'en', label: 'Electronegatividad (Pauling)', short: 'χ', unit: '', get: (e) => e.electronegativity, digits: 3, note: 'Escala de Pauling (CRC). Sin valor para He, Ne, Ar y los elementos sin dato en la fuente (se muestran como «sin datos»).' },
   zeff: { id: 'zeff', label: 'Carga nuclear efectiva (Slater)', short: 'Z_ef', unit: '', get: (e) => outerZeff(e.z, groundState(e.z)).zeff, digits: 3, note: 'Sobre el electrón más externo, con las reglas de Slater completas.' },
   masa: { id: 'masa', label: 'Masa atómica', short: 'M', unit: 'u', get: (e) => e.atomicWeight, digits: 5, note: 'Peso atómico estándar (IUPAC/CIAAW) o número másico del isótopo más estable.' },
 };
@@ -150,4 +150,13 @@ export function commonIon(el: ElementRecord): { charge: number | null; reason: s
   if (g === 18) return { charge: null, reason: 'Los gases nobles ya tienen la capa de valencia completa: no forman iones con facilidad.' };
   if (el.block === 'd') return { charge: null, reason: 'Los metales de transición suelen perder primero sus electrones ns y forman varios iones (p. ej. Fe²⁺ y Fe³⁺); no hay una regla única.' };
   return { charge: null, reason: 'No forma un ion monoatómico sencillo y habitual (tiende a compartir electrones).' };
+}
+
+/** Texto de un valor de propiedad para la interfaz: distingue «sin datos» de 0 (anión no ligado). */
+export function propertyText(prop: PropertyId, el: ElementRecord): string {
+  const P = PROPERTIES[prop];
+  const v = P.get(el);
+  if (prop === 'ae' && affinityStatus(el) === 'no-ligado') return '≤ 0 (anión no estable)';
+  if (v === null) return 'sin datos';
+  return `${Number(v.toPrecision(P.digits)).toLocaleString('es-ES')}${P.unit ? ` ${P.unit}` : ''}`;
 }

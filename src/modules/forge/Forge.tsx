@@ -1,6 +1,7 @@
+import { CalmOrbitControls } from '../../render/CalmControls';
+import { Prediction } from '../../ui/Prediction';
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { Stage } from '../../render/Stage';
@@ -10,7 +11,7 @@ import { useStore } from '../../state/store';
 import { useQuality, useReducedMotion, useMediaQuery } from '../../app/hooks';
 import { sfx } from '../../app/sound';
 import { atomDensity } from '../../science/orbitals';
-import { speciesConfiguration, formatConfiguration, unpairedElectrons, valenceElectrons } from '../../science/configuration';
+import { speciesConfiguration, formatConfiguration, unpairedElectrons, valenceElectrons, sameConfiguration, groundState } from '../../science/configuration';
 import { mulberry32 } from '../../science/numbers';
 import { identify, KIND_LABEL, chargeLabel, loadNuclides, nuclideStatus, knownIsotopes, formatHalfLife, type NuclideTable, type Species } from '../../science/nucleus';
 import { ELEMENTS, CATEGORY_LABEL, elementBySymbol, displayWeight } from '../../science/elements';
@@ -18,7 +19,8 @@ import { MissionPanel } from '../../ui/MissionPanel';
 import { EpiTag, announce } from '../../ui/common';
 import { Icon } from '../../ui/Icon';
 import { RealScale } from './RealScale';
-import { NeutralIonCompare } from './Compare';
+import { NeutralIonCompare, SpeciesCompare } from './Compare';
+import { Flights, Pedestal, ProbabilityShell, Reservoirs } from './ForgeChamber';
 
 /** Unidades de escena por radio de Bohr para la nube (la escala del núcleo NO es real). */
 const CLOUD_SCALE = 1.15;
@@ -59,35 +61,6 @@ function NucleusScaled({ scale, reduced, children }: { scale: number; reduced: b
   return <group ref={g}>{children}</group>;
 }
 
-/** Plataforma del crisol: anillo de luz bajo el átomo que se adapta a su tamaño (zona para soltar partículas). */
-function Crucible({ radius, reduced }: { radius: number; reduced: boolean }) {
-  const g = useRef<THREE.Group>(null);
-  const r = useRef(radius);
-  useFrame((_, dt) => {
-    r.current += (radius - r.current) * (reduced ? 1 : Math.min(1, dt * 2.2));
-    if (g.current) {
-      g.current.scale.setScalar(Math.max(0.5, r.current * 0.95));
-      g.current.position.y = -Math.max(0.5, r.current) * 1.3;
-    }
-  });
-  return (
-    <group ref={g}>
-      <mesh rotation-x={-Math.PI / 2}>
-        <ringGeometry args={[0.98, 1, 128]} />
-        <meshBasicMaterial color={new THREE.Color('#f2a93b').multiplyScalar(1.4)} transparent opacity={0.4} toneMapped={false} />
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.002}>
-        <circleGeometry args={[0.98, 96]} />
-        <meshBasicMaterial color="#f2a93b" transparent opacity={0.035} />
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.004}>
-        <ringGeometry args={[1.12, 1.125, 128]} />
-        <meshBasicMaterial color="#ece6dc" transparent opacity={0.12} />
-      </mesh>
-    </group>
-  );
-}
-
 function CameraRig({ radius, reduced }: { radius: number; reduced: boolean }) {
   const { camera, controls } = useThree() as unknown as { camera: THREE.PerspectiveCamera; controls: OrbitControlsImpl | null };
   const target = Math.min(90, Math.max(2.6, radius * 6.2));
@@ -118,22 +91,26 @@ export function ForgeScene() {
     }
   }, [sp.z]);
   const r50 = density ? rq(density.positions, CLOUD_SCALE, 0.5) : 0;
+  const counts = useMemo(() => ({ p: sp.z, n: sp.n, e: sp.e }), [sp.z, sp.n, sp.e]);
   // El núcleo es un esquema: se dibuja como mucho con un 25 % del radio mediano de la nube.
   const nScale = density ? Math.min(1, (0.25 * r50) / nucleusRadius(Math.max(1, sp.z + sp.n))) : 1;
   const radius = density ? Math.max(nucleusRadius(sp.z + sp.n) * nScale * 2, rq(density.positions, CLOUD_SCALE, 0.9)) : nucleusRadius(Math.max(1, sp.z + sp.n)) * 4;
   return (
-    <Stage camera={[0, 0.8, 6]} fov={36}>
-      <ambientLight intensity={0.25} />
-      <directionalLight position={[3, 4, 5]} intensity={2.2} color="#ffe4c4" />
+    <Stage mood="forja" camera={[0, 0.8, 6]} fov={36}>
+      <ambientLight intensity={0.2} />
+      <directionalLight position={[3, 5, 5]} intensity={2.3} color="#ffe4c4" castShadow />
       <directionalLight position={[-4, -1, -3]} intensity={1.1} color="#9fc2ee" />
       <pointLight position={[0, 0, 0]} intensity={0.6} color="#ffd2a0" distance={4} />
       <NucleusScaled scale={nScale} reduced={reduced}>
         <Nucleus z={sp.z} n={sp.n} reduced={reduced} flash={flash} />
       </NucleusScaled>
-      {density && <ElectronCloud density={density} scale={CLOUD_SCALE} size={(q.tier === 'baja' ? 110 : 80) * Math.max(1, Math.sqrt(radius / 2.5))} opacity={(q.tier === 'baja' ? 0.32 : 0.2) * Math.min(1, Math.max(0.5, 1.2 - 0.25 * Math.log10(sp.e)))} animate={!reduced} />}
-      <Crucible radius={radius} reduced={reduced} />
+      {density && <ElectronCloud density={density} scale={CLOUD_SCALE} size={(q.tier === 'baja' ? 84 : 58) * Math.max(1, Math.sqrt(radius / 2.5))} opacity={(q.tier === 'baja' ? 0.38 : 0.27) * Math.min(1, Math.max(0.5, 1.2 - 0.25 * Math.log10(sp.e)))} animate={!reduced} />}
+      {density && <ProbabilityShell r90={rq(density.positions, CLOUD_SCALE, 0.9)} charge={sp.z - sp.e} reduced={reduced} />}
+      <Pedestal radius={radius} pulse={flash} reduced={reduced} />
+      <Reservoirs radius={radius} reduced={reduced} />
+      <Flights radius={radius} counts={counts} reduced={reduced} />
       <CameraRig radius={radius} reduced={reduced} />
-      <OrbitControls makeDefault enablePan={false} enableDamping autoRotate={!reduced} autoRotateSpeed={0.35} />
+      <CalmOrbitControls makeDefault enablePan={false} enableDamping autoRotate={!reduced} autoRotateSpeed={0.35} />
     </Stage>
   );
 }
@@ -143,6 +120,17 @@ export function ForgeScene() {
 function NuclideNotation({ sp }: { sp: Species }) {
   const id = identify(sp);
   const sym = id.element?.symbol ?? '—';
+  // Crisol vacío: en lugar de «0 0 —», la plantilla de la notación (ᴬ_Z X) en gris, que ya enseña algo.
+  if (!id.element)
+    return (
+      <div className="row" style={{ alignItems: 'center', gap: 6, color: 'var(--ink-faint)' }} aria-label="Notación nuclear: número másico A arriba, número atómico Z abajo, símbolo X">
+        <span className="mono" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.05, fontSize: '1rem' }}>
+          <span>A</span>
+          <span>Z</span>
+        </span>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: '4.25rem', lineHeight: 0.9 }}>X</span>
+      </div>
+    );
   return (
     <div className="row" style={{ alignItems: 'center', gap: 6 }} aria-label={`Notación: ${sym}, Z ${sp.z}, A ${id.massNumber}, carga ${id.charge}`}>
       <span className="mono" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.05, fontSize: '1rem' }}>
@@ -473,6 +461,19 @@ export function ForgeOverlay() {
               </div>
             </dl>
             <NuclearStatus sp={sp} table={table} />
+            <Prediction
+              resetKey="forja-neutron"
+              question="Tienes un carbono-12 (6 p⁺, 6 n⁰, 6 e⁻). Si le añades UN neutrón, ¿qué obtienes?"
+              options={[
+                { id: 'otro', label: 'Otro elemento' },
+                { id: 'isotopo', label: 'Un isótopo del C' },
+                { id: 'ion', label: 'Un ion' },
+              ]}
+              correct="isotopo"
+              explanation="El elemento lo decide Z (protones) y la carga, la diferencia entre protones y electrones. Un neutrón no cambia ninguna de las dos: solo A, de 12 a 13. Es el carbono-13, un isótopo estable (1,1 % del carbono natural)."
+              onRun={() => setSp({ z: 6, n: 7, e: 6 })}
+              runLabel="Forjar el carbono-13"
+            />
             {highlyChargedAnion && (
               <p className="note">
                 <b>Matiz.</b> Un anión aislado con carga {chargeLabel(id.charge)} no es estable en fase gaseosa: el electrón extra se escapa. Existe en sólidos iónicos y disoluciones, donde el entorno lo estabiliza.
@@ -489,12 +490,18 @@ export function ForgeOverlay() {
               <div className="row row--wrap" style={{ gap: 6 }}>
                 <span className="chip">{unpairedElectrons(conf)} e⁻ desapareados</span>
                 <span className="chip">{valenceElectrons(conf)} e⁻ en la capa externa</span>
-                {id.isoelectronicWith && id.charge !== 0 && <span className="chip" style={{ color: 'var(--electron)' }}>Isoelectrónico con {id.isoelectronicWith.symbol}</span>}
+                {id.isoelectronicWith && id.charge !== 0 && (
+                  <span className="chip" style={{ color: 'var(--electron)' }} title={sameConfiguration(conf, groundState(id.isoelectronicWith.z)) ? 'Mismo número de electrones y misma configuración' : 'Mismo número de electrones, pero distinta configuración (en los iones de transición se pierden antes los electrones ns)'}>
+                    Isoelectrónico con {id.isoelectronicWith.symbol}
+                    {!sameConfiguration(conf, groundState(id.isoelectronicWith.z)) && ' · distinta configuración'}
+                  </span>
+                )}
               </div>
             </section>
           )}
 
           {sp.z > 0 && <NeutralIonCompare sp={sp} onPick={setSp} />}
+          {sp.z > 0 && <SpeciesCompare sp={sp} onPick={setSp} />}
           {sp.z > 0 && <RealScale z={sp.z} a={sp.z + sp.n} />}
 
           <section className="section">

@@ -1,0 +1,293 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   ATOM 3.0 · Raíl de navegación y búsqueda global
+   ══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --rail-w: 0px;
+}
+@media (min-width: 761px) {
+  :root {
+    --rail-w: 84px;
+  }
+  .overlay {
+    left: var(--rail-w);
+  }
+}
+.rail {
+  position: fixed;
+  z-index: 30;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--rail-w);
+  padding: 14px 8px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.rail__search {
+  height: 40px;
+  margin: 0 6px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface-raised);
+  color: var(--ink-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: var(--elev-1);
+  transition: color var(--dur-fast), border-color var(--dur-fast);
+}
+.rail__search:hover {
+  color: var(--accent);
+  border-color: var(--accent-line);
+}
+.rail__group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rail__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 7px 2px 6px;
+  border-radius: 12px;
+  color: var(--ink-muted);
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 560;
+  letter-spacing: 0.005em;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+.rail__item:hover {
+  background: var(--surface-sunken);
+  color: var(--ink);
+}
+.rail__item[aria-current='page'] {
+  background: var(--surface-raised);
+  color: var(--ink);
+  box-shadow: var(--elev-1), inset 0 0 0 1px var(--hairline);
+}
+.rail__item[aria-current='page'] svg {
+  color: var(--accent);
+}
+.rail__glyph {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  color: var(--ink-muted);
+}
+.rail__glyph .lab-glyph {
+  width: 30px;
+  height: 30px;
+}
+.rail__item--lab[aria-current='page'] .rail__glyph,
+.rail__item--lab:hover .rail__glyph {
+  color: var(--ink);
+}
+.rail__sep {
+  height: 1px;
+  margin: 8px 14px;
+  background: var(--hairline-strong);
+}
+.topbar__search {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 10px 0 12px;
+  min-width: 260px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface-raised);
+  color: var(--ink-faint);
+  font-size: var(--fs-sm);
+  cursor: text;
+  box-shadow: var(--elev-1);
+  transition: border-color var(--dur-fast), color var(--dur-fast);
+}
+.topbar__search:hover {
+  border-color: var(--accent-line);
+  color: var(--ink-muted);
+}
+.topbar__search kbd {
+  margin-left: auto;
+}
+kbd {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+}
+@media (max-width: 760px) {
+  .topbar__search {
+    min-width: 0;
+    width: 38px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+.palette-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--scrim);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12vh 16px 16px;
+  animation: fadeIn var(--dur-fast) var(--ease-out);
+}
+.palette {
+  width: min(640px, 100%);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-raised);
+  border: 1px solid var(--hairline);
+  border-radius: 18px;
+  box-shadow: var(--elev-3);
+  overflow: hidden;
+  animation: paletteIn var(--dur-base) var(--ease-out);
+}
+@keyframes paletteIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.985);
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+.palette__field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--ink-faint);
+}
+.palette__field input {
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: var(--fs-lg);
+  color: var(--ink);
+}
+.palette__empty {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chip-btn {
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline-strong);
+  background: transparent;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.chip-btn:hover {
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+.palette__list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+}
+.palette__hit {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.palette__hit[data-active='true'] {
+  background: var(--accent-quiet);
+}
+.palette__kind {
+  flex: none;
+  width: 84px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.palette__kind--laboratorio {
+  color: var(--b5);
+}
+.palette__kind--practica {
+  color: var(--ok);
+}
+.palette__kind--formula {
+  color: var(--b3);
+}
+.palette__kind--truco {
+  color: var(--b4);
+}
+.palette__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.palette__title {
+  font-weight: 560;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.palette__detail {
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.palette__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--hairline);
+}
+
+/* iPad en vertical (y ventanas estrechas altas): visor arriba, panel debajo. */
+@media (min-width: 761px) and (max-width: 1100px) and (orientation: portrait) {
+  .app[data-kind='laboratorio'] .workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: 50vh minmax(0, 1fr);
+  }
+  .app[data-kind='laboratorio'] .stage,
+  .app[data-kind='laboratorio'] .label-layer {
+    right: var(--gutter);
+    inset-inline-end: var(--gutter);
+    bottom: auto;
+    height: calc(50vh - var(--viewer-gap));
+  }
+  .app[data-kind='laboratorio'] .workspace > :not(.side):not(.label-layer) {
+    margin: 0 var(--gutter) var(--viewer-gap) var(--viewer-gap);
+  }
+  .app[data-kind='laboratorio'] .side {
+    margin: 0 var(--gutter) var(--gutter) var(--viewer-gap);
+  }
+}

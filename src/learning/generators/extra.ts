@@ -3,6 +3,7 @@
  * el núcleo científico o con datos de referencia; las preguntas conceptuales llevan retroalimentación
  * específica para cada distractor.
  */
+import { abundanceResolution, averageMassResolution } from '../resolutions';
 import { ELEMENTS, elementByZ, familyName, type ElementRecord } from '../../science/elements';
 import { NATURAL_ISOTOPES } from '../../science/data/naturalIsotopes';
 import { averageAtomicMass, twoIsotopeAbundance } from '../../science/massSpec';
@@ -220,7 +221,8 @@ export function buildAverageMassExercise(z: number, difficulty: Difficulty, seed
       ],
       stepwise: true,
       hints: ['Las dos abundancias suman 100 %: llama x a una y 100 − x a la otra.', 'M = [m₁·x + m₂·(100 − x)] / 100. Despeja x.', `x = 100·(M − m₂)/(m₁ − m₂) con m₁ = ${fmt(l.mass, 7)} u y m₂ = ${fmt(h.mass, 7)} u.`],
-      solution: [`x = 100·(${fmt(M, 5)} − ${fmt(h.mass, 7)})/(${fmt(l.mass, 7)} − ${fmt(h.mass, 7)}) = ${fmt(x, 4)} %.`, `Comprobación: la masa media queda más cerca del isótopo más abundante.`],
+      solution: [`x = 100·(${fmt(M, 5)} − ${fmt(h.mass, 7)})/(${fmt(l.mass, 7)} − ${fmt(h.mass, 7)}) = ${fmt(x, 4)} %.`, `Comprobación: con dos isótopos, la masa media queda más cerca del más abundante.`],
+      resolution: abundanceResolution(el.symbol, l, h, M, x),
       source,
     };
   }
@@ -249,13 +251,18 @@ export function buildAverageMassExercise(z: number, difficulty: Difficulty, seed
         'cerca',
         '¿A qué isótopo está más cerca la masa media?',
         iso.map((i) => O(String(i.a), `${el.symbol}-${i.a}`, 'La media ponderada se acerca al isótopo con mayor abundancia.')),
-        [String([...iso].sort((a, b) => b.abundance - a.abundance)[0]!.a)],
-        'La masa media siempre queda más cerca del isótopo más abundante: es una buena forma de comprobar el resultado (TEO p.5).',
+        // La respuesta se CALCULA (isótopo más próximo a la media): con dos isótopos coincide siempre con el más
+        // abundante; con tres o más no está garantizado, y no se afirma.
+        [String([...iso].sort((a, b) => Math.abs(a.mass - res.value) - Math.abs(b.mass - res.value))[0]!.a)],
+        iso.length === 2
+          ? 'Con dos isótopos, la masa media siempre queda más cerca del más abundante: es una buena forma de comprobar el resultado (TEO p.5).'
+          : 'La media ponderada se acerca a los isótopos más abundantes; con más de dos isótopos, compruébalo comparando distancias.',
       ),
     ],
     stepwise: true,
     hints: ['La masa atómica es un promedio ponderado: cada isótopo pesa según su abundancia.', 'M = (m₁·%₁ + m₂·%₂ + …)/100.', `Multiplica ${fmt(iso[0]!.mass, 7)} por ${fmt(iso[0]!.abundance, 4)} y suma el resto de términos.`],
     solution: [`M = ${fmt(res.value, 6)} u (valor tabulado: ${fmt(el.atomicWeight, 5)} u).`],
+    resolution: averageMassResolution(el.symbol, iso, res.value),
     source,
   };
 }
@@ -621,9 +628,9 @@ export const E = (s: string) => ELEMENTS.find((e) => e.symbol === s)!;
 export const MISC_ITEMS: ConceptItem[] = [
   {
     q: 'Al iluminar un gas frío con luz blanca y analizar la luz que lo atraviesa se observa…',
-    options: [O('abs', 'un espectro continuo con líneas oscuras (absorción)'), O('emi', 'líneas brillantes sobre fondo negro', 'Eso es un espectro de emisión: lo produce el gas excitado, no la luz que lo atraviesa.'), O('cont', 'un espectro continuo sin huecos', 'Los átomos absorben justamente las frecuencias que pueden emitir: faltan esas líneas.')],
+    options: [O('abs', 'un espectro continuo con líneas oscuras (absorción)'), O('emi', 'líneas brillantes sobre fondo negro', 'Eso es un espectro de emisión: lo produce el gas excitado, no la luz que lo atraviesa.'), O('cont', 'un espectro continuo sin huecos', 'Los átomos absorben las frecuencias de los saltos que pueden dar desde su nivel: faltan esas líneas.')],
     correct: 'abs',
-    explanation: 'El gas absorbe solo las frecuencias que corresponden a sus saltos entre niveles: aparecen líneas oscuras en las mismas posiciones que las líneas brillantes de su espectro de emisión (TEO p.7).',
+    explanation: 'El gas absorbe solo las frecuencias de los saltos que sus átomos pueden dar: aparecen líneas oscuras, cada una en la posición de una línea brillante de su espectro de emisión (TEO p.7). Matiz: en un gas frío casi todos los átomos están en el estado fundamental y solo se ven las líneas que parten de él (en el hidrógeno, la serie de Lyman, en el ultravioleta), no todas las de emisión.',
     nodes: ['3.5'],
   },
   {

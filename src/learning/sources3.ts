@@ -77,7 +77,7 @@ function tableRow(ref: string, s: Species, given: string, ask: Field[], level: 1
   const parts: ExercisePart[] = ask.map((f) =>
     f === 'el'
       ? { id: f, prompt: FIELD_LABEL[f], answer: { kind: 'element', z: s.z }, canonical: el.symbol, explanation: why[f], placeholder: 'p. ej. Na', nodeIds: ['1.1'] }
-      : { ...integerPart(f, FIELD_LABEL[f], value[f], why[f], f === 'q' ? 'p. ej. +2, −1 o 0' : 'número entero'), nodeIds: f === 'n' || f === 'a' ? ['1.2'] : f === 'e' || f === 'q' ? ['1.4'] : ['1.1'] },
+      : { ...integerPart(f, FIELD_LABEL[f], value[f], why[f], f === 'q' ? 'p. ej. +2, −1 o 0' : 'número entero'), nodeIds: f === 'n' || f === 'a' ? ['1.2'] : f === 'e' || f === 'q' ? [q === 0 ? '1.1' : '1.4'] : ['1.1'] },
   );
   return ex(ref, q === 0 ? ['1.1', '1.2'] : ['1.1', '1.2', '1.4'], level, `Completa la fila: ${given}`, `Datos de la fila: **${given}**. Completa las casillas vacías.${note ? `\n${note}` : ''}`, parts, ['El elemento lo decide Z (protones). A = Z + N.', 'Electrones = Z − carga (un anión tiene carga negativa: suma electrones).', `Fila completa: ${nuclearNotation(s)}.`]);
 }
@@ -177,8 +177,8 @@ const HOJ: SourceExercise3[] = [
       return { ...e, statement: 'Una «estación de radio» emite con una **λ = 200 nm**. Calcula la frecuencia y la energía de los fotones irradiados.\n*Nota de rigor: con 200 nm no es radio sino ultravioleta (las emisoras usan λ de metros); el último apartado te lo hará comprobar.*' };
     },
   },
-  { ref: 'HOJ 9', nodeIds: ['3.2', '3.4'], level: 1, build: () => ({ ...buildWaveExercise({ value: 425, unit: 'nm' }, 1, 'src:HOJ9', 'HOJ 9'), statement: 'Las clorofilas a y b absorben sobre todo luz de las zonas roja y azul y reflejan la verde. ¿Cuál es la energía y la frecuencia de una radiación de **425 nm** absorbida por la clorofila a? (Sol.: 4,68·10⁻¹⁹ J y 7,06·10¹⁴ Hz)' }) },
-  { ref: 'HOJ 10', nodeIds: ['3.6', '3.7'], level: 2, build: () => ({ ...buildRydbergExercise({ from: 5, to: 2, difficulty: 1, seedId: 'src:HOJ10', source: 'HOJ 10', rUnit: 'm', k: THEORY_DATA }), statement: 'Determina la longitud de onda de la línea de la serie de **Balmer** del hidrógeno correspondiente a la transición de la **tercera línea**. Dato: R = 1,097·10⁷ m⁻¹. (Sol.: 4,341·10⁻⁷ m)' }) },
+  { ref: 'HOJ 9', nodeIds: ['3.2', '3.4'], level: 1, build: () => ({ ...buildWaveExercise({ value: 425, unit: 'nm' }, 1, 'src:HOJ9', 'HOJ 9'), statement: 'Las clorofilas a y b absorben sobre todo luz de las zonas roja y azul y reflejan la verde. ¿Cuál es la energía y la frecuencia de una radiación de **425 nm** absorbida por la clorofila a?', originalSolution: '4,68·10⁻¹⁹ J y 7,06·10¹⁴ Hz' }) },
+  { ref: 'HOJ 10', nodeIds: ['3.6', '3.7'], level: 2, build: () => ({ ...buildRydbergExercise({ from: 5, to: 2, difficulty: 1, seedId: 'src:HOJ10', source: 'HOJ 10', rUnit: 'm', k: THEORY_DATA }), statement: 'Determina la longitud de onda de la línea de la serie de **Balmer** del hidrógeno correspondiente a la transición de la **tercera línea**. Dato: R = 1,097·10⁷ m⁻¹.', originalSolution: '4,341·10⁻⁷ m' }) },
   { ref: 'HOJ 11', nodeIds: ['3.6', '3.7'], level: 3, build: () => buildInverseSeriesExercise(2, 8, 2, 'src:HOJ11', 'HOJ 11', undefined, { lambdaNm: 389, k: THEORY_DATA }) },
   ex('HOJ 12', ['6.3', '7.2', '7.5'], 1, 'Un elemento por su configuración', 'Dado el elemento cuya configuración electrónica es **1s² 2s² 2p⁶ 3s² 3p⁴**:', [
     integerPart('per', 'a) Periodo', 3, 'La capa más externa es n = 3 → periodo 3.'),
@@ -374,7 +374,7 @@ const EBAU: SourceExercise3[] = [
     choicePart('b2', 'b) Orbital del electrón (2, 1, −1, −½)', [O('2p', '2p'), O('2s', '2s', 'l = 1 es p.')], ['2p'], 'n = 2, l = 1 → 2p.'),
     choicePart('b3', 'b) Orbital del electrón (1, 0, 0, ½)', [O('1s', '1s'), O('1p', '1p', 'No existe: con n = 1 solo l = 0.')], ['1s'], '1s.'),
     choicePart('c', 'c) ¿Cuál de esos orbitales tiene mayor energía? Justifícalo', [O('3d', '3d (n + l = 5)'), O('2p', '2p (n + l = 3)', 'Compara n + l: el 3d tiene 5.'), O('1s', '1s (n + l = 1)', 'Es el de menor energía.')], ['3d'], 'Regla n + l: 3d (3 + 2 = 5) > 2p (2 + 1 = 3) > 1s (1 + 0 = 1). Mayor n + l → mayor energía (a igual n + l, el de mayor n).'),
-  ], ['(4, 2, 3, ½): |m| ≤ l = 2 no se cumple. (3, 3, −1, ½): l debe ser ≤ n − 1 = 2.', 'El orbital lo dan n y l.', 'Energía: compara n + l.'], { source: 'EBAU La Rioja jul. 2025 (P1A)' }),
+  ], ['Comprueba cada conjunto en este orden: n ≥ 1; 0 ≤ l ≤ n − 1; −l ≤ m ≤ l; m_s = ±½. Basta con que falle una condición.', 'El orbital lo dan n y l (l = 0 s, 1 p, 2 d). Para comparar energías usa n + l (y, si empatan, el de menor n).', '(4, 2, 3, ½) falla porque |m| > l; (3, 3, −1, ½), porque l = n.'], { source: 'EBAU La Rioja jul. 2025 (P1A)' }),
   ex(
     'EBAU-3 a',
     ['6.5'],
@@ -392,7 +392,7 @@ const EBAU: SourceExercise3[] = [
         `${STATUS_LABEL[d.status]}${el ? ` (${el.name}, ${d.electrons} e⁻)` : ''}. ${d.issues.map((x) => x.message).join(' ')}`.trim(),
       );
     }),
-    ['Imposible: aparece un subnivel que no existe (2d, 1p, 3f…) o se supera su capacidad.', 'Excitado: subniveles reales, pero queda un hueco por debajo de un electrón.', 'El orden de escritura (3d antes de 4s) no cambia el estado.'],
+    ['Para cada configuración hazte dos preguntas: ¿existen todos sus subniveles y ninguno supera su capacidad? ¿Queda algún hueco por debajo de un electrón?', 'Si falla la primera pregunta, es imposible; si solo falla la segunda (hay un hueco), es un estado excitado; si no falla ninguna, es fundamental.', 'Recuerda: 1p, 2d y 3f no existen (l < n), y el orden de escritura (3d antes de 4s) no cambia el estado.'],
     { source: 'EBAU (hoja del tema)' },
   ),
   tableRow('EBAU-3 b · ²⁰⁸Pb', sp(82, 208), '²⁰⁸Pb · electrones = 82 · carga 0', ['p', 'n'], 2),

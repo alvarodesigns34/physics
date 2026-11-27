@@ -7,8 +7,11 @@ import { toSuperscript } from '../science/numbers';
 import { lLetter } from '../science/quantum';
 import { nodeTitle } from '../learning/syllabus';
 import { guideAnchorFor, SECTION_BY_NODE } from '../learning/guide';
-import { Feedback, Rich } from './common';
+import { Feedback, Rich, announce } from './common';
 import { Icon } from './Icon';
+import { EssayInput, FigureView, ResolutionView } from './Pedagogy';
+import { structuredResolution } from '../learning/autoResolution';
+import { ProcedurePanel } from './Procedure';
 import { sfx } from '../app/sound';
 
 export interface ExerciseOutcome {
@@ -26,7 +29,34 @@ export interface ExerciseOutcome {
 
 type Mode = 'practica' | 'examen' | 'campana';
 
+/**
+ * Cómo se acompaña la práctica (ATOM 3.0):
+ * - guiado: paso a paso siempre y la primera pista ya visible;
+ * - autonomo: el alumno resuelve y pide ayuda cuando la necesita (por defecto);
+ * - desafio: todo el problema a la vez; pistas y teoría solo tras dos intentos fallidos;
+ * - revision: se ve la resolución completa sin responder (no cuenta para el progreso).
+ */
+export type Variant = 'guiado' | 'autonomo' | 'desafio' | 'revision';
+
 /** Enlace a la sección de la guía que explica el apartado del ejercicio. */
+const BOX_DIAGRAM = /^(\[[^\]]{0,2}\]\s?)+$/;
+const ARROW_NAME: Record<string, string> = { '': 'vacío', '↑': 'un electrón, espín hacia arriba', '↓': 'un electrón, espín hacia abajo', '↑↓': 'dos electrones apareados', '↑↑': 'dos electrones con el mismo espín', '↓↓': 'dos electrones con el mismo espín' };
+
+/** Texto de una opción; los diagramas de cajas («[↑↓] [↑] [ ]») se dibujan como cajas con su lectura accesible. */
+function OptionText({ text }: { text: string }) {
+  if (!BOX_DIAGRAM.test(text.trim())) return <span>{text}</span>;
+  const boxes = [...text.matchAll(/\[([^\]]*)\]/g)].map((m) => m[1]!.trim());
+  return (
+    <span className="box-diagram" role="img" aria-label={`Diagrama de ${boxes.length} orbitales: ${boxes.map((b, i) => `orbital ${i + 1}, ${ARROW_NAME[b] ?? b}`).join('; ')}`}>
+      {boxes.map((b, i) => (
+        <span key={i} className="box-diagram__box">
+          {b}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function TheoryLink({ nodeId, prominent, generatorId }: { nodeId: string | undefined; prominent: boolean; generatorId?: string }) {
   if (!nodeId) return null;
   const anchor = guideAnchorFor(nodeId, generatorId);
@@ -45,20 +75,24 @@ interface PartState {
   done: boolean;
   revealed: boolean;
   credit: number;
-  errors: { kind: ErrorKind; skill?: SkillId }[];
+  errors: { kind: ErrorKind; skill?: SkillId; valueCorrect?: boolean }[];
+  sigFigsAssessed?: boolean;
   carried: boolean;
   sigFigIssue: boolean;
+  hinted?: boolean;
+  procedureAssisted?: boolean;
 }
 
 const freshPart = (p: ExercisePart): PartState => ({ value: initialValue(p), attempts: 0, result: null, done: false, revealed: false, credit: 0, errors: [], carried: false, sigFigIssue: false });
 
 function toRecords(ex: Exercise, parts: PartState[]): PartRecord[] {
-  return parts.map((p, i) => ({ id: ex.parts[i]!.id, credit: p.credit, attempts: p.attempts, revealed: p.revealed, errors: p.errors, carried: p.carried, sigFigIssue: p.sigFigIssue }));
+  return parts.map((p, i) => ({ id: ex.parts[i]!.id, credit: p.credit, attempts: p.attempts, revealed: p.revealed, errors: p.errors, carried: p.carried, sigFigIssue: p.sigFigIssue, sigFigsAssessed: p.sigFigsAssessed, hinted: p.hinted, procedureAssisted: p.procedureAssisted }));
 }
 
 function initialValue(p: ExercisePart): string | string[] {
   if (p.answer.kind === 'choice') return [];
   if (p.answer.kind === 'order') return p.answer.items.map((i) => i.id);
+  if (p.answer.kind === 'essay') return [''];
   return '';
 }
 
@@ -76,8 +110,11 @@ function ConfigPreview({ text }: { text: string }) {
   );
 }
 
-function PartInput({ part, value, onChange, onSubmit, disabled, labelId }: { part: ExercisePart; value: string | string[]; onChange: (v: string | string[]) => void; onSubmit: () => void; disabled: boolean; labelId: string }) {
+export function PartInput({ part, value, onChange, onSubmit, disabled, labelId }: { part: ExercisePart; value: string | string[]; onChange: (v: string | string[]) => void; onSubmit: () => void; disabled: boolean; labelId: string }) {
   const a = part.answer;
+  if (a.kind === 'essay') {
+    return <EssayInput spec={a} value={value as string[]} onChange={onChange} onSubmit={onSubmit} disabled={disabled} labelId={labelId} />;
+  }
   if (a.kind === 'choice') {
     const sel = value as string[];
     return (
@@ -106,7 +143,7 @@ function PartInput({ part, value, onChange, onSubmit, disabled, labelId }: { par
               }}
             >
               <span aria-hidden="true" style={{ width: 16, height: 16, flex: 'none', borderRadius: a.multiple ? 4 : 999, border: '1.5px solid ' + (on ? 'var(--accent)' : 'var(--hairline-strong)'), background: on ? 'var(--accent)' : 'transparent', boxShadow: on ? 'inset 0 0 0 3px var(--surface-raised)' : 'none' }} />
-              <span>{o.text}</span>
+              <OptionText text={o.text} />
             </button>
           );
         })}
@@ -115,12 +152,19 @@ function PartInput({ part, value, onChange, onSubmit, disabled, labelId }: { par
   }
   if (a.kind === 'order') {
     const order = value as string[];
-    const move = (i: number, d: number) => {
+    const move = (i: number, d: number, el?: HTMLElement) => {
       const j = i + d;
       if (j < 0 || j >= order.length) return;
       const next = [...order];
       [next[i], next[j]] = [next[j]!, next[i]!];
       onChange(next);
+      const item = a.items.find((x) => x.id === order[i]);
+      announce(`${item?.text ?? ''}: posición ${j + 1} de ${order.length}.`);
+      // Si el botón pulsado queda desactivado (primera o última posición), el foco pasa al otro botón.
+      if (j === 0 || j === order.length - 1) {
+        const li = el?.closest('li');
+        requestAnimationFrame(() => (li?.querySelector('button:not([disabled])') as HTMLElement | null)?.focus());
+      }
     };
     return (
       <ol className="stack-8" style={{ listStyle: 'none', padding: 0, margin: 0 }} aria-labelledby={labelId}>
@@ -133,10 +177,10 @@ function PartInput({ part, value, onChange, onSubmit, disabled, labelId }: { par
                 <span>{item.text}</span>
               </span>
               <span className="row" style={{ gap: 4 }}>
-                <button type="button" className="btn btn--ghost btn--sm btn--icon" disabled={disabled || i === 0} onClick={() => move(i, -1)} aria-label={`Subir ${item.text}`}>
+                <button type="button" className="btn btn--ghost btn--sm btn--icon" disabled={disabled || i === 0} onClick={(e) => move(i, -1, e.currentTarget)} aria-label={`Subir ${item.text}`}>
                   <Icon name="chevron-up" size={16} />
                 </button>
-                <button type="button" className="btn btn--ghost btn--sm btn--icon" disabled={disabled || i === order.length - 1} onClick={() => move(i, 1)} aria-label={`Bajar ${item.text}`}>
+                <button type="button" className="btn btn--ghost btn--sm btn--icon" disabled={disabled || i === order.length - 1} onClick={(e) => move(i, 1, e.currentTarget)} aria-label={`Bajar ${item.text}`}>
                   <Icon name="chevron-down" size={16} />
                 </button>
               </span>
@@ -171,22 +215,113 @@ function PartInput({ part, value, onChange, onSubmit, disabled, labelId }: { par
   );
 }
 
-export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = 'Siguiente', showMeta = true }: { exercise: Exercise; mode: Mode; onFinish?: (o: ExerciseOutcome) => void; onNext?: () => void; nextLabel?: string; showMeta?: boolean }) {
-  const [parts, setParts] = useState<PartState[]>(() => exercise.parts.map(freshPart));
-  const [hints, setHints] = useState(0);
-  const [showSolution, setShowSolution] = useState(false);
+// ── Ejercicio en curso: persistencia (ATOM 5.0) ─────────────────────────────
+
+const IN_PROGRESS_KEY = 'atom:en-curso';
+interface InProgress {
+  id: string;
+  parts: PartState[];
+  hints: number;
+  finished: boolean;
+  at?: number;
+}
+
+function readAll(): Record<string, InProgress> {
+  try {
+    const raw = localStorage.getItem(IN_PROGRESS_KEY);
+    const v = raw ? (JSON.parse(raw) as unknown) : {};
+    return typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, InProgress>) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Valida lo guardado (puede estar dañado o ser de otra versión): ante la duda, se empieza de cero. */
+export function validInProgress(v: unknown, ex: Exercise): v is InProgress {
+  if (typeof v !== 'object' || v === null) return false;
+  const x = v as Partial<InProgress>;
+  return (
+    x.id === ex.id &&
+    Number.isInteger(x.hints) && x.hints! >= 0 && x.hints! <= 3 &&
+    typeof x.finished === 'boolean' &&
+    Array.isArray(x.parts) && x.parts.length === ex.parts.length &&
+    x.parts.every((p) => validPartState(p))
+  );
+}
+
+const optBool = (v: unknown) => v === undefined || typeof v === 'boolean';
+
+/** ATOM 5.1: validación estricta de cada paso restaurado (tipos, longitudes y el resultado mostrado). */
+function validPartState(p: unknown): boolean {
+  if (typeof p !== 'object' || p === null || Array.isArray(p)) return false;
+  const q = p as Partial<PartState>;
+  const okValue = (typeof q.value === 'string' && q.value.length <= 5000) || (Array.isArray(q.value) && q.value.length <= 40 && q.value.every((y) => typeof y === 'string' && y.length <= 5000));
+  const okResult = q.result === null || q.result === undefined || (typeof q.result === 'object' && typeof q.result.status === 'string' && typeof q.result.message === 'string' && typeof q.result.correct === 'boolean' && (q.result.warnings === undefined || Array.isArray(q.result.warnings)));
+  const okErrors = Array.isArray(q.errors) && q.errors.length <= 50 && q.errors.every((e) => typeof e === 'object' && e !== null && typeof e.kind === 'string');
+  return (
+    okValue && okResult && okErrors &&
+    Number.isInteger(q.attempts) && q.attempts! >= 0 && q.attempts! <= 100 &&
+    typeof q.done === 'boolean' && typeof q.revealed === 'boolean' &&
+    typeof q.credit === 'number' && Number.isFinite(q.credit) && q.credit >= 0 && q.credit <= 1 &&
+    typeof q.carried === 'boolean' && typeof q.sigFigIssue === 'boolean' &&
+    optBool(q.hinted) && optBool(q.procedureAssisted) && optBool(q.sigFigsAssessed)
+  );
+}
+
+function loadInProgress(key: string, ex: Exercise): InProgress | null {
+  const all = readAll();
+  const v = all[key];
+  if (v === undefined) return null;
+  if (validInProgress(v, ex)) return v;
+  delete all[key];
+  try {
+    localStorage.setItem(IN_PROGRESS_KEY, JSON.stringify(all));
+  } catch {
+    /* almacenamiento no disponible */
+  }
+  return null;
+}
+
+function saveInProgress(key: string, v: InProgress) {
+  const all = readAll();
+  all[key] = { ...v, at: Date.now() };
+  // Se conservan como mucho 20 ejercicios en curso (los más recientes).
+  const keys = Object.keys(all).sort((a, b) => (all[b]!.at ?? 0) - (all[a]!.at ?? 0));
+  for (const k of keys.slice(20)) delete all[k];
+  try {
+    localStorage.setItem(IN_PROGRESS_KEY, JSON.stringify(all));
+  } catch {
+    /* cuota llena o modo privado: se sigue sin persistir */
+  }
+}
+
+export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = 'Siguiente', showMeta = true, variant = 'autonomo', persistKey }: { exercise: Exercise; mode: Mode; onFinish?: (o: ExerciseOutcome) => void; onNext?: () => void; nextLabel?: string; showMeta?: boolean; variant?: Variant; /** Si se da, el ejercicio en curso (respuestas, intentos, pistas) se conserva al salir y volver */ persistKey?: string }) {
+  const review = variant === 'revision' && mode !== 'examen';
+  const startParts = () => exercise.parts.map((p) => (review ? { ...freshPart(p), done: true, revealed: true } : freshPart(p)));
+  const restored = useMemo(() => (persistKey && !review && mode !== 'examen' ? loadInProgress(persistKey, exercise) : null), [persistKey, exercise, review, mode]);
+  const [parts, setParts] = useState<PartState[]>(() => restored?.parts ?? startParts());
+  const [hints, setHints] = useState(() => restored?.hints ?? (variant === 'guiado' ? 1 : 0));
+  const [showSolution, setShowSolution] = useState(review);
   const [submittedExam, setSubmittedExam] = useState(false);
-  const finished = useRef(false);
+  const finished = useRef(restored?.finished ?? false);
   const baseId = useId();
   const exam = mode === 'examen';
 
   useEffect(() => {
-    setParts(exercise.parts.map(freshPart));
-    setHints(0);
-    setShowSolution(false);
+    setParts(restored?.parts ?? startParts());
+    setHints(restored?.hints ?? (variant === 'guiado' ? 1 : 0));
+    setShowSolution(review);
     setSubmittedExam(false);
-    finished.current = false;
-  }, [exercise]);
+    finished.current = restored?.finished ?? false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exercise, variant]);
+
+  // Guarda el progreso del ejercicio en curso (incluido si ya se terminó, para no registrarlo dos veces).
+  useEffect(() => {
+    if (!persistKey || review || exam) return;
+    const touched = hints > (variant === 'guiado' ? 1 : 0) || parts.some((p) => p.attempts > 0 || p.revealed || (typeof p.value === 'string' ? p.value !== '' : false));
+    if (touched) saveInProgress(persistKey, { id: exercise.id, parts, hints, finished: finished.current || parts.every((p) => p.done) });
+  }, [persistKey, parts, hints, exercise.id, review, exam, variant]);
 
   const previousWrong = useMemo(() => {
     const out: Record<string, number> = {};
@@ -201,7 +336,7 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
   const allDone = parts.every((p) => p.done);
 
   useEffect(() => {
-    if (exam || !allDone || finished.current) return;
+    if (exam || review || !allDone || finished.current) return;
     finished.current = true;
     const score = parts.reduce((a, p) => a + p.credit, 0) / parts.length;
     const revealed = parts.filter((p) => p.revealed).length;
@@ -221,12 +356,18 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
       return;
     }
     const attempts = st.attempts + 1;
+    if (p.answer.kind === 'essay') {
+      // Desarrollo: un único envío autoevaluado; el crédito es la fracción de la rúbrica marcada.
+      (result.correct ? sfx.success : sfx.error)();
+      update(i, { result, attempts, done: true, credit: result.credit ?? (result.correct ? 1 : 0), errors: result.errorKind ? [{ kind: result.errorKind, skill: result.errorSkill }] : [] });
+      return;
+    }
     if (result.correct) {
       sfx.success();
-      update(i, { result, attempts, done: true, credit: attempts === 1 ? 1 : 0.5, carried: result.status === 'correcto-arrastre', sigFigIssue: result.errorKind === 'cifras' });
+      update(i, { result, attempts, done: true, credit: attempts === 1 ? 1 : 0.5, carried: result.status === 'correcto-arrastre', sigFigIssue: result.errorKind === 'cifras', sigFigsAssessed: result.sigFigsAssessed, hinted: hints > 0, procedureAssisted: st.procedureAssisted });
     } else {
       sfx.error();
-      update(i, { result, attempts, errors: result.errorKind ? [...st.errors, { kind: result.errorKind, skill: result.errorSkill }] : st.errors });
+      update(i, { result, attempts, errors: result.errorKind ? [...st.errors, { kind: result.errorKind, skill: result.errorSkill, valueCorrect: result.valueCorrect }, ...(result.secondary ?? [])] : st.errors });
     }
   };
 
@@ -244,7 +385,7 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
     const next = parts.map((p, i) => {
       const r = results[i]!;
       const answered = r.status !== 'vacio';
-      return { ...p, result: r, attempts: 1, done: true, credit: r.correct ? 1 : 0, errors: !r.correct && r.errorKind ? [{ kind: r.errorKind, skill: r.errorSkill }] : !answered ? [{ kind: 'incompleto' as const }] : [], carried: r.status === 'correcto-arrastre', sigFigIssue: r.correct && r.errorKind === 'cifras' };
+      return { ...p, result: r, attempts: 1, done: true, credit: r.correct ? 1 : 0, errors: !r.correct && r.errorKind ? [{ kind: r.errorKind, skill: r.errorSkill, valueCorrect: r.valueCorrect }, ...(r.secondary ?? [])] : !answered ? [{ kind: 'incompleto' as const }] : [], carried: r.status === 'correcto-arrastre', sigFigIssue: r.correct && r.errorKind === 'cifras', sigFigsAssessed: r.correct ? r.sigFigsAssessed : undefined };
     });
     setParts(next);
     setSubmittedExam(true);
@@ -254,7 +395,10 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
 
   // En modo paso a paso, solo se muestran los pasos hasta el primero sin terminar.
   const firstOpen = parts.findIndex((p) => !p.done);
-  const visibleCount = exam || !exercise.stepwise ? parts.length : firstOpen === -1 ? parts.length : firstOpen + 1;
+  const stepwise = variant === 'guiado' ? exercise.parts.length > 1 : variant === 'desafio' ? false : exercise.stepwise;
+  const maxAttempts = Math.max(0, ...parts.map((p) => p.attempts));
+  const helpUnlocked = variant !== 'desafio' || maxAttempts >= 2;
+  const visibleCount = exam || !stepwise ? parts.length : firstOpen === -1 ? parts.length : firstOpen + 1;
 
   return (
     <article className="stack-16" aria-label={exercise.title}>
@@ -272,10 +416,11 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
             </span>
           </div>
         )}
-        <h3 className="h3">{exercise.title}</h3>
+        <h2 className="h3">{exercise.title}</h2>
         <p style={{ lineHeight: 1.6 }}>
           <Rich text={exercise.statement} />
         </p>
+        {exercise.figure && <FigureView fig={exercise.figure} />}
         {exercise.data && (
           <div className="row row--wrap" style={{ gap: 6 }} aria-label="Datos">
             {exercise.data.map((d) => (
@@ -339,7 +484,19 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
         })}
       </ol>
 
-      {!exam && !allDone && (
+      {!exam && !review && (
+        <ProcedurePanel
+          exercise={exercise}
+          onAnalyzed={() => setParts((ps) => ps.map((p, k) => (!p.done && exercise.parts[k]!.answer.kind === 'numeric' ? { ...p, procedureAssisted: true } : p)))}
+        />
+      )}
+
+      {!exam && !allDone && !helpUnlocked && (
+        <p className="small faint" style={{ margin: 0 }}>
+          Modo desafío: las pistas y la teoría se desbloquean tras dos intentos fallidos.
+        </p>
+      )}
+      {!exam && !allDone && helpUnlocked && (
         <section className="stack-8" aria-label="Pistas">
           {exercise.hints.slice(0, hints).map((h, i) => (
             <Feedback key={i} tone="warn">
@@ -368,7 +525,7 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
 
       {(allDone || submittedExam) && (
         <section className="stack-12 fade">
-          {!exam && (
+          {!exam && !review && (
             <Feedback tone={parts.every((p) => p.credit === 1) ? 'ok' : 'info'}>
               {parts.every((p) => p.credit === 1) ? 'Todo correcto al primer intento.' : `Completado. ${parts.filter((p) => p.credit === 1).length} de ${parts.length} pasos al primer intento.`}
             </Feedback>
@@ -384,12 +541,11 @@ export function ExercisePlayer({ exercise, mode, onFinish, onNext, nextLabel = '
               </button>
             )}
           </div>
-          {showSolution && (
-            <ol className="stack-8 small" style={{ margin: 0, paddingLeft: 20, color: 'var(--ink-muted)' }}>
-              {exercise.solution.map((s, i) => (
-                <li key={i}>{s}</li>
-              ))}
-            </ol>
+          {showSolution && <ResolutionView steps={exercise.resolution ?? structuredResolution(exercise)} methods={exercise.methods} />}
+          {showSolution && exercise.originalSolution && (
+            <p className="small" style={{ margin: 0 }}>
+              <strong>Solución del documento original:</strong> {exercise.originalSolution}
+            </p>
           )}
         </section>
       )}

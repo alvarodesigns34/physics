@@ -179,7 +179,7 @@ const ISOELECTRONIC_SETS: [number, number][][] = [
 export const isoelectronicGenerator: ExerciseGenerator = {
   id: 'isoelectronicas',
   title: 'Especies isoelectrónicas',
-  nodeIds: ['1.5'],
+  nodeIds: ['1.5', '1.4'],
   difficulties: [2, 3],
   create(seed, difficulty) {
     const rng = rngFor(this.id, seed, difficulty);
@@ -278,7 +278,7 @@ const PARTICLE_ITEMS: ConceptItem[] = [
 export const particleGenerator: ExerciseGenerator = {
   id: 'particulas',
   title: 'Partículas subatómicas',
-  nodeIds: ['1.6'],
+  nodeIds: ['1.6', '1.1'],
   difficulties: [1],
   create(seed, difficulty) {
     const rng = rngFor(this.id, seed, difficulty);

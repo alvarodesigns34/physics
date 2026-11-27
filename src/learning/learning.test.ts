@@ -13,6 +13,9 @@ function canonicalInput(p: ExercisePart): string | string[] {
       return p.answer.correct;
     case 'order':
       return p.answer.correctOrder;
+    case 'essay':
+      // La respuesta modelo con todos los criterios marcados en la autoevaluación.
+      return [p.canonical, ...p.answer.criteria.map((c) => c.id)];
     default:
       return p.canonical;
   }
@@ -359,7 +362,7 @@ describe('importación y migración del progreso', () => {
     expect(parseExport(JSON.stringify({ app: 'OTRA', version: 1 })).ok).toBe(false);
     expect(parseExport(JSON.stringify({ app: 'ATOM', version: 99 })).ok).toBe(false);
     expect(parseExport('x'.repeat(2_000_001)).ok).toBe(false);
-    const good = { app: 'ATOM', version: 1, settings: { sound: true, volume: 0.5 }, mastery: { '3.6': { theta: 0.4, attempts: 3, correct: 2, lastSeen: 1 } }, cards: { '3.6': { nodeId: '3.6', box: 2, due: 5 } }, history: [{ exerciseId: 'a', nodeIds: ['3.6'], difficulty: 2, correct: true, score: 1, hintsUsed: 0, at: 1, mode: 'practica' }], campaign: {}, exams: [] };
+    const good = { app: 'ATOM', version: 1, settings: { sound: true, volume: 0.5 }, mastery: { '3.6': { theta: 0.4, attempts: 3, correct: 2, lastSeen: 1.75e12 } }, cards: { '3.6': { nodeId: '3.6', box: 2, due: 1.76e12 } }, history: [{ exerciseId: 'a', nodeIds: ['3.6'], difficulty: 2, correct: true, score: 1, hintsUsed: 0, at: 1.75e12, mode: 'practica' }], campaign: {}, exams: [] };
     const r = parseExport(JSON.stringify(good));
     expect(r.ok).toBe(true);
     expect(r.data!.mastery['3.6']).toBeDefined();
@@ -406,8 +409,10 @@ describe('calidad adaptativa con histéresis', () => {
     let b = initialQualityState('media', 0);
     for (let i = 0; i < 50; i++) b = qualityStep(b, 60, 30, i * 2000 + 20000);
     expect(b.tier).toBe('media');
+    // Pausa larga aislada (cambio de laboratorio) con fotogramas típicos fluidos: no cuenta.
+    // (ATOM 3.0: antes se pasaba solo fps y el pico; ahora decide la mediana, véase audit3 P1.1.)
     let c = initialQualityState('alta', 0);
-    for (let i = 0; i < 10; i++) c = qualityStep(c, 20, 900, i * 2000);
+    for (let i = 0; i < 10; i++) c = qualityStep(c, { fps: 20, longestFrameMs: 900, medianFrameMs: 16 }, i * 2000);
     expect(c.tier).toBe('alta');
   });
 });

@@ -55,3 +55,6 @@ Gesto:       la única saturación de la pantalla es la luz calculada. Cuando ap
 | Baja | 1 | No | 5 000 | No |
 
 El modo **Auto** arranca en el nivel que corresponde por hardware (núcleos, memoria y GPU anunciada) y ajusta según los FPS medidos (PerformanceMonitor).
+
+## Actualización ATOM 3.0 (dirección visual vigente)
+La dirección «museo de noche» de este documento queda sustituida por «laboratorio a la luz del día»: tema claro principal, sans única (Inter Tight), un acento cobalto y escenas 3D en un visor de tono pizarra. Detalle y justificación en [08-tercera-generacion.md](08-tercera-generacion.md) §3; tokens en `src/styles/tokens.css`.

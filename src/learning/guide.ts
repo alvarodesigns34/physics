@@ -93,7 +93,7 @@ export const LESSONS: Lesson[] = [
         node: '1.5',
         title: 'Especies isoelectrónicas',
         body: [
-          'Son especies con el **mismo número de electrones** (y la misma configuración electrónica), aunque tengan distinto Z. Ejemplo con 10 e⁻: N³⁻, O²⁻, F⁻, Ne, Na⁺, Mg²⁺, Al³⁺.',
+          'Son especies con el **mismo número de electrones**, aunque tengan distinto Z. Ejemplo con 10 e⁻: N³⁻, O²⁻, F⁻, Ne, Na⁺, Mg²⁺, Al³⁺, que además comparten configuración (1s² 2s² 2p⁶, la del neón). Ojo: mismo número de electrones no garantiza la misma configuración en los metales de transición (Ca: [Ar] 4s²; Ti²⁺: [Ar] 3d²).',
           'Entre ellas, la que tiene **más protones** atrae más a la nube electrónica: es la más pequeña y la que tiene mayor energía de ionización.',
         ],
         tip: 'Para ordenar por tamaño una serie isoelectrónica no necesitas la tabla: ordena por Z (más protones, menor radio).',
@@ -152,7 +152,7 @@ export const LESSONS: Lesson[] = [
         ],
         tip: 'Respuesta modelo: «La mayoría pasa → el átomo es casi vacío. Algunas rebotan → hay un núcleo pequeño, positivo y con casi toda la masa. Thomson no lo explica porque su carga positiva está repartida».',
       },
-      { node: '2.5', title: 'Modelo de Rutherford', body: ['Núcleo pequeñísimo y positivo con casi toda la masa. Los electrones giran a su alrededor como planetas. El protón se identifica en 1919.'] },
+      { node: '2.5', title: 'Modelo de Rutherford', body: ['Núcleo pequeñísimo y positivo con casi toda la masa. En este modelo los electrones giran a su alrededor como planetas: es la imagen de 1911, que la mecánica cuántica sustituirá por los orbitales. El protón se identifica en 1919.'] },
       {
         node: '2.6',
         title: 'Limitaciones de Rutherford',
@@ -189,7 +189,7 @@ export const LESSONS: Lesson[] = [
         formulas: [{ expr: 'M = (m₁·%₁ + m₂·%₂ + …) / 100', vars: [['M', 'masa atómica media', 'u'], ['mᵢ', 'masa del isótopo i', 'u'], ['%ᵢ', 'abundancia del isótopo i', '%']] }],
         widget: 'masa-media',
         mistakes: ['Hacer la media aritmética sin ponderar.', 'Olvidar dividir entre 100.', 'No comprobar que las abundancias sumen 100 % (los apuntes tienen una errata: 74,771 % debería ser 75,771 %).'],
-        tip: 'Comprueba siempre: el resultado debe quedar más cerca del isótopo más abundante.',
+        tip: 'Comprueba siempre: el resultado debe quedar entre las masas de los isótopos y, si son dos, más cerca del más abundante.',
       },
       {
         node: '3.2',
@@ -207,7 +207,7 @@ export const LESSONS: Lesson[] = [
         ],
         widget: 'onda',
         mistakes: ['No pasar nm a metros: 1 nm = 10⁻⁹ m (500 nm = 5·10⁻⁷ m).', 'Confundir periodo y frecuencia: T = 1/ν.', 'Pensar que a mayor λ, mayor frecuencia: son inversamente proporcionales (λ·ν = c es constante).'],
-        tip: 'Escribe siempre la fórmula, sustituye con unidades del SI y comprueba el orden de magnitud: la luz visible tiene ν ≈ 10¹⁴–10¹⁵ Hz.',
+        tip: 'Escribe siempre la fórmula, sustituye con unidades del SI y comprueba el orden de magnitud: la luz visible tiene ν ≈ 4–8·10¹⁴ Hz.',
       },
       {
         node: '3.3',
@@ -233,7 +233,7 @@ export const LESSONS: Lesson[] = [
         title: 'Espectros de emisión y absorción',
         body: [
           'Un gas **excitado** emite solo ciertas longitudes de onda: **espectro de emisión**, con líneas brillantes sobre fondo negro.',
-          'Si la luz blanca atraviesa un gas frío, faltan exactamente esas longitudes de onda: **espectro de absorción**, con líneas oscuras.',
+          'Si la luz blanca atraviesa un gas frío, faltan longitudes de onda de ese mismo conjunto: **espectro de absorción**, con líneas oscuras. Ojo: en un gas frío casi todos los átomos están en el estado fundamental, así que solo aparecen las líneas de los saltos que parten de él (en el hidrógeno, la serie de Lyman, en el UV). Cada línea de absorción coincide con una de emisión, pero no todas las de emisión aparecen en absorción.',
           'Cada elemento tiene un espectro **único**: sirve para identificarlo, incluso en las estrellas.',
         ],
       },
@@ -352,7 +352,7 @@ export const LESSONS: Lesson[] = [
         node: '4.4',
         title: 'Correcciones al modelo',
         body: [
-          '**Sommerfeld (1915)**: la estructura fina (líneas dobles) se explica con órbitas elípticas → número cuántico secundario **l**.',
+          '**Sommerfeld (1915)**: la estructura fina (líneas dobles) se explica con órbitas elípticas → número cuántico secundario **l**. La imagen de la elipse está superada: hoy l indica la forma del orbital.',
           '**Zeeman (1896)**: el desdoblamiento de las líneas en un campo magnético se explica con distintas orientaciones → número cuántico magnético **m**.',
           '**Uhlenbeck y Goudsmit (1925)**: proponen el espín del electrón → **s**.',
         ],
@@ -498,7 +498,7 @@ export const LESSONS: Lesson[] = [
         body: ['**s** (grupos 1–2): ns¹–². **p** (13–18): ns² npˣ. **d** (3–12): ns² (n−1)dˣ. **f** (lantánidos y actínidos): ns² (n−2)fˣ. El bloque lo indica el subnivel del último electrón según Möller.'],
       },
       { node: '7.4', title: 'Familias', body: ['Grupo 1: **alcalinos** (salvo el H); 2: **alcalinotérreos**; 3–12: **metales de transición**; 16: anfígenos; 17: **halógenos**; 18: **gases nobles**. Metales a la izquierda, no metales a la derecha y semimetales en la frontera.'] },
-      { node: '7.5', title: 'Iones estables', body: ['Los elementos representativos ganan o pierden electrones hasta alcanzar la configuración del gas noble: grupo 1 → +1, grupo 2 → +2, grupo 13 → +3, grupo 15 → −3, grupo 16 → −2, grupo 17 → −1.'] },
+      { node: '7.5', title: 'Iones estables', body: ['Los elementos representativos ganan o pierden electrones hasta alcanzar la configuración del gas noble: grupo 1 → +1, grupo 2 → +2, grupo 13 → +3, grupo 15 → −3, grupo 16 → −2, grupo 17 → −1. En los grupos 13–15 la regla sirve sobre todo para los casos típicos (Al³⁺, N³⁻): el boro o el carbono, por ejemplo, comparten electrones en lugar de formar iones simples.'] },
       {
         node: '7.6',
         title: 'Apantallamiento y carga nuclear efectiva',
@@ -603,13 +603,13 @@ export const TRICKS: Record<string, string[]> = {
   '1.4': ['Carga negativa = electrones de MÁS: O²⁻ tiene 8 + 2 = 10. Carga positiva = electrones de MENOS: Al³⁺ tiene 13 − 3 = 10.', 'Truco del signo: «e⁻ = Z − q» funciona siempre si escribes q con su signo.'],
   '1.5': ['Cuenta electrones, no protones: N³⁻, O²⁻, F⁻, Ne, Na⁺, Mg²⁺ y Al³⁺ tienen todos 10.', 'En una serie isoelectrónica, el de MÁS protones es el MÁS pequeño: tira más de los mismos electrones.'],
   '2.4': ['Resume Rutherford en tres frases: «casi todas pasan → vacío; pocas se desvían → algo positivo; alguna rebota → núcleo pequeño y masivo».'],
-  '3.1': ['Comprobación en 2 segundos: la media debe quedar más cerca del isótopo más abundante (Cl: 35,45, cerca de 35).', 'Problema inverso (abundancias): llama x a una y 100 − x a la otra; la ecuación es de primer grado.'],
+  '3.1': ['Comprobación en 2 segundos: con dos isótopos, la media debe quedar más cerca del más abundante (Cl: 35,45, cerca de 35).', 'Problema inverso (abundancias): llama x a una y 100 − x a la otra; la ecuación es de primer grado.'],
   '3.2': ['λ y ν son como un balancín: λ·ν = c fijo. Si una sube, la otra baja en la misma proporción.', 'Prefijos que caen siempre: nm = 10⁻⁹ m, µm = 10⁻⁶ m, MHz = 10⁶ Hz, GHz = 10⁹ Hz, fs = 10⁻¹⁵ s.', 'Orden de magnitud del visible: λ ≈ 5·10⁻⁷ m, ν ≈ 6·10¹⁴ Hz, E ≈ 4·10⁻¹⁹ J ≈ 2,5 eV. Si te sale muy distinto, revisa las potencias.'],
   '3.3': ['Regla de memoria (de menor λ a mayor): «Gamma Xilofón Ultra Visible Infla Micro Radios» → γ, X, UV, visible, IR, microondas, radio.', 'En el visible: «el rojo es lento y largo» (λ grande, ν pequeña); el violeta, «corto y rápido».'],
   '3.4': ['E = h·c/λ: λ va DIVIDIENDO. Si te sale E ≈ 10⁻⁴⁰ J, has multiplicado por λ.', 'J → eV: divide entre 1,602·10⁻¹⁹ (salen números «normales», 1–15 eV). eV → J: multiplica.'],
   '3.6': ['R en cm⁻¹ (109 740) → multiplica por 100 para tenerla en m⁻¹ (1,0974·10⁷). Si tu λ sale 100 veces grande, es eso.', 'n₁ es SIEMPRE el pequeño (el de abajo) y n₂ el grande: así el paréntesis es positivo.'],
   '3.7': ['Series de abajo arriba: «Le Bailo Pasodobles Bien Pronto» → Lyman (1), Balmer (2), Paschen (3), Brackett (4), Pfund (5).', 'Lyman = ultravioleta, Balmer = visible (y UV cercano), las demás = infrarrojo.', 'k-ésima línea de una serie: n₂ = n₁ + k. Tercera de Balmer → 5 → 2.'],
-  '3.7-inv': ['Cinco pasos y nunca falla: 1/λ → ÷R → resta de 1/n₁² → invierte → raíz.', 'Si n₂ sale 4,98 o 7,99, el nivel es 5 u 8 (redondeo de datos). Si sale 5,5, hay un error de cálculo.', 'Para n₁ (te dan n₂): el término 1/n₂² pasa SUMANDO.'],
+  '3.7-inv': ['Cinco pasos cortos, cada uno comprobable, evitan casi todos los errores: 1/λ → ÷R → resta de 1/n₁² → invierte → raíz.', 'Si n₂ sale 4,98 o 7,99, el nivel es 5 u 8 (redondeo de datos). Si sale 5,5, hay un error de cálculo.', 'Para n₁ (te dan n₂): el término 1/n₂² pasa SUMANDO.'],
   '3.8': ['Líneas desde el nivel n: n(n − 1)/2. Desde 4 → 6; desde 5 → 10; desde 6 → 15.'],
   '4.1': ['Sube = absorbe energía; baja = emite un fotón. El fotón siempre tiene E positiva.'],
   '4.2': ['Energías del H para memorizar: −13,6 / −3,40 / −1,51 / −0,85 eV (n = 1, 2, 3, 4).'],

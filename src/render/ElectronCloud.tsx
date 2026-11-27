@@ -42,7 +42,8 @@ const fragment = /* glsl */ `
     vec2 c = gl_PointCoord - 0.5;
     float d = dot(c, c);
     if (d > 0.25) discard;
-    float a = smoothstep(0.25, 0.0, d);
+    // ATOM 5.2 · Caída gaussiana con núcleo suave: grano fino, sin el borde de disco de los puntos.
+    float a = exp(-d * 16.0) - 0.018;
     vec3 col = mix(uInner, uOuter, vShell);
     float gain = mix(0.55, 1.0, vShell) * uGain;
     gl_FragColor = vec4(col * gain, a * uOpacity * vAlpha);

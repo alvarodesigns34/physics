@@ -59,7 +59,44 @@ export function checkAnswer(spec: AnswerSpec, input: string | string[], ctx: Che
       return checkOrder(spec, Array.isArray(input) ? input : String(input).split(','));
     case 'quantum':
       return checkQuantum(spec, String(input));
+    case 'essay':
+      return checkEssay(spec, Array.isArray(input) ? input : [String(input)]);
   }
+}
+
+type EssaySpec = Extract<AnswerSpec, { kind: 'essay' }>;
+
+const normEs = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+/** Criterios de la rúbrica que PARECEN presentes en el texto (coincidencia de palabras clave; solo orientativo). */
+export function suggestCriteria(spec: EssaySpec, text: string): string[] {
+  const t = normEs(text);
+  return spec.criteria.filter((c) => c.keywords.length > 0 && c.keywords.every((g) => g.some((k) => t.includes(normEs(k))))).map((c) => c.id);
+}
+
+/**
+ * Respuesta de desarrollo autoevaluada: input = [texto, ...ids de criterios que el alumno marca como
+ * cumplidos]. El crédito es la fracción ponderada de criterios cumplidos. No se finge comprender el texto.
+ */
+function checkEssay(spec: EssaySpec, input: string[]): CheckResult {
+  const [text = '', ...ticked] = input;
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  if (words === 0) return empty;
+  if (spec.minWords && words < spec.minWords) return format(`Desarrolla un poco más (al menos ${spec.minWords} palabras): una justificación de examen necesita causa y consecuencia.`);
+  const total = spec.criteria.reduce((a, c) => a + (c.weight ?? 1), 0);
+  const got = spec.criteria.filter((c) => ticked.includes(c.id)).reduce((a, c) => a + (c.weight ?? 1), 0);
+  const credit = total ? got / total : 0;
+  const missing = spec.criteria.filter((c) => !ticked.includes(c.id)).map((c) => c.text);
+  if (credit >= 0.999) return { status: 'correcto', correct: true, message: 'Según tu autoevaluación, la respuesta cubre todos los criterios.', warnings: [], credit: 1 };
+  return {
+    status: 'incorrecto',
+    correct: credit >= 0.7,
+    message: `Autoevaluación: ${Math.round(credit * 100)} % de la rúbrica. Te falta: ${missing.join(' · ')}.`,
+    warnings: [],
+    credit,
+    errorKind: credit < 0.4 ? 'concepto' : 'incompleto',
+    errorSkill: 'razonamiento',
+  };
 }
 
 type NumericSpec = Extract<AnswerSpec, { kind: 'numeric' }>;
@@ -74,16 +111,17 @@ function checkNumeric(spec: NumericSpec, input: string, ctx: CheckContext): Chec
   const warnings: string[] = [];
   let value = parsed.value;
 
+  let unitMissing = false;
   if (unitText === '') {
-    if (expectedUnit.quantity !== 'adimensional') {
-      const close = relClose(value, spec.value, spec.relTol ?? 0.01);
-      return bad(close ? `El número es correcto, pero falta la unidad (${expectedUnit.symbol}). Una magnitud física sin unidad no está completa.` : `Falta la unidad. Se pide una ${QUANTITY_LABEL[expectedUnit.quantity]} en ${expectedUnit.symbol}.`, [], value, 'unidad-falta');
-    }
+    if (expectedUnit.quantity !== 'adimensional') unitMissing = true;
   } else {
     const unit = parseUnit(unitText);
     if (!unit) return format(`No reconozco la unidad «${unitText}». Se espera ${expectedUnit.symbol || 'un número sin unidades'}.`);
     if (unit.quantity !== expectedUnit.quantity) {
       return bad(`«${unit.symbol}» es una unidad de ${QUANTITY_LABEL[unit.quantity]}, pero aquí se pide una ${QUANTITY_LABEL[expectedUnit.quantity]} (en ${expectedUnit.symbol}).`, [], undefined, 'unidad-incompatible');
+    }
+    if (spec.strictUnit && unit.symbol !== expectedUnit.symbol) {
+      return format(`Exprésalo en ${expectedUnit.symbol}: convertir es justo lo que pide este paso.`);
     }
     value = convert(value, unit, expectedUnit);
     if (unit.symbol !== expectedUnit.symbol) warnings.push(`Has respondido en ${unit.symbol}; es equivalente, pero el enunciado pide ${expectedUnit.symbol}.`);
@@ -101,6 +139,20 @@ function checkNumeric(spec: NumericSpec, input: string, ctx: CheckContext): Chec
     }
   }
 
+  if (unitMissing) {
+    // La corrección numérica (¿el número sería correcto en la unidad pedida?) se separa de la dimensional.
+    if (relClose(value, expected, tol)) {
+      return { ...bad(`El número es correcto, pero falta la unidad (${expectedUnit.symbol}). Una magnitud física sin unidad no está completa.`, [], value, 'unidad-falta'), valueCorrect: true };
+    }
+    const numeric = diagnoseWrongValue(spec, value, expected, tol, warnings, expectedUnit.symbol);
+    return {
+      ...numeric,
+      message: `${numeric.message} Además, falta la unidad (${expectedUnit.symbol}).`,
+      valueCorrect: false,
+      secondary: [{ kind: 'unidad-falta', skill: 'unidades' }],
+    };
+  }
+
   if (relClose(value, expected, tol)) {
     const before = warnings.length;
     if (spec.sigFigs !== undefined && !parsed.ambiguousSigFigs) {
@@ -108,23 +160,29 @@ function checkNumeric(spec: NumericSpec, input: string, ctx: CheckContext): Chec
       else if (parsed.sigFigs < spec.sigFigs - 1) warnings.push(`Con ${parsed.sigFigs} cifra${parsed.sigFigs === 1 ? '' : 's'} significativa${parsed.sigFigs === 1 ? '' : 's'} pierdes precisión; los datos permiten unas ${spec.sigFigs}.`);
     }
     // Respuesta correcta con cifras significativas inadecuadas: es correcta, pero aporta evidencia negativa sobre «cifras».
-    const sigIssue = warnings.length > before ? ({ errorKind: 'cifras', errorSkill: 'cifras' } as const) : {};
+    const sigFigsAssessed = spec.sigFigs !== undefined && !parsed.ambiguousSigFigs;
+    const sigIssue = { sigFigsAssessed, ...(warnings.length > before ? ({ errorKind: 'cifras', errorSkill: 'cifras' } as const) : {}) };
     if (carried) {
       return { status: 'correcto-arrastre', correct: true, message: 'El cálculo es correcto con el resultado que obtuviste en el paso anterior, aunque aquel resultado era erróneo.', warnings, numericValue: value, ...sigIssue };
     }
     return { ...ok('Correcto.', warnings, value), ...sigIssue };
   }
 
+  return diagnoseWrongValue(spec, value, expected, tol, warnings, expectedUnit.symbol);
+}
+
+/** Clasifica un valor numérico incorrecto (ya expresado en la unidad esperada). */
+function diagnoseWrongValue(spec: NumericSpec, value: number, expected: number, tol: number, warnings: string[], unitSymbol: string): CheckResult {
   for (const m of spec.misconceptions ?? []) {
     if (m.test(value)) return bad(m.message, warnings, value, 'idea-erronea', m.skill ?? 'formula');
   }
-  // Detectores genéricos
+  // Detectores genéricos. Se formulan como posibilidades: una sola respuesta numérica no revela el razonamiento.
   if (value !== 0 && expected !== 0) {
     if (relClose(-value, expected, tol)) return bad('El valor absoluto es correcto, pero el signo no. Revisa qué magnitud es positiva por definición.', warnings, value, 'signo');
     const ratio = value / expected;
     const k = Math.round(Math.log10(Math.abs(ratio)));
     if (k !== 0 && relClose(Math.abs(ratio), Math.pow(10, k), tol)) {
-      return bad(`Las cifras son correctas, pero el resultado es 10${k > 0 ? '' : '⁻'}${String(Math.abs(k)).replace(/\d/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[Number(d)]!)} veces ${k > 0 ? 'mayor' : 'menor'}: revisa la conversión de unidades (nm, cm, m…) o el exponente.`, warnings, value, 'orden-de-magnitud');
+      return bad(`Las cifras coinciden, pero el resultado es 10${k > 0 ? '' : '⁻'}${String(Math.abs(k)).replace(/\d/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[Number(d)]!)} veces ${k > 0 ? 'mayor' : 'menor'}: probablemente una conversión de unidades (nm, cm, m…) o un exponente.`, warnings, value, 'orden-de-magnitud');
     }
     if (relClose(value * expected, 1, tol * 2)) return bad('Has obtenido el inverso del resultado: revisa si debes dividir o invertir.', warnings, value, 'inverso');
     // Muy cerca pero fuera de la tolerancia: redondeo prematuro de resultados intermedios o de constantes.
@@ -133,7 +191,7 @@ function checkNumeric(spec: NumericSpec, input: string, ctx: CheckContext): Chec
       return bad(`Te acercas (difieres un ${formatNumber(pct, { sig: 2 })} %), pero no basta: suele deberse a redondear demasiado pronto un resultado intermedio o a usar una constante distinta de la del enunciado. Arrastra al menos 4 cifras en los cálculos intermedios.`, warnings, value, 'redondeo');
     }
   }
-  return bad(`No es correcto. Tu resultado es ${formatNumber(value, { sig: 4 })} ${expectedUnit.symbol}.`, warnings, value, 'calculo');
+  return bad(`No es correcto. Tu resultado es ${formatNumber(value, { sig: 4 })} ${unitSymbol}.`, warnings, value, 'calculo');
 }
 
 function checkInteger(expected: number, input: string): CheckResult {

@@ -7,8 +7,10 @@ import { persist, createJSONStorage, type StateStorage } from 'zustand/middlewar
 import type { Species } from '../science/nucleus';
 import { initialMastery, updateCard, updateMastery, updateMasteryY, type NodeMastery, type ReviewCard } from '../learning/mastery';
 import type { Difficulty, ErrorKind, Exercise, SkillId } from '../learning/types';
-import { buildEvidence, type PartRecord } from '../learning/evidence';
+import { buildEvidence, EVIDENCE_WEIGHT, type EvidenceKind, type PartRecord } from '../learning/evidence';
+import { addMiss, registerClean, type NotebookEntry } from '../learning/notebook';
 import { parseExport, PROGRESS_VERSION, validateProgress } from './validate';
+import { mergeProgress, type MergeSummary } from './merge';
 import type { ConfigOrder } from '../science/configuration';
 
 export type QualitySetting = 'auto' | 'alta' | 'media' | 'baja';
@@ -24,7 +26,11 @@ export interface Settings {
   seenIntro: boolean;
   textScale: number;
   configOrder: ConfigOrder;
+  /** Tema de la interfaz (ATOM 3.0: claro por defecto) */
+  theme: ThemeSetting;
 }
+
+export type ThemeSetting = 'claro' | 'oscuro' | 'sistema';
 
 export interface Attempt {
   exerciseId: string;
@@ -39,6 +45,23 @@ export interface Attempt {
   errors?: { kind: ErrorKind; skill?: SkillId; nodeIds: string[] }[];
   /** Resultado medio 0–1 por competencia en este intento */
   skills?: Partial<Record<SkillId, number>>;
+  /** Tipo de evidencia (ATOM 4.0): demostrada, posible azar, asistida o autoevaluada */
+  evidence?: EvidenceKind;
+  /** Apartado → resultado 0–1 y tipo de evidencia de ESE apartado en este intento */
+  nodeEvidence?: Record<string, { y: number; kind: EvidenceKind; w?: number; g?: number }>;
+  /**
+   * ATOM 5.2 · Actualización exacta por competencia (y sin redondear, peso final y azar) para que la fusión
+   * entre dispositivos reproduzca la misma actualización que hizo el dispositivo original.
+   */
+  skillEvidence?: Partial<Record<SkillId, { y: number; w: number; g: number }>>;
+}
+
+export { SPACED_RETRIEVAL_MS, repetitionInfo, repetitionFactor } from './repetition';
+import { repetitionInfo } from './repetition';
+
+const KIND_RANK: Record<EvidenceKind, number> = { demostrada: 0, 'posible-azar': 1, asistida: 2, autoevaluada: 3 };
+function weakestKind(ks: EvidenceKind[]): EvidenceKind {
+  return ks.reduce<EvidenceKind>((a, k) => (KIND_RANK[k] > KIND_RANK[a] ? k : a), 'demostrada');
 }
 
 export interface MissionProgress {
@@ -68,6 +91,8 @@ interface PersistedState {
   history: Attempt[];
   campaign: Record<string, MissionProgress>;
   exams: ExamRecord[];
+  /** Cuaderno de errores (ATOM 4.0) */
+  notebook: NotebookEntry[];
   forge: Species;
   activeMission: string | null;
   storageAvailable: boolean;
@@ -85,7 +110,7 @@ interface Actions {
   updateMission: (id: string, patch: Partial<MissionProgress>) => void;
   resetProgress: () => void;
   /** Importa un archivo: si no es válido, el progreso actual no cambia. */
-  importProgress: (json: string) => { ok: boolean; issues: string[] };
+  importProgress: (json: string, mode?: 'reemplazar' | 'fusionar') => { ok: boolean; issues: string[]; summary?: MergeSummary };
   /** Deshace la última importación (restaura la copia previa). */
   undoImport: () => boolean;
   exportProgress: () => string;
@@ -93,7 +118,7 @@ interface Actions {
 
 export type AppState = PersistedState & Actions;
 
-const DEFAULT_SETTINGS: Settings = { alias: '', quality: 'auto', motion: 'sistema', sound: false, ambient: true, volume: 0.8, seenIntro: false, textScale: 1, configOrder: 'llenado' };
+const DEFAULT_SETTINGS: Settings = { alias: '', quality: 'auto', motion: 'sistema', sound: false, ambient: true, volume: 0.8, seenIntro: false, textScale: 1, configOrder: 'llenado', theme: 'claro' };
 
 function probeStorage(): boolean {
   try {
@@ -141,6 +166,7 @@ const initialPersisted = (): PersistedState => ({
   history: [],
   campaign: {},
   exams: [],
+  notebook: [],
   forge: { z: 0, n: 0, e: 0 },
   activeMission: null,
   storageAvailable: typeof window !== 'undefined' ? probeStorage() : false,
@@ -178,17 +204,33 @@ export const useStore = create<AppState>()(
           }
           const now = Date.now();
           const ev = buildEvidence(ex, o.parts);
+          // Repetir el MISMO enunciado (mismo id) puede ser memoria, no comprensión (auditoría de ATOM 4.0:
+          // inflación por repetición). Pesa mucho menos y nunca cuenta como evidencia «demostrada».
+          const repInfo = repetitionInfo(s.history, ex.id, now);
+          const rep = repInfo.factor;
+          if (rep < 1) {
+            for (const v of Object.values(ev.nodes)) if (v.kind === 'demostrada' || v.kind === 'posible-azar') v.kind = 'asistida';
+            for (const v of Object.values(ev.skills)) if (v && (v.kind === 'demostrada' || v.kind === 'posible-azar')) v.kind = 'asistida';
+          }
           const mastery = { ...s.mastery };
           const cards = { ...s.cards };
-          for (const [node, { y }] of Object.entries(ev.nodes)) {
-            mastery[node] = updateMasteryY(mastery[node] ?? initialMastery(), ex.difficulty, y, o.hintsUsed, now);
+          // Peso final (tipo de evidencia × repetición) y azar de cada actualización: se guardan en el intento
+          // (ATOM 5.2) para que la fusión con otro dispositivo aplique EXACTAMENTE la misma actualización.
+          const nodeEvidence: NonNullable<Attempt['nodeEvidence']> = {};
+          const skillEvidence: NonNullable<Attempt['skillEvidence']> = {};
+          for (const [node, { y, guess, kind }] of Object.entries(ev.nodes)) {
+            const w = EVIDENCE_WEIGHT[kind] * rep;
+            nodeEvidence[node] = { y, kind, w, g: guess };
+            mastery[node] = updateMasteryY(mastery[node] ?? initialMastery(), ex.difficulty, y, o.hintsUsed, now, w, guess);
             const ok = y >= 0.75;
-            if (mode !== 'examen' || !ok) cards[node] = updateCard(cards[node], node, ok, now);
+            if (mode !== 'examen' || !ok) cards[node] = updateCard(cards[node], node, ok, now, kind);
           }
           const skills = { ...s.skills };
           const skillY: Partial<Record<SkillId, number>> = {};
-          for (const [k, v] of Object.entries(ev.skills) as [SkillId, { y: number; n: number }][]) {
-            skills[k] = updateMasteryY(skills[k] ?? initialMastery(), 2, v.y, o.hintsUsed, now, Math.min(1, 0.5 + v.n * 0.25));
+          for (const [k, v] of Object.entries(ev.skills) as [SkillId, { y: number; n: number; guess: number; kind: EvidenceKind }][]) {
+            const w = Math.min(1, 0.5 + v.n * 0.25) * EVIDENCE_WEIGHT[v.kind] * rep;
+            skillEvidence[k] = { y: v.y, w, g: v.guess };
+            skills[k] = updateMasteryY(skills[k] ?? initialMastery(), 2, v.y, o.hintsUsed, now, w, v.guess);
             skillY[k] = Math.round(v.y * 100) / 100;
           }
           const attempt: Attempt = {
@@ -202,8 +244,26 @@ export const useStore = create<AppState>()(
             at: now,
             errors: ev.errors.map(({ kind, skill, nodeIds }) => ({ kind, skill, nodeIds })),
             skills: skillY,
+            evidence: weakestKind(Object.values(ev.nodes).map((n) => n.kind)),
+            nodeEvidence,
+            skillEvidence,
           };
-          return { mastery, skills, cards, history: [...s.history, attempt].slice(-400) };
+          // Cuaderno de errores: los pasos no superados dejan entrada; un ejercicio limpio (primer intento,
+          // sin pistas ni pasos revelados) puede superar entradas abiertas de su mismo tipo.
+          let notebook = s.notebook;
+          const misses = o.parts
+            .map((r, k) => ({ r, part: ex.parts[k]! }))
+            .filter(({ r }) => r.credit < 1 || r.revealed)
+            .map(({ r, part }) => {
+              // El diagnóstico real (p. ej. «unidades») es más útil que «revelado»: solo si no hubo error
+              // diagnosticado se anota que el paso se tuvo que ver resuelto.
+              const diag = r.errors.find((e) => e.kind !== 'formato' && e.kind !== 'incompleto');
+              return { prompt: part.prompt, partId: part.id, kind: diag?.kind ?? (r.revealed ? ('revelado' as const) : 'incompleto'), skill: diag?.skill ?? r.errors[0]?.skill };
+            });
+          if (misses.length) notebook = addMiss(notebook, { exerciseId: ex.id, generatorId: ex.generatorId, title: ex.title, nodeIds: Object.keys(ev.nodes), at: now, mode, misses });
+          else if (o.hintsUsed === 0 && (rep === 1 || repInfo.spaced) && o.parts.every((r) => r.attempts <= 1 && !r.revealed && !r.hinted && !r.procedureAssisted && r.credit >= 1))
+            notebook = registerClean(notebook, { id: ex.id, generatorId: ex.generatorId, difficulty: ex.difficulty, steps: o.parts.map((r, k) => ({ id: r.id, prompt: ex.parts.find((p) => p.id === r.id)?.prompt ?? ex.parts[k]!.prompt })) }, now).list;
+          return { mastery, skills, cards, notebook, history: [...s.history, attempt].slice(-400) };
         }),
       recordExam: (r) => set((s) => ({ exams: [...s.exams, { ...r, at: Date.now() }].slice(-30) })),
       startMission: (id) =>
@@ -213,18 +273,26 @@ export const useStore = create<AppState>()(
         })),
       setActiveMission: (id) => set({ activeMission: id }),
       updateMission: (id, patch) => set((s) => ({ campaign: { ...s.campaign, [id]: { ...(s.campaign[id] ?? { status: 'en-curso', step: 0, collected: [], stars: 0, hintsUsed: 0, firstTry: true }), ...patch } } })),
-      resetProgress: () => set({ mastery: {}, skills: {}, cards: {}, history: [], campaign: {}, exams: [], activeMission: null }),
+      resetProgress: () => set({ mastery: {}, skills: {}, cards: {}, history: [], campaign: {}, exams: [], notebook: [], activeMission: null }),
       exportProgress: () => {
-        const { settings, mastery, skills, cards, history, campaign, exams } = get();
-        return JSON.stringify({ app: 'ATOM', version: PROGRESS_VERSION, exportedAt: new Date().toISOString(), settings, mastery, skills, cards, history, campaign, exams }, null, 2);
+        const { settings, mastery, skills, cards, history, campaign, exams, notebook } = get();
+        return JSON.stringify({ app: 'ATOM', version: PROGRESS_VERSION, exportedAt: new Date().toISOString(), settings, mastery, skills, cards, history, campaign, exams, notebook }, null, 2);
       },
-      importProgress: (json) => {
+      importProgress: (json, mode = 'reemplazar') => {
         const res = parseExport(json);
         if (!res.ok || !res.data) return { ok: false, issues: res.issues };
         const cur = get();
-        importBackup = JSON.stringify({ settings: cur.settings, mastery: cur.mastery, skills: cur.skills, cards: cur.cards, history: cur.history, campaign: cur.campaign, exams: cur.exams });
+        importBackup = JSON.stringify({ settings: cur.settings, mastery: cur.mastery, skills: cur.skills, cards: cur.cards, history: cur.history, campaign: cur.campaign, exams: cur.exams, notebook: cur.notebook });
         const d = res.data;
-        set({ settings: { ...DEFAULT_SETTINGS, ...d.settings } as Settings, mastery: d.mastery as AppState['mastery'], skills: d.skills as AppState['skills'], cards: d.cards as AppState['cards'], history: d.history as Attempt[], campaign: d.campaign as AppState['campaign'], exams: d.exams as ExamRecord[], activeMission: null });
+        if (mode === 'fusionar') {
+          const { data, summary } = mergeProgress(
+            { mastery: cur.mastery, skills: cur.skills, cards: cur.cards, history: cur.history, campaign: cur.campaign, exams: cur.exams, notebook: cur.notebook },
+            { mastery: d.mastery as AppState['mastery'], skills: d.skills as AppState['skills'], cards: d.cards as AppState['cards'], history: d.history as Attempt[], campaign: d.campaign as AppState['campaign'], exams: d.exams as ExamRecord[], notebook: d.notebook as NotebookEntry[] },
+          );
+          set({ ...data });
+          return { ok: true, issues: res.issues, summary };
+        }
+        set({ settings: { ...DEFAULT_SETTINGS, ...d.settings } as Settings, mastery: d.mastery as AppState['mastery'], skills: d.skills as AppState['skills'], cards: d.cards as AppState['cards'], history: d.history as Attempt[], campaign: d.campaign as AppState['campaign'], exams: d.exams as ExamRecord[], notebook: d.notebook as NotebookEntry[], activeMission: null });
         return { ok: true, issues: res.issues };
       },
       undoImport: () => {
@@ -239,7 +307,7 @@ export const useStore = create<AppState>()(
       name: 'atom:v1',
       version: PROGRESS_VERSION,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({ settings: s.settings, mastery: s.mastery, skills: s.skills, cards: s.cards, history: s.history, campaign: s.campaign, exams: s.exams, forge: s.forge, activeMission: s.activeMission }),
+      partialize: (s) => ({ settings: s.settings, mastery: s.mastery, skills: s.skills, cards: s.cards, history: s.history, campaign: s.campaign, exams: s.exams, notebook: s.notebook, forge: s.forge, activeMission: s.activeMission }),
       // v1 → v2: se añade el dominio por competencias (vacío) y se sanean las entradas. Los datos dañados
       // se descartan entrada a entrada, sin perder el resto del progreso.
       migrate: (persisted) => persisted as PersistedState,
@@ -257,6 +325,7 @@ export const useStore = create<AppState>()(
           history: d.history as Attempt[],
           campaign: d.campaign as AppState['campaign'],
           exams: d.exams as ExamRecord[],
+          notebook: d.notebook as NotebookEntry[],
           forge: (d.forge as unknown as Species) ?? current.forge,
           activeMission: d.activeMission ?? null,
         };

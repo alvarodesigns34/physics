@@ -6,8 +6,13 @@ import { masteryPercent } from '../../learning/mastery';
 import { useStore } from '../../state/store';
 import { navigate, useRoute } from '../../app/hooks';
 import { Rich } from '../../ui/common';
+import { formatNumber } from '../../science/numbers';
 import { Icon } from '../../ui/Icon';
 import { GuideWidget } from './widgets';
+import { DEPTH } from '../../learning/guideDepth';
+import { PROGRESSION } from '../../learning/guideProgression';
+import { MathText } from '../../ui/MathText';
+import { LIVE, sliderToValue, valueToSlider, type LiveFormula } from '../../learning/liveFormulas';
 
 const covered = new Set(COVERED_NODES);
 
@@ -15,7 +20,69 @@ function practiceUrl(nodes: string[]) {
   return `/entrenamiento?v=practica&nodes=${nodes.filter((n) => covered.has(n)).join(',')}`;
 }
 
+/** Explorador de una fórmula: deslizadores para las entradas y el resultado recalculado al instante. */
+const showVal = (i: LiveFormula['inputs'][number], v: number) => (!i.log && Number.isInteger(i.step) ? String(v).replace('-', '−') : formatNumber(v, { sig: i.log ? 3 : 4 })) + (i.unit ? ` ${i.unit}` : '');
+
+function LivePanel({ lf, label }: { lf: LiveFormula; label: string }) {
+  const [vals, setVals] = useState<Record<string, number>>(() => Object.fromEntries(lf.inputs.map((i) => [i.key, i.value])));
+  const r = lf.compute(vals);
+  return (
+    <div className="live" role="group" aria-label={`Explorar ${label}`}>
+      <div className="live__inputs">
+        {lf.inputs.map((i) => {
+          const id = `live-${label}-${i.key}`.replace(/[^\w-]/g, '_');
+          return (
+            <label key={i.key} className="live__in" htmlFor={id}>
+              <span className="live__lab">
+                <span className="mono live__sym">{i.sym}</span> {i.label}
+                <output className="mono live__val" htmlFor={id}>
+                  {showVal(i, vals[i.key]!)}
+                </output>
+              </span>
+              <input
+                id={id}
+                type="range"
+                min={i.log ? 0 : i.min}
+                max={i.log ? 1000 : i.max}
+                step={i.log ? 1 : i.step}
+                value={i.log ? valueToSlider(i, vals[i.key]!) : vals[i.key]!}
+                aria-valuetext={showVal(i, vals[i.key]!)}
+                onChange={(e) => setVals((v) => ({ ...v, [i.key]: i.log ? sliderToValue(i, Number(e.target.value)) : Number(e.target.value) }))}
+              />
+            </label>
+          );
+        })}
+      </div>
+      <div className="live__out" aria-live="polite">
+        {r.invalid ? (
+          <p className="live__invalid">{r.invalid}</p>
+        ) : (
+          <>
+            <dl className="live__results">
+              {r.outputs.map((o, k) => (
+                <div key={o.sym + k} className={o.main ? 'is-main' : undefined}>
+                  <dt className="mono">{o.sym}</dt>
+                  <dd className="mono">
+                    {o.value}
+                    {o.unit ? <span className="live__unit"> {o.unit}</span> : null}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            {r.note && <p className="small muted live__note">{r.note}</p>}
+          </>
+        )}
+        <p className="small live__observe">
+          <strong>Observa:</strong> {lf.observe}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function FormulaCard({ f }: { f: Formula }) {
+  const lf = LIVE[f.expr];
+  const [open, setOpen] = useState(false);
   return (
     <div className="formula">
       <div className="formula__expr">{f.expr}</div>
@@ -33,6 +100,15 @@ function FormulaCard({ f }: { f: Formula }) {
         </tbody>
       </table>
       {f.note && <p className="small muted" style={{ margin: 0 }}>{f.note}</p>}
+      {lf && (
+        <>
+          <button type="button" className="btn btn--ghost btn--sm live__toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+            {open ? 'Ocultar el explorador' : 'Explorar la fórmula'}
+            <span className="live__tag">cálculo</span>
+          </button>
+          {open && <LivePanel lf={lf} label={f.expr} />}
+        </>
+      )}
     </div>
   );
 }
@@ -88,13 +164,15 @@ function Worked({ w }: { w: WorkedExample }) {
   );
 }
 
-function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) {
+export function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) {
   const node = NODES.find((n) => n.id === s.node);
   const mastery = useStore((st) => st.mastery[s.node]);
+  const depth = DEPTH[s.id ?? s.node];
+  const prog = PROGRESSION[s.id ?? s.node];
   return (
     <section id={`sec-${s.id ?? s.node}`} className="guide-sec" aria-labelledby={`h-${s.id ?? s.node}`} data-block={s.node.split('.')[0]}>
       <header className="guide-sec__head">
-        <span className="mono guide-sec__num">{s.node}</span>
+        <span className="guide-sec__num num">{s.node}</span>
         <h2 id={`h-${s.id ?? s.node}`} className="h2 guide-sec__title">
           {s.title}
         </h2>
@@ -104,13 +182,26 @@ function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) {
           </span>
         ) : null}
       </header>
+      {prog && (
+        <p className="guide-intuition">
+          <span className="guide-stage">Intuición</span>
+          {prog.intuition}
+        </p>
+      )}
       <div className="guide-sec__body">
         {s.body.map((p, i) => (
           <p key={i}>
             <Rich text={p} />
           </p>
         ))}
+        {depth && (
+          <p className="guide-why">
+            <span className="guide-why__tag">Por qué</span>
+            <Rich text={depth.why} />
+          </p>
+        )}
       </div>
+      {s.widget && <GuideWidget id={s.widget} />}
       {s.formulas && (
         <div className="formula-grid">
           {s.formulas.map((f) => (
@@ -118,8 +209,44 @@ function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) {
           ))}
         </div>
       )}
-      {s.widget && <GuideWidget id={s.widget} />}
-      {(s.mistakes || s.tip || TRICKS[s.id ?? s.node]) && (
+      {prog?.derivation && (
+        <details className="derivation">
+          <summary>
+            <span className="guide-stage">Deducción</span> {prog.derivation.title}
+          </summary>
+          <ol className="derivation__steps">
+            {prog.derivation.steps.map((st, k) => (
+              <li key={k}>
+                <p>{st.text}</p>
+                {st.math && <MathText tex={st.math} block />}
+              </li>
+            ))}
+          </ol>
+          <p className="derivation__meaning">
+            <strong>Qué significa:</strong> {prog.derivation.meaning}
+          </p>
+        </details>
+      )}
+      {(depth?.analogy || depth?.counter) && (
+        <div className="guide-callouts">
+          {depth.analogy && (
+            <div className="callout callout--analogy">
+              <span className="callout__title">Analogía</span>
+              <p>{depth.analogy.text}</p>
+              <p className="callout__limit">
+                <strong>Dónde falla:</strong> {depth.analogy.limit}
+              </p>
+            </div>
+          )}
+          {depth.counter && (
+            <div className="callout callout--counter">
+              <span className="callout__title">Contraejemplo</span>
+              <p>{depth.counter}</p>
+            </div>
+          )}
+        </div>
+      )}
+      {(s.mistakes || s.tip || TRICKS[s.id ?? s.node] || depth?.exam.length) && (
         <div className="guide-callouts">
           {s.mistakes && (
             <div className="callout callout--bad">
@@ -141,14 +268,45 @@ function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) {
               </ul>
             </div>
           )}
-          {s.tip && (
+          {(s.tip || depth?.exam.length) && (
             <div className="callout callout--tip">
               <span className="callout__title">En el examen</span>
-              <p>{s.tip}</p>
+              {s.tip && <p>{s.tip}</p>}
+              {depth?.exam.length ? (
+                <>
+                  <span className="callout__sub">Cómo lo preguntan</span>
+                  <ul>
+                    {depth.exam.map((e) => (
+                      <li key={e}>{e}</li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
             </div>
           )}
         </div>
       )}
+      {depth?.doubts.length ? (
+        <div className="doubts">
+          <span className="doubts__title">Dudas frecuentes</span>
+          {depth.doubts.map((d) => (
+            <details key={d.q} className="doubt">
+              <summary>{d.q}</summary>
+              <p>{d.a}</p>
+            </details>
+          ))}
+        </div>
+      ) : null}
+      {prog?.connections.length ? (
+        <nav className="connections" aria-label={`Conexiones de ${s.title}`}>
+          <span className="guide-stage">Conecta con</span>
+          {prog.connections.map((c) => (
+            <a key={c.to} className="connection" href={`#/guia?n=${c.to}`}>
+              <span className="nid">{c.to.replace('-inv', '')}</span> {c.why}
+            </a>
+          ))}
+        </nav>
+      ) : null}
       {RIGOR_NOTES.filter((r) => r.node === s.node && !s.id).map((r) => (
         <details key={r.id} className="rigor">
           <summary>
@@ -174,6 +332,11 @@ function Section({ s, labRoute }: { s: GuideSection; labRoute: string }) {
         {covered.has(s.node) && (
           <a className="btn btn--sm" href={`#${practiceUrl([s.node])}`}>
             <Icon name="target" size={14} /> Practicar este apartado
+          </a>
+        )}
+        {covered.has(s.node) && !s.id && (
+          <a className="btn btn--sm btn--primary" href={`#/entrenamiento?v=ruta&n=${s.node}`}>
+            Ruta de estudio completa
           </a>
         )}
         {node && node.modules.length > 0 && node.modules[0] !== 'entrenamiento' && (
@@ -238,7 +401,7 @@ function FormulaSheet() {
       {LESSONS.filter((l) => l.sections.some((s) => s.formulas)).map((l) => (
         <section key={l.block} className="stack-12">
           <span className="h3">
-            <span className="mono faint">{l.block}.</span> {l.title}
+            <span className="nid">{l.block}.</span> {l.title}
           </span>
           <div className="formula-grid">
             {l.sections.flatMap((s) => (s.formulas ?? []).map((f) => <FormulaCard key={s.node + f.expr} f={f} />))}
@@ -385,7 +548,7 @@ export function GuideOverlay() {
                           document.getElementById(`sec-${s.id ?? s.node}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         }}
                       >
-                        <span className="mono faint">{s.node}</span> {s.title}
+                        <span className="nid">{s.node}</span> {s.title}
                       </a>
                     ))}
                   </nav>

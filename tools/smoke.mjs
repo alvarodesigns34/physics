@@ -1,6 +1,6 @@
 /**
  * Prueba de humo de extremo a extremo (Playwright + Chromium preinstalado).
- * Arranca `vite preview` sobre dist/, recorre Atrio → Forja (¹²C y misión I-1) → Photon Lab (Hα) →
+ * Arranca `vite preview` sobre dist/, recorre Inicio (búsqueda) → Campaña → Forja (¹²C y misión I-1) → Photon Lab (Hα) →
  * Entrenamiento (AMP 6), comprueba el DOM y la ausencia de errores, y guarda capturas en test-results/.
  * Uso: npm run build && npm run e2e
  */
@@ -38,10 +38,22 @@ try {
   await page.waitForSelector('.intro', { timeout: T });
   check(await page.locator('.intro').isVisible(), 'Bienvenida visible en la primera visita');
   await page.click('.intro button:text-is("Cerrar")');
-  await page.waitForFunction(() => document.querySelectorAll('.station-label').length >= 9, null, { timeout: T });
-  check((await page.locator('.station-label').count()) === 9, 'Atrio: nueve estaciones etiquetadas');
-  await page.screenshot({ path: `${OUT}/01-atrio.png` });
-
+  // ATOM 3.0: el inicio es una página de estudio (sin escena 3D) con los laboratorios a un clic.
+  await page.waitForSelector('.lab-row', { timeout: T });
+  check((await page.locator('.lab-row').count()) === 8, 'Inicio: siete laboratorios y la campaña a un clic');
+  check((await page.locator('.signature svg rect[width="2.5"]').count()) === 5, 'Inicio: firma espectral con las 5 líneas de Balmer calculadas');
+  check((await page.locator('.rail__item').count()) === 10, 'Raíl lateral: inicio, guía, práctica y siete laboratorios');
+  await page.keyboard.press('Control+k');
+  await page.waitForSelector('.palette input', { timeout: T });
+  await page.fill('.palette input', 'Rydberg');
+  await page.waitForSelector('.palette__hit', { timeout: T });
+  const kinds = await page.locator('.palette__kind').allInnerTexts();
+  check(kinds.some((k) => /teor/i.test(k)) && kinds.some((k) => /laborat/i.test(k)) && kinds.some((k) => /pr[aá]ctica/i.test(k)), 'Búsqueda «Rydberg»: teoría, laboratorio y práctica');
+  await page.keyboard.press('Escape');
+  await page.screenshot({ path: `${OUT}/01-inicio.png` });
+  await page.goto(base + '#/campana');
+  await page.waitForFunction(() => document.querySelectorAll('.map-chapter').length >= 7, null, { timeout: T });
+  check((await page.locator('.map-chapter').count()) === 7, 'Campaña: mapa con los siete capítulos rotulados');
   await page.click('button:has-text("Empezar")');
   await page.waitForURL(/#\/forja/, { timeout: T });
   check(page.url().includes('#/forja'), 'La misión I-1 abre la Forja');
@@ -61,6 +73,14 @@ try {
   await page.locator('#sec-3\\.2 .widget').scrollIntoViewIfNeeded();
   check((await page.locator('#sec-3\\.2 .formula-live').innerText()).includes('m/s'), 'Guía: v = λ·ν calculada en vivo');
   await page.screenshot({ path: `${OUT}/11-guia-ondas.png` });
+  // ATOM 4.0: capas didácticas y fórmula manipulable (Rydberg: 3 → 2 y, con una pulsación, 4 → 2).
+  check((await page.locator('#sec-3\\.6 .guide-why').count()) === 1 && (await page.locator('#sec-3\\.6 .doubt').count()) >= 1, 'Guía: «por qué» y dudas frecuentes en la sección de Rydberg');
+  await page.locator('#sec-3\\.6 button:has-text("Explorar la fórmula")').first().click();
+  const live = page.locator('#sec-3\\.6 .live').first();
+  check((await live.innerText()).includes('656,3'), 'Fórmula manipulable: Hα a 656,3 nm');
+  await live.locator('input[type=range]').nth(1).focus();
+  await page.keyboard.press('ArrowRight');
+  check((await live.innerText()).includes('486,2'), 'Fórmula manipulable: al subir n₂ a 4 sale Hβ (486,2 nm)');
 
   await page.goto(base + '#/fotones');
   await page.waitForSelector('aside [role=tab][aria-selected=true]', { timeout: T });
@@ -78,6 +98,12 @@ try {
   const ph = await page.locator('aside').innerText();
   check(ph.includes('656,47') && ph.includes('Balmer'), 'Photon Lab: Hα a 656,47 nm en la serie de Balmer');
   await page.screenshot({ path: `${OUT}/03-fotones-halpha.png` });
+  // ATOM 4.0: predicción antes del experimento (el cálculo se oculta hasta comprobar).
+  await page.check('text=Predecir antes de ver');
+  check(!(await page.locator('aside').innerText()).includes('656,47'), 'Predicción: el resultado no se muestra antes de comprometerse');
+  await page.click('.prediction [role=radio]:text-is("Visible")');
+  await page.click('.prediction button:has-text("comprobar")');
+  check((await page.locator('aside').innerText()).includes('Predicción correcta'), 'Predicción: Hα en el visible, comprobada en la escena');
 
   await page.goto(base + '#/entrenamiento?v=fuentes');
   await page.waitForSelector('.source-card', { timeout: T });
@@ -91,18 +117,91 @@ try {
   check((await page.locator('.feedback--ok').count()) >= 2, 'Entrenamiento: AMP 6 corregido paso a paso');
   await page.screenshot({ path: `${OUT}/04-entrenamiento.png` });
 
+  // ATOM 5.0: procedimiento escrito; ATOM localiza la línea del error.
+  await page.goto(base + '#/entrenamiento?ex=onda-lambda:2:416109');
+  await page.waitForSelector('.procedure summary', { timeout: T });
+  await page.click('.procedure summary');
+  await page.fill('.procedure textarea', 'λ = 250 nm = 2,5·10^-7 m\nν = 3·10^8 / 2,5·10^-7 = 1,2·10^15 Hz\nE = 6,626·10^-34 · 1,2·10^15 = 7,2·10^-19 J');
+  await page.click('button:has-text("Revisar procedimiento")');
+  const procTxt = await page.locator('.procedure').innerText();
+  check(procTxt.includes('Línea 3') && (await page.locator('.procedure__lines li.procedure__line--ok').count()) === 2, 'Procedimiento: dos líneas correctas y el error localizado en la línea 3');
+
+  // Cuaderno de errores: el fallo de AMP 6 (primer intento erróneo abajo) o el simulacro dejan entradas.
+  await page.goto(base + '#/entrenamiento?gen=onda-lambda');
+  await page.waitForSelector('input.input', { timeout: T });
+  // Completa el ejercicio fallando cada paso y viéndolo resuelto (solo se registra al terminar).
+  for (let k = 0; k < 8 && !(await page.locator('text=Completado').count()); k++) {
+    const inp = page.locator('article input.input:not([disabled])').last();
+    const opts = page.locator('article li:last-child [role=radio]:not([disabled]), article li:last-child [role=checkbox]:not([disabled])');
+    if (await inp.count()) {
+      await inp.fill('27');
+      await page.click('button:text-is("Comprobar")');
+      await inp.fill('28');
+      await page.click('button:text-is("Comprobar")');
+    } else if (await opts.count()) {
+      // Paso de elección: dos opciones distintas, ambas comprobadas (al menos una será errónea).
+      for (const j of [0, 1]) {
+        await opts.nth(j).click();
+        if (await page.locator('button:has-text("Ver este paso")').count()) break;
+        await page.click('button:text-is("Comprobar")');
+      }
+    } else break;
+    if (await page.locator('button:has-text("Ver este paso")').count()) await page.click('button:has-text("Ver este paso")');
+  }
+  await page.goto(base + '#/entrenamiento?v=cuaderno');
+  await page.waitForSelector('.nb-item, .panel-card', { timeout: T });
+  check((await page.locator('.nb-item').count()) >= 1, 'Cuaderno de errores: el paso fallado aparece con su diagnóstico');
+  await page.goto(base + '#/entrenamiento?v=ruta&n=3.6');
+  await page.waitForSelector('.path-steps', { timeout: T });
+  await page.click('.path-steps button:has-text("Practicar guiado")');
+  await page.waitForSelector('article', { timeout: T });
+  check((await page.locator('.path-steps button').count()) === 6 && (await page.locator('article').count()) === 1, 'Ruta de estudio 3.6: seis pasos y ejercicio guiado');
+  // ATOM 5.0: el ejercicio en curso de la ruta (respuesta a medio escribir incluida) se conserva al salir.
+  await page.locator('article input.input:not([disabled])').first().fill('12345');
+  await page.click('.path-steps button:has-text("Observar")');
+  await page.click('a:has-text("Abrir Photon Lab")');
+  await page.waitForSelector('.path-return', { timeout: T });
+  check((await page.locator('.path-return').innerText()).includes('paso 2/6'), 'Ruta de estudio: desde el laboratorio se ve «volver a la ruta» con el paso');
+  await page.click('.path-return__link');
+  await page.waitForSelector('.path-steps', { timeout: T });
+  check((await page.locator('.path-steps button[aria-current=step]').innerText()).includes('Observar') && (await page.locator('.path-steps button.done').count()) >= 1, 'Ruta de estudio: al volver, el paso y lo hecho se conservan');
+  await page.click('.path-steps button:has-text("Practicar guiado")');
+  await page.waitForSelector('article input.input', { timeout: T });
+  check((await page.locator('article input.input').first().inputValue()) === '12345', 'Ruta de estudio: la respuesta a medio escribir sigue ahí al volver del laboratorio');
   await page.goto(base + '#/entrenamiento?v=examen');
-  await page.waitForSelector('button:has-text("Empezar el examen tipo")', { timeout: T });
-  await page.click('button:has-text("Empezar el examen tipo")');
+  await page.waitForSelector('button:has-text("Empezar el simulacro equilibrado")', { timeout: T });
+  await page.click('button:has-text("Empezar el simulacro equilibrado")');
   await page.waitForFunction(() => /de 8/.test(document.querySelector('main')?.textContent ?? ''), null, { timeout: T }).catch(() => {});
-  check((await page.locator('main').innerText()).includes('de 8'), 'Examen tipo: 8 preguntas');
+  check((await page.locator('.exam-q').count()) === 8, 'Simulacro equilibrado: 8 preguntas con navegación libre');
+  // Responder algo en la 1, saltar a la 3, recargar: el simulacro se recupera (guardado automático).
+  const firstInput = page.locator('.exam-main input.input').first();
+  if (await firstInput.count()) await firstInput.fill('1');
+  else await page.locator('.exam-main [role=radio], .exam-main [role=checkbox]').first().click();
+  await page.click('.exam-q >> nth=2');
+  await page.reload();
+  await page.waitForSelector('.exam-q', { timeout: T });
+  check((await page.locator('.exam-main').innerText()).includes('Pregunta 3 de 8') && (await page.locator('.exam-q--respondida, .exam-q--parcial').count()) >= 1, 'Simulacro: se recupera tras recargar (pregunta actual y respuestas)');
+  await page.click('.exam-nav button:has-text("Entregar")');
+  await page.click('button:has-text("Entregar y corregir")');
+  await page.waitForSelector('.exam-grade', { timeout: T });
+  const rep = await page.locator('.exam-report').innerText();
+  check(/sin responder/.test(rep) && /\/ 10/.test(rep), 'Simulacro: informe con nota, apartados y preguntas sin responder');
 
   // Laboratorios de las fases 2–4
   await page.goto(base + '#/periodico');
   await page.waitForSelector('button[role=radio]:text-is("EI₁")', { timeout: T });
   await page.click('button[role=radio]:text-is("EI₁")');
-  await page.waitForFunction(() => document.querySelectorAll('.label-layer span').length >= 118, null, { timeout: T }).catch(() => {});
-  check((await page.locator('.label-layer span').count()) >= 118, 'Periodic Universe: 118 elementos etiquetados');
+  // ATOM 5.1: los símbolos van grabados en las piezas (atlas en el sombreador), no en 118 etiquetas DOM.
+  await page.waitForFunction(() => document.querySelectorAll('.axis-label').length >= 25, null, { timeout: T }).catch(() => {});
+  const atlas = await page.evaluate(() => {
+    let n = 0;
+    window.__atomScene?.traverse((o) => {
+      const a = o.geometry?.attributes?.aCell;
+      if (o.isInstancedMesh && a) n = a.count;
+    });
+    return n;
+  });
+  check(atlas === 118 && (await page.locator('.axis-label').count()) === 25, 'Periodic Universe: 118 casillas con símbolo grabado y 25 rótulos de grupo y periodo');
   await page.screenshot({ path: `${OUT}/06-periodico.png` });
 
   await page.goto(base + '#/cuantico');
@@ -113,6 +212,10 @@ try {
   check((await page.locator('aside').innerText()).includes('Encierra realmente'), 'Quantum Space: superficie calculada en el Worker');
   check((await page.locator('aside').innerText()).includes('nodos angulares'), 'Quantum Space: orbital 3d con sus nodos');
   await page.screenshot({ path: `${OUT}/07-cuantico.png` });
+  await page.check('text=Predecir los nodos antes de verlos');
+  await page.click('.prediction [role=radio]:text-is("2")');
+  await page.click('.prediction button:has-text("comprobar")');
+  check((await page.locator('aside').innerText()).includes('Predicción correcta'), 'Predicción: el 3d tiene 2 nodos (n − 1)');
 
   await page.goto(base + '#/arquitecto?z=8');
   await page.waitForSelector('button:has-text("Estado fundamental real")', { timeout: T });
@@ -120,6 +223,11 @@ try {
   await page.waitForFunction(() => /Estado fundamental/.test(document.querySelector('aside')?.textContent ?? ''), null, { timeout: T }).catch(() => {});
   check((await page.locator('aside').innerText()).includes('Estado fundamental'), 'Electron Architect: oxígeno en estado fundamental');
   await page.screenshot({ path: `${OUT}/08-arquitecto.png` });
+  await page.click('button.challenge-chip:has-text("Repara: nitrógeno")');
+  await page.waitForSelector('.challenge-card', { timeout: T });
+  check(!(await page.locator('aside').innerText()).includes('objetivo:'), 'Desafío: el objetivo queda oculto mientras se resuelve');
+  await page.click('.challenge-card button:has-text("Regla de Hund")');
+  check((await page.locator('.challenge-card').innerText()).includes('Correcto: incumple'), 'Desafío «Repara: nitrógeno»: regla de Hund identificada');
 
   await page.goto(base + '#/historia?tab=geiger');
   await page.waitForSelector('[role=radio]:has-text("Átomo nuclear")', { timeout: T });
@@ -133,6 +241,14 @@ try {
   await page.waitForFunction(() => /\d+,\d+ u/.test(document.querySelector('aside')?.textContent ?? ''), null, { timeout: 60000 }).catch(() => {});
   check(/\d+,\d+ u/.test(await page.locator('aside').innerText()), 'Mass Spectrometry: masa media medida');
   await page.screenshot({ path: `${OUT}/10-masas.png` });
+  await page.click('.prediction [role=radio]:text-is("Se reduce a la mitad")');
+  await page.click('.prediction button:has-text("comprobar")');
+  const msPred = await page.locator('aside').innerText();
+  check(msPred.includes('Predicción correcta') && msPred.includes('0,600 T'), 'Predicción: duplicar B reduce el radio a la mitad (B pasa a 0,600 T)');
+  await page.click('button:has-text("Analizar una muestra desconocida")');
+  await page.waitForSelector('text=Muestra desconocida X', { timeout: T });
+  const massSide = await page.locator('aside').innerText();
+  check(massSide.includes('X-') && massSide.includes('oculto'), 'Mass Spectrometry: muestra desconocida con nombre y tabla ocultos');
 
   const stored = await page.evaluate(() => localStorage.getItem('atom:v1'));
   check(!!stored && stored.includes('"I-1"'), 'Progreso persistido en localStorage');

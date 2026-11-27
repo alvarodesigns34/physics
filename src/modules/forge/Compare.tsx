@@ -2,10 +2,12 @@
  * Comparación átomo neutro ↔ ion: electrones, configuración y tamaño con datos reales
  * (radio covalente para el átomo y radio iónico de Shannon, NC = 6, para el ion).
  */
+import { useState } from 'react';
+import { relations, variantsOf, RELATION_LABEL } from '../../science/speciesRelations';
 import { elementByZ, NOBLE_GASES } from '../../science/elements';
 import { formatConfiguration, speciesConfiguration } from '../../science/configuration';
 import { commonIon } from '../../science/trends';
-import { ionSymbol, type Species } from '../../science/nucleus';
+import { ionSymbol, nuclearNotation, type Species } from '../../science/nucleus';
 import { EpiTag } from '../../ui/common';
 
 /** Si el número de electrones es el de un gas noble, su configuración es la de ese gas: «1s² 2s² 2p⁶ = [Ne]». */
@@ -56,6 +58,82 @@ export function NeutralIonCompare({ sp, onPick }: { sp: Species; onPick: (s: Spe
         <button type="button" className="btn btn--sm" onClick={() => onPick({ ...sp, e: ionE })}>Ver el ion {ionSymbol(el.symbol, q)}</button>
       </div>
       <EpiTag kind="calculo">Radios: covalente (Pyykkö) y cristalino del ion (Shannon, NC 6)</EpiTag>
+    </section>
+  );
+}
+
+/**
+ * Atomic Forge 3.0 · Comparar especies a la vez (hasta tres): qué cambia y qué se conserva.
+ * Las celdas que difieren de la primera especie se resaltan; debajo, la relación de cada pareja.
+ */
+export function SpeciesCompare({ sp, onPick }: { sp: Species; onPick: (s: Species) => void }) {
+  const [others, setOthers] = useState<Species[]>([]);
+  if (sp.z === 0) return null;
+  const list = [sp, ...others];
+  const row = (s: Species) => {
+    const el = elementByZ(s.z);
+    const q = s.z - s.e;
+    return {
+      Elemento: el?.name ?? '—',
+      Notación: nuclearNotation(s),
+      Z: String(s.z),
+      A: String(s.z + s.n),
+      N: String(s.n),
+      'e⁻': String(s.e),
+      Carga: q === 0 ? '0' : `${q > 0 ? '+' : '−'}${Math.abs(q)}`,
+      Configuración: s.e > 0 ? (nobleLabel(s.e) ?? formatConfiguration(speciesConfiguration(s.z, s.e), { abbreviate: true })) : '—',
+    };
+  };
+  const rows = list.map(row);
+  const keys = Object.keys(rows[0]!) as (keyof ReturnType<typeof row>)[];
+  return (
+    <section className="section" aria-label="Comparar especies">
+      <div className="row row--between">
+        <span className="eyebrow">Comparar especies</span>
+        {others.length > 0 && (
+          <button type="button" className="btn btn--ghost btn--sm" onClick={() => setOthers([])}>
+            Limpiar
+          </button>
+        )}
+      </div>
+      <p className="small muted" style={{ margin: 0 }}>
+        Añade variantes de la especie de la Forja y observa qué cambia (resaltado) y qué se conserva.
+      </p>
+      <div className="row row--wrap" style={{ gap: 6 }}>
+        {variantsOf(sp).map((v) => (
+          <button key={v.label} type="button" className="btn btn--sm" disabled={others.length >= 2} onClick={() => setOthers((o) => [...o, v.sp].slice(-2))}>
+            + {v.label}
+          </button>
+        ))}
+      </div>
+      {others.length > 0 && (
+        <>
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Tabla comparativa de especies">
+            <table className="data-table species-table">
+              <tbody>
+                {keys.map((k) => (
+                  <tr key={k}>
+                    <th scope="row">{k}</th>
+                    {rows.map((r, i) => (
+                      <td key={i} className={i > 0 && r[k] !== rows[0]![k] ? 'is-diff' : undefined}>
+                        {r[k]}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {others.map((o, i) => (
+            <p key={i} className="small" style={{ margin: 0 }}>
+              {nuclearNotation(sp)} y {nuclearNotation(o)}: <strong>{relations(sp, o).map((r) => RELATION_LABEL[r]).join(' y ') || 'sin una relación con nombre propio'}</strong>.{' '}
+              <button type="button" className="link" style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }} onClick={() => onPick(o)}>
+                Construirla en la Forja
+              </button>
+            </p>
+          ))}
+        </>
+      )}
     </section>
   );
 }

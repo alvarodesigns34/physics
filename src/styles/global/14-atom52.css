@@ -1,0 +1,15 @@
+/* ATOM 5.2 · Refinamientos de la versión final */
+
+/* Predicción: opciones en rejilla que se adapta (antes, cuatro columnas aplastadas en el panel lateral) */
+.prediction__opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); gap: 4px; }
+.prediction__opts > button { white-space: normal; text-align: center; line-height: 1.3; min-height: 40px; }
+
+/* Guía: tarjetas de examen sobrias. Superficie neutra, borde fino y un acento de color en la cabecera
+   (antes, bloques tintados de rosa, lila y verde que competían con el texto). */
+.guide-callouts .callout { position: relative; background: var(--surface-raised); border-color: var(--hairline); box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -12px rgb(0 0 0 / 0.08); overflow: hidden; }
+.guide-callouts .callout::before { content: ''; position: absolute; inset: 0 0 auto; height: 3px; background: var(--callout-accent, var(--accent)); opacity: 0.85; }
+.guide-callouts .callout--bad { --callout-accent: var(--bad); }
+.guide-callouts .callout--tip { --callout-accent: var(--ok); }
+.guide-callouts .callout--trick { --callout-accent: var(--b3); }
+.guide-callouts .callout li { color: var(--ink); }
+.guide-callouts .callout li::marker { color: var(--callout-accent, var(--ink-faint)); }

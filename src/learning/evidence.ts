@@ -9,8 +9,10 @@
  * - Paso correcto tras fallar → 0,5 para sus apartados; 0 para la competencia del error cometido y 0,5 para el resto.
  * - Paso revelado o no resuelto → 0 para sus apartados y para la competencia del error (o la principal si
  *   el error no se pudo clasificar).
- * - Error exclusivamente de unidades o de cifras significativas → el apartado conserva 0,75: no se
- *   penaliza el conocimiento del tema por una conversión (la competencia «unidades» sí recibe 0).
+ * - Error exclusivamente de unidades con el número correcto, o de cifras → el apartado conserva 0,75
+ *   (0,5 si es de potencia de 10); sin valor correcto no hay suelo (véase nodeFloor). Solo aplica si el
+ *   paso acabó resolviéndose: un paso revelado o sin resolver no demuestra comprensión.
+ * - Cifras significativas: evidencia positiva y negativa simétricas, solo si la respuesta permitía evaluarlas.
  * - Arrastre de error: el paso que usa correctamente un resultado previo erróneo cuenta como correcto
  *   (el error solo se penaliza una vez, en su paso de origen).
  */
@@ -59,6 +61,8 @@ export function partSkills(p: ExercisePart): SkillId[] {
       return ['notacion'];
     case 'order':
       return ['razonamiento'];
+    case 'essay':
+      return ['razonamiento', 'concepto'];
   }
 }
 
@@ -70,31 +74,109 @@ export interface PartRecord {
   attempts: number;
   revealed: boolean;
   /** Errores clasificados en los intentos fallidos */
-  errors: { kind: ErrorKind; skill?: SkillId }[];
+  errors: { kind: ErrorKind; skill?: SkillId; valueCorrect?: boolean }[];
   /** Se resolvió aplicando bien un resultado previo erróneo */
   carried: boolean;
   /** La respuesta correcta tenía cifras significativas inadecuadas */
   sigFigIssue: boolean;
+  /**
+   * Las cifras significativas se pudieron evaluar en la respuesta correcta (criterio definido y número no
+   * ambiguo). Solo entonces hay evidencia —positiva o negativa— sobre la competencia «cifras».
+   */
+  sigFigsAssessed?: boolean;
+  /** Había pistas a la vista cuando se resolvió el paso (ATOM 5.0): el acierto no es «demostrado». */
+  hinted?: boolean;
+  /**
+   * ATOM 5.1: el alumno pasó su procedimiento por el analizador ANTES de resolver este paso. El analizador
+   * dice qué líneas cuadran y cuánto vale cada operación: es una ayuda, así que el acierto es «asistida».
+   */
+  procedureAssisted?: boolean;
+}
+
+/** Cómo se obtuvo la evidencia de un apartado (ATOM 4.0): no todo acierto demuestra lo mismo. */
+export type EvidenceKind = 'demostrada' | 'posible-azar' | 'asistida' | 'autoevaluada';
+
+export interface NodeEvidence {
+  /** Resultado medio 0–1 */
+  y: number;
+  /** Pasos que lo evalúan */
+  n: number;
+  /** Probabilidad media de acertar adivinando (1/opciones en preguntas cerradas; 0 en respuestas abiertas) */
+  guess: number;
+  /** Tipo de evidencia dominante del apartado en este ejercicio */
+  kind: EvidenceKind;
+}
+
+/** Peso de cada tipo de evidencia en el modelo de dominio (documentado en docs/09). */
+export const EVIDENCE_WEIGHT: Record<EvidenceKind, number> = { demostrada: 1, 'posible-azar': 1, asistida: 0.6, autoevaluada: 0.4 };
+
+export const EVIDENCE_KIND_LABEL: Record<EvidenceKind, string> = {
+  demostrada: 'comprensión demostrada',
+  'posible-azar': 'acierto que pudo ser casual',
+  asistida: 'respuesta con ayuda',
+  autoevaluada: 'autoevaluación',
+};
+
+/** Probabilidad de acertar un paso al azar. */
+export function guessChance(p: ExercisePart): number {
+  const a = p.answer;
+  if (a.kind === 'choice') {
+    const k = a.options.length;
+    if (!a.multiple) return k > 0 ? 1 / k : 0;
+    // Marcar exactamente el subconjunto correcto entre 2^k posibles.
+    return k > 0 ? 1 / Math.pow(2, k) : 0;
+  }
+  if (a.kind === 'order') {
+    let f = 1;
+    for (let i = 2; i <= a.items.length; i++) f *= i;
+    return 1 / f;
+  }
+  return 0;
 }
 
 export interface Evidence {
   /** Apartado → resultado medio 0–1 y número de pasos que lo evalúan */
-  nodes: Record<string, { y: number; n: number }>;
+  nodes: Record<string, NodeEvidence>;
   /** Competencia → resultado medio 0–1 y número de observaciones */
-  skills: Partial<Record<SkillId, { y: number; n: number }>>;
+  skills: Partial<Record<SkillId, { y: number; n: number; guess: number; kind: EvidenceKind }>>;
   /** Errores clasificados, con el paso y el apartado en que ocurrieron */
   errors: { kind: ErrorKind; skill?: SkillId; partId: string; nodeIds: string[] }[];
 }
 
-const UNIT_LIKE = new Set<ErrorKind>(['unidad-falta', 'unidad-incompatible', 'orden-de-magnitud', 'cifras']);
+/**
+ * Suelo de evidencia sobre el apartado cuando TODOS los errores del paso son de este tipo. Solo se concede
+ * cuando el error deja intacta la prueba de comprensión del tema:
+ * - «unidad-falta» con el número correcto en la unidad pedida → 0,75 (sin el valor correcto no hay suelo);
+ * - «orden-de-magnitud»: cifras correctas, potencia de 10 errónea; lo más probable es una conversión,
+ *   pero también podría ser una fórmula equivocada → 0,5;
+ * - «cifras» → 0,75 (el valor es correcto).
+ * «unidad-incompatible» no aporta información sobre el valor → sin suelo.
+ */
+function nodeFloor(e: { kind: ErrorKind; valueCorrect?: boolean }): number {
+  switch (e.kind) {
+    case 'unidad-falta':
+      return e.valueCorrect ? 0.75 : 0;
+    case 'orden-de-magnitud':
+      return 0.5;
+    case 'cifras':
+      return 0.75;
+    default:
+      return 0;
+  }
+}
 
 export function buildEvidence(ex: Exercise, records: PartRecord[]): Evidence {
   const nodes: Evidence['nodes'] = {};
   const skills: Evidence['skills'] = {};
   const errors: Evidence['errors'] = [];
+  const rank: Record<EvidenceKind, number> = { autoevaluada: 3, asistida: 2, 'posible-azar': 1, demostrada: 0 };
+  // Las competencias reciben el MISMO tratamiento del azar, las ayudas y la autoevaluación que los
+  // apartados (ATOM 5.0): media de la probabilidad de acertar al azar y tipo de evidencia más débil.
+  let skillGuess = 0;
+  let skillKind: EvidenceKind = 'demostrada';
   const addSkill = (k: SkillId, y: number) => {
-    const cur = skills[k] ?? { y: 0, n: 0 };
-    skills[k] = { y: (cur.y * cur.n + y) / (cur.n + 1), n: cur.n + 1 };
+    const cur = skills[k] ?? { y: 0, n: 0, guess: 0, kind: 'demostrada' as EvidenceKind };
+    skills[k] = { y: (cur.y * cur.n + y) / (cur.n + 1), n: cur.n + 1, guess: (cur.guess * cur.n + skillGuess) / (cur.n + 1), kind: rank[skillKind] > rank[cur.kind] ? skillKind : cur.kind };
   };
   ex.parts.forEach((part, i) => {
     const r = records.find((x) => x.id === part.id) ?? records[i];
@@ -105,10 +187,20 @@ export function buildEvidence(ex: Exercise, records: PartRecord[]): Evidence {
     for (const e of realErrors) errors.push({ ...e, partId: part.id, nodeIds: partNodes });
     // Apartados
     let yNode = r.revealed ? 0 : r.credit;
-    if (!r.carried && realErrors.length > 0 && realErrors.every((e) => UNIT_LIKE.has(e.kind))) yNode = Math.max(yNode, 0.75);
+    if (!r.carried && !r.revealed && r.credit > 0 && realErrors.length > 0) yNode = Math.max(yNode, Math.min(...realErrors.map(nodeFloor)));
+    const g = guessChance(part);
+    const partKind: EvidenceKind = part.answer.kind === 'essay' ? 'autoevaluada' : r.revealed || r.attempts > 1 || r.carried || r.hinted || r.procedureAssisted ? 'asistida' : g >= 0.2 ? 'posible-azar' : 'demostrada';
+    skillGuess = g;
+    skillKind = partKind;
     for (const n of partNodes) {
-      const cur = nodes[n] ?? { y: 0, n: 0 };
-      nodes[n] = { y: (cur.y * cur.n + yNode) / (cur.n + 1), n: cur.n + 1 };
+      const cur = nodes[n] ?? { y: 0, n: 0, guess: 0, kind: 'demostrada' as EvidenceKind };
+      nodes[n] = {
+        y: (cur.y * cur.n + yNode) / (cur.n + 1),
+        n: cur.n + 1,
+        guess: (cur.guess * cur.n + g) / (cur.n + 1),
+        // El apartado hereda el tipo de evidencia más débil de sus pasos.
+        kind: rank[partKind] > rank[cur.kind] ? partKind : cur.kind,
+      };
     }
     // Competencias
     const failedSkills = new Set<SkillId>(realErrors.map((e) => e.skill).filter((s): s is SkillId => !!s));
@@ -123,7 +215,68 @@ export function buildEvidence(ex: Exercise, records: PartRecord[]): Evidence {
       if (failedSkills.size) for (const k of failedSkills) addSkill(k, 0);
       else addSkill(sk[0]!, 0);
     }
+    // Cifras significativas: evidencia simétrica, solo cuando la respuesta permitía evaluarlas.
     if (r.sigFigIssue) addSkill('cifras', 0);
+    else if (r.sigFigsAssessed && r.credit > 0 && !r.revealed) addSkill('cifras', 1);
   });
   return { nodes, skills, errors };
+}
+
+/**
+ * Informe por apartados de un conjunto de ejercicios (examen) a partir de la MISMA evidencia granular que
+ * alimenta el diagnóstico adaptativo: cada paso puntúa solo en sus apartados, de modo que un fallo en el
+ * paso de unidades no rebaja el apartado de configuración del mismo problema. `ok/total` son sumas de
+ * evidencia por paso (no de ejercicios completos).
+ */
+export function aggregateNodeEvidence(results: { exercise: Exercise; parts: PartRecord[] }[]): Record<string, { ok: number; total: number }> {
+  const out: Record<string, { ok: number; total: number }> = {};
+  for (const { exercise, parts } of results) {
+    const ev = buildEvidence(exercise, parts);
+    for (const [n, v] of Object.entries(ev.nodes)) {
+      const cur = out[n] ?? { ok: 0, total: 0 };
+      out[n] = { ok: cur.ok + v.y * v.n, total: cur.total + v.n };
+    }
+  }
+  return out;
+}
+
+export interface EvidenceBreakdown {
+  /** Intentos con resultado ≥ 0,75 en el apartado, por tipo de evidencia */
+  successes: Record<EvidenceKind, number>;
+  /** Intentos con resultado < 0,75 */
+  misses: number;
+  total: number;
+  /** Frase que resume la calidad de la evidencia (no solo cuánta hay) */
+  summary: string;
+}
+
+/**
+ * Desglose de la evidencia de un apartado (ATOM 4.0): separa la comprensión demostrada de los aciertos
+ * que pudieron ser casuales, de los logrados con ayuda y de las autoevaluaciones. Se calcula a partir del
+ * historial; los intentos antiguos sin `nodeEvidence` usan el tipo global del intento, o se cuentan como
+ * «demostrada» solo si fueron limpios (sin pistas) — antes de ATOM 4.0 no se registraba el tipo.
+ */
+export function evidenceBreakdown(
+  history: { nodeIds: string[]; score: number; hintsUsed: number; evidence?: EvidenceKind; nodeEvidence?: Record<string, { y: number; kind: EvidenceKind }> }[],
+  node: string,
+): EvidenceBreakdown {
+  const successes: Record<EvidenceKind, number> = { demostrada: 0, 'posible-azar': 0, asistida: 0, autoevaluada: 0 };
+  let misses = 0;
+  for (const h of history) {
+    if (!h.nodeIds.includes(node)) continue;
+    const ne = h.nodeEvidence?.[node];
+    const y = ne?.y ?? h.score;
+    const kind: EvidenceKind = ne?.kind ?? h.evidence ?? (h.hintsUsed > 0 ? 'asistida' : 'demostrada');
+    if (y >= 0.75) successes[kind]++;
+    else misses++;
+  }
+  const ok = Object.values(successes).reduce((a, b) => a + b, 0);
+  const total = ok + misses;
+  let summary: string;
+  if (!total) summary = 'Sin evidencia todavía.';
+  else if (!ok) summary = 'Aún ningún acierto en este apartado.';
+  else if (successes.demostrada === 0) summary = 'Ningún acierto demostrado todavía: los aciertos fueron con ayuda, autoevaluados o pudieron ser casuales.';
+  else if (successes.demostrada / ok >= 0.6) summary = `Evidencia sólida: ${successes.demostrada} de ${ok} aciertos demuestran comprensión.`;
+  else summary = `Evidencia mixta: solo ${successes.demostrada} de ${ok} aciertos demuestran comprensión; el resto pudo ser azar o tuvo ayuda.`;
+  return { successes, misses, total, summary };
 }

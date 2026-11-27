@@ -1,11 +1,18 @@
-import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
-import { navigate, useRoute, useReducedMotion, type Route } from './hooks';
-import { useStore, type QualitySetting, type MotionSetting } from '../state/store';
-import { Announcer, Toaster, toast } from '../ui/common';
+import { useStudyPath } from '../state/studyPath';
+import { NODES } from '../learning/syllabus';
+import { MISSIONS } from '../learning/campaign';
+import { NavRail, SearchPalette, useSearchShortcut } from './Navigation';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { navigate, notifySceneChange, useRoute, useReducedMotion, type Route } from './hooks';
+import { useStore, type QualitySetting, type MotionSetting, type ThemeSetting } from '../state/store';
+import { Announcer, Toaster } from '../ui/common';
 import { installUiSounds, setAmbient, sfx } from './sound';
 import { Icon } from '../ui/Icon';
 import { HubScene, HubOverlay } from '../modules/hub/Hub';
+import { HomeOverlay } from '../modules/hub/Home';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
+import { OfflinePanel, UpdateBanner } from '../ui/OfflinePanel';
+import { ProgressTransfer } from '../ui/ProgressTransfer';
 
 const ForgeScene = lazy(() => import('../modules/forge/Forge').then((m) => ({ default: m.ForgeScene })));
 const ForgeOverlay = lazy(() => import('../modules/forge/Forge').then((m) => ({ default: m.ForgeOverlay })));
@@ -36,7 +43,7 @@ export const LABS: { route: Route; label: string; blurb: string }[] = [
 ];
 
 const CRUMB: Record<Route, string> = {
-  '/': 'The Matter Experience',
+  '/': 'Inicio',
   '/forja': 'Atomic Forge',
   '/fotones': 'Photon Lab',
   '/entrenamiento': 'Centro de entrenamiento',
@@ -49,49 +56,6 @@ const CRUMB: Record<Route, string> = {
   '/guia': 'Guía de estudio',
 };
 
-function LabsMenu({ route }: { route: Route }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
-    window.addEventListener('mousedown', close);
-    window.addEventListener('keydown', esc);
-    return () => {
-      window.removeEventListener('mousedown', close);
-      window.removeEventListener('keydown', esc);
-    };
-  }, [open]);
-  const active = LABS.some((l) => l.route === route);
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <a
-        href="#"
-        role="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-current={active ? 'page' : undefined}
-        onClick={(e) => {
-          e.preventDefault();
-          setOpen((o) => !o);
-        }}
-      >
-        {active ? CRUMB[route] : 'Laboratorios'} <span aria-hidden="true" style={{ opacity: 0.6 }}>▾</span>
-      </a>
-      {open && (
-        <div role="menu" className="labs-menu fade">
-          {LABS.map((l) => (
-            <a key={l.route} role="menuitem" href={`#${l.route}`} aria-current={route === l.route ? 'page' : undefined} onClick={() => setOpen(false)}>
-              <span style={{ display: 'block', color: 'var(--ink)', fontWeight: 550 }}>{l.label}</span>
-              <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-faint)' }}>{l.blurb}</span>
-            </a>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function hasWebGL(): boolean {
   try {
@@ -108,7 +72,7 @@ function SegmentedSetting<T extends string | number | boolean>({ label, value, o
       <span className="label">{label}</span>
       <div className="segmented" role="radiogroup" aria-label={label} style={{ flexWrap: 'wrap' }}>
         {options.map((o) => (
-          <button key={String(o.v)} type="button" role="radio" aria-checked={value === o.v} aria-pressed={value === o.v} onClick={() => onChange(o.v)}>
+          <button key={String(o.v)} type="button" role="radio" aria-checked={value === o.v} onClick={() => onChange(o.v)}>
             {o.label}
           </button>
         ))}
@@ -120,13 +84,6 @@ function SegmentedSetting<T extends string | number | boolean>({ label, value, o
 function SettingsDrawer({ onClose }: { onClose: () => void }) {
   const settings = useStore((s) => s.settings);
   const set = useStore((s) => s.setSettings);
-  const exportProgress = useStore((s) => s.exportProgress);
-  const importProgress = useStore((s) => s.importProgress);
-  const resetProgress = useStore((s) => s.resetProgress);
-  const undoImport = useStore((s) => s.undoImport);
-  const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const storageOk = useStore((s) => s.storageAvailable);
-  const fileRef = useRef<HTMLInputElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     closeRef.current?.focus();
@@ -134,14 +91,6 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
-  const download = () => {
-    const blob = new Blob([exportProgress()], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `atom-progreso-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
   return (
     <>
       <div className="drawer-backdrop" onClick={onClose} />
@@ -168,62 +117,18 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
             </div>
           </>
         )}
+        <SegmentedSetting<ThemeSetting> label="Tema" value={settings.theme ?? 'claro'} onChange={(v) => set({ theme: v })} options={[{ v: 'claro', label: 'Claro' }, { v: 'oscuro', label: 'Oscuro' }, { v: 'sistema', label: 'Sistema' }]} />
         <SegmentedSetting<number> label="Tamaño del texto" value={settings.textScale} onChange={(v) => set({ textScale: v })} options={[{ v: 0.9, label: '90 %' }, { v: 1, label: '100 %' }, { v: 1.15, label: '115 %' }, { v: 1.3, label: '130 %' }]} />
         <SegmentedSetting<'llenado' | 'capas'> label="Orden de las configuraciones" value={settings.configOrder} onChange={(v) => set({ configOrder: v })} options={[{ v: 'llenado', label: 'Orden de llenado (Möller)' }, { v: 'capas', label: 'Por capas' }]} />
         <hr className="divider" />
         <div className="stack-12">
-          <span className="h3">Progreso</span>
-          {importMsg && (
-            <p className="small" role="status" style={{ color: importMsg.ok ? 'var(--ok)' : 'var(--bad)' }}>
-              {importMsg.text}
-            </p>
-          )}
-          {!storageOk && <p className="small" style={{ color: 'var(--warn)' }}>Este navegador no permite guardar datos: el progreso solo durará mientras la página esté abierta. Exporta un archivo para conservarlo.</p>}
-          <div className="row row--wrap">
-            <button type="button" className="btn btn--sm" onClick={download}>
-              Exportar
-            </button>
-            <button type="button" className="btn btn--sm" onClick={() => fileRef.current?.click()}>
-              Importar
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="application/json"
-              hidden
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                if (!f) return;
-                const res = importProgress(await f.text());
-                setImportMsg(res.ok ? { ok: true, text: 'Progreso importado. Tu progreso anterior se ha guardado por si quieres deshacerlo.' } : { ok: false, text: `No se ha importado nada: ${res.issues.slice(0, 3).join(' ')}${res.issues.length > 3 ? ` (y ${res.issues.length - 3} problema(s) más)` : ''} Tu progreso actual no ha cambiado.` });
-                e.target.value = '';
-              }}
-            />
-            {importMsg?.ok && (
-              <button
-                type="button"
-                className="btn btn--sm"
-                onClick={() => {
-                  if (undoImport()) toast('Importación deshecha');
-                  setImportMsg(null);
-                }}
-              >
-                Deshacer importación
-              </button>
-            )}
-            <button
-              type="button"
-              className="btn btn--ghost btn--sm"
-              onClick={() => {
-                if (window.confirm('¿Borrar todo el progreso (dominio, repasos, misiones y exámenes)? No se puede deshacer.')) {
-                  resetProgress();
-                  toast('Progreso borrado');
-                }
-              }}
-            >
-              Borrar progreso
-            </button>
-          </div>
+          <span className="h3">Progreso entre dispositivos</span>
+          <ProgressTransfer />
+        </div>
+        <hr className="divider" />
+        <div className="stack-12">
+          <span className="h3">Estudiar sin conexión</span>
+          <OfflinePanel />
         </div>
         <p className="small faint" style={{ marginTop: 'auto' }}>
           ATOM. Datos: CODATA 2018, NIST, IUPAC/CIAAW y NUBASE (vía mendeleev). Sin cuentas ni seguimiento: todo se guarda en este navegador.
@@ -261,7 +166,7 @@ function Intro() {
           </button>
           <button type="button" className="intro__path" onClick={() => go('/')}>
             <span className="h3">Explorar</span>
-            <span className="small muted">Siete laboratorios 3D y una campaña de 35 misiones.</span>
+            <span className="small muted">Siete laboratorios 3D y una campaña de {MISSIONS.length} misiones.</span>
           </button>
           <button type="button" className="intro__path" onClick={() => go('/entrenamiento?v=examen')}>
             <span className="h3">Practicar</span>
@@ -305,7 +210,7 @@ function MobileNav({ route }: { route: Route }) {
       <nav className="mobile-nav" aria-label="Secciones">
         <a href="#/" aria-current={route === '/' ? 'page' : undefined}>
           <Icon name="target" size={20} />
-          <span>Atrio</span>
+          <span>Inicio</span>
         </a>
         <a href="#/guia" aria-current={route === '/guia' ? 'page' : undefined}>
           <Icon name="info" size={20} />
@@ -324,28 +229,44 @@ function MobileNav({ route }: { route: Route }) {
   );
 }
 
-function TopBar({ route, onSettings }: { route: Route; onSettings: () => void }) {
+/** Continuidad de la ruta de estudio: desde un laboratorio o la guía se vuelve al paso exacto. */
+function PathReturn({ route }: { route: Route }) {
+  const path = useStudyPath((s) => s.path);
+  const { query } = useRoute();
+  if (!path) return null;
+  if (route === '/entrenamiento' && query.get('v') === 'ruta') return null;
+  const title = NODES.find((n) => n.id === path.node)?.title ?? path.node;
+  return (
+    <span className="path-return interactive">
+      <a href={`#/entrenamiento?v=ruta&n=${path.node}`} className="path-return__link">
+        <Icon name="arrow-left" size={14} /> Ruta: {title} <span className="num faint">· paso {path.step + 1}/6</span>
+      </a>
+      <button type="button" className="path-return__x" aria-label="Cerrar la ruta de estudio" onClick={() => useStudyPath.getState().set(null)}>
+        ×
+      </button>
+    </span>
+  );
+}
+
+function TopBar({ route, onSettings, onSearch }: { route: Route; onSettings: () => void; onSearch: () => void }) {
   const sound = useStore((s) => s.settings.sound);
   const set = useStore((s) => s.setSettings);
   return (
     <header className="topbar">
-      <button type="button" className="brand" onClick={() => navigate('/')} aria-label="ATOM, volver al Atrio">
+      <button type="button" className="brand" onClick={() => navigate('/')} aria-label="ATOM, volver al inicio">
         <span className="brand__mark">ATOM</span>
         <span className="brand__crumb">{CRUMB[route]}</span>
       </button>
+      <PathReturn route={route} />
       <span className="topbar__spacer" />
-      <nav className="topnav" aria-label="Secciones">
-        <a href="#/" aria-current={route === '/' ? 'page' : undefined}>
-          Atrio
-        </a>
-        <a href="#/guia" aria-current={route === '/guia' ? 'page' : undefined}>
-          Estudiar
-        </a>
-        <LabsMenu route={route} />
-        <a href="#/entrenamiento" aria-current={route === '/entrenamiento' ? 'page' : undefined}>
-          Entrenamiento
-        </a>
-      </nav>
+      <button type="button" className="topbar__search interactive" onClick={onSearch} aria-label="Buscar un concepto (⌘K)">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="6.5" />
+          <path d="m16 16 4 4" />
+        </svg>
+        <span className="desktop-only">Buscar un concepto</span>
+        <kbd className="desktop-only">⌘K</kbd>
+      </button>
       <button type="button" className="btn btn--ghost btn--icon interactive" style={{ pointerEvents: 'auto' }} onClick={() => set({ sound: !sound })} aria-label={sound ? 'Desactivar sonido' : 'Activar sonido'} aria-pressed={sound}>
         <Icon name={sound ? 'sound' : 'mute'} />
       </button>
@@ -375,8 +296,11 @@ function SceneFor({ route }: { route: Route }) {
     case '/entrenamiento':
     case '/guia':
       return null;
-    default:
+    case '/campana':
       return <HubScene />;
+    default:
+      // ATOM 3.0: el inicio es una página de estudio (sin escena 3D a pantalla completa).
+      return null;
   }
 }
 
@@ -400,8 +324,10 @@ function OverlayFor({ route }: { route: Route }): ReactNode {
       return <TrainingOverlay />;
     case '/guia':
       return <GuideOverlay />;
-    default:
+    case '/campana':
       return <HubOverlay />;
+    default:
+      return <HomeOverlay />;
   }
 }
 
@@ -411,13 +337,30 @@ export function App() {
   const textScale = useStore((s) => s.settings.textScale);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [webgl] = useState(hasWebGL);
-  const effectiveRoute: Route = route === '/campana' ? '/' : route;
+  const effectiveRoute: Route = route;
 
   useEffect(() => {
     document.documentElement.style.setProperty('--text-scale', String(textScale));
   }, [textScale]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const openSearch = useCallback(() => setSearchOpen(true), []);
+  useSearchShortcut(openSearch);
+  const theme = useStore((s) => s.settings.theme ?? 'claro');
+  useEffect(() => {
+    const apply = () => {
+      const dark = theme === 'oscuro' || (theme === 'sistema' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.dataset.theme = dark ? 'oscuro' : 'claro';
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#14171d' : '#f5f4f1');
+    };
+    apply();
+    if (theme !== 'sistema') return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, [theme]);
   useEffect(() => {
     document.title = `ATOM · ${CRUMB[effectiveRoute]}`;
+    notifySceneChange();
   }, [effectiveRoute]);
   useEffect(() => installUiSounds(), []);
   const soundOn = useStore((s) => s.settings.sound);
@@ -428,11 +371,11 @@ export function App() {
   }, [effectiveRoute, soundOn, ambientOn]);
 
   return (
-    <div className="app" data-motion={reduced ? 'reducido' : 'completo'}>
+    <div className="app" data-motion={reduced ? 'reducido' : 'completo'} data-kind={effectiveRoute === '/' ? 'inicio' : effectiveRoute === '/guia' || effectiveRoute === '/entrenamiento' ? 'pagina' : 'laboratorio'}>
       <a href="#contenido" className="sr-only">
         Saltar al contenido
       </a>
-      <div className="stage" key={effectiveRoute}>
+      <section className="stage" key={effectiveRoute} aria-label="Escena 3D del laboratorio">
         {webgl ? (
           <ErrorBoundary label="la escena 3D">
             <Suspense fallback={<div className="loading">Preparando el laboratorio…</div>}>
@@ -440,16 +383,16 @@ export function App() {
             </Suspense>
           </ErrorBoundary>
         ) : (
-          effectiveRoute !== '/entrenamiento' && effectiveRoute !== '/guia' && (
+          effectiveRoute !== '/entrenamiento' && effectiveRoute !== '/guia' && effectiveRoute !== '/' && (
             <div className="loading" style={{ padding: 32, textAlign: 'center' }}>
               Este dispositivo no ofrece WebGL: las escenas 3D no están disponibles, pero los paneles, cálculos y ejercicios funcionan.
             </div>
           )
         )}
-        {(effectiveRoute === '/entrenamiento' || effectiveRoute === '/guia') && <div aria-hidden="true" className="page-bg" />}
-      </div>
+        {(effectiveRoute === '/entrenamiento' || effectiveRoute === '/guia' || effectiveRoute === '/') && <div aria-hidden="true" className="page-bg" />}
+      </section>
       <div className="overlay">
-        <TopBar route={effectiveRoute} onSettings={() => setSettingsOpen(true)} />
+        <TopBar route={effectiveRoute} onSettings={() => setSettingsOpen(true)} onSearch={openSearch} />
         <main id="contenido" style={{ minHeight: 0, display: 'grid' }}>
           <ErrorBoundary label="este panel" key={effectiveRoute}>
             <Suspense fallback={null}>
@@ -458,9 +401,12 @@ export function App() {
           </ErrorBoundary>
         </main>
       </div>
+      <NavRail route={effectiveRoute} onSearch={openSearch} />
       <MobileNav route={effectiveRoute} />
+      {searchOpen && <SearchPalette onClose={() => setSearchOpen(false)} />}
       {!seenIntro && <Intro />}
       {settingsOpen && <SettingsDrawer onClose={() => setSettingsOpen(false)} />}
+      <UpdateBanner />
       <Announcer />
       <Toaster />
     </div>

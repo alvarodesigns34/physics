@@ -1,15 +1,20 @@
+import { TrendsChart, TrendsPanel } from './Trends';
+import { Prediction } from '../../ui/Prediction';
+import { useQuality } from '../../app/hooks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three-stdlib';
+import { buildAtlas, cellAttribute, tileMaterial } from './TileMaterial';
+import { requestFrames } from '../../render/demand';
 import { create } from 'zustand';
 import { Stage } from '../../render/Stage';
 import { AnchoredLabel, LabelLayer, LabelProjector, type Anchor } from '../../render/labels';
 import { BLOCK_COLOR, CATEGORY_COLOR, RAMP_GRADIENT, rampColor } from '../../render/palette';
 import { STATE_LABEL, standardState, isRadioactive } from '../../science/data/elementState';
-import { ELEMENTS, CATEGORY_LABEL, elementByZ, familyName, displayWeight, ieKJPerMol, type ElementRecord, type Category } from '../../science/elements';
-import { PROPERTIES, compare, commonIon, type PropertyId } from '../../science/trends';
+import { ELEMENTS, CATEGORY_LABEL, elementByZ, familyName, displayWeight, ieKJPerMol, affinityStatus, type ElementRecord, type Category } from '../../science/elements';
+import { PROPERTIES, compare, commonIon, propertyText, type PropertyId } from '../../science/trends';
 import { groundState, formatConfiguration, valenceElectrons, unpairedElectrons } from '../../science/configuration';
 import { outerZeff } from '../../science/slater';
 import { ionSymbol } from '../../science/nucleus';
@@ -22,7 +27,7 @@ import { Icon } from '../../ui/Icon';
 
 type PropSel = PropertyId | 'ninguna';
 type ColorMode = 'categoria' | 'bloque' | 'propiedad';
-type View = 'tabla' | 'tamanos';
+type View = 'tabla' | 'tamanos' | 'tendencias';
 
 interface PState {
   prop: PropSel;
@@ -60,7 +65,7 @@ function useTargets(prop: PropSel, color: ColorMode) {
       const t = range && v !== null ? (v - range[0]) / (range[1] - range[0] || 1) : 0;
       const height = prop === 'ninguna' ? 0.22 : v === null ? 0.05 : 0.12 + 3.6 * t;
       let c: THREE.Color;
-      if (color === 'propiedad' && prop !== 'ninguna') c = v === null ? new THREE.Color('#2a2622') : rampColor(t, tmp).clone();
+      if (color === 'propiedad' && prop !== 'ninguna') c = v === null ? new THREE.Color('#3a4252') : rampColor(t, tmp).clone();
       else if (color === 'bloque') c = new THREE.Color(BLOCK_COLOR[el.block]);
       else c = new THREE.Color(CATEGORY_COLOR[el.category]);
       if (prop !== 'ninguna' && v === null) c.multiplyScalar(0.35);
@@ -76,25 +81,54 @@ function Blocks() {
   const mesh = useRef<THREE.InstancedMesh>(null);
   const heights = useRef(ELEMENTS.map(() => 0.22));
   const colors = useRef(ELEMENTS.map((e) => new THREE.Color(CATEGORY_COLOR[e.category])));
+  // Segmentos del biselado según la calidad: con 3 segmentos, 118 casillas sumaban 69 000 triángulos.
+  const tier = useQuality().tier;
   const geo = useMemo(() => {
-    const g = new RoundedBoxGeometry(0.94, 1, 0.94, 3, 0.07);
+    const g = new RoundedBoxGeometry(0.94, 1, 0.94, tier === 'alta' ? 3 : tier === 'media' ? 2 : 1, 0.07);
     g.translate(0, 0.5, 0);
+    g.setAttribute('aCell', cellAttribute());
     return g;
+  }, [tier]);
+  // El atlas se rehace cuando la fuente de la interfaz ya está cargada (si no, saldría la de reserva).
+  const [atlas, setAtlas] = useState(() => buildAtlas());
+  useEffect(() => {
+    let live = true;
+    document.fonts?.ready.then(() => {
+      if (!live) return;
+      setAtlas(buildAtlas());
+      requestFrames(300);
+    });
+    return () => {
+      live = false;
+    };
   }, []);
-  const mat = useMemo(() => new THREE.MeshPhysicalMaterial({ roughness: 0.38, metalness: 0.05, clearcoat: 0.6, clearcoatRoughness: 0.3, envMapIntensity: 0.8 }), []);
+  const mat = useMemo(() => tileMaterial(atlas, 0.94), [atlas]);
   useEffect(() => () => {
     geo.dispose();
+  }, [geo]);
+  useEffect(() => () => {
     mat.dispose();
-  }, [geo, mat]);
+    atlas.dispose();
+  }, [mat, atlas]);
+  // Transición en ola: cada columna empieza un poco después que la anterior (de izquierda a derecha).
+  const waveStart = useRef(0);
+  const clock = useRef(0);
+  useEffect(() => {
+    waveStart.current = clock.current;
+    requestFrames(2200);
+  }, [targets]);
   const m4 = useMemo(() => new THREE.Matrix4(), []);
   const tmp = useMemo(() => new THREE.Color(), []);
   useFrame((_, dt) => {
     const mm = mesh.current;
     if (!mm) return;
-    const k = reduced ? 1 : 1 - Math.exp(-dt * 6);
+    clock.current += dt;
+    const k = reduced ? 1 : 1 - Math.exp(-dt * 6.5);
+    const since = clock.current - waveStart.current;
     ELEMENTS.forEach((el, i) => {
       const tg = targets[i]!;
-      heights.current[i]! += (tg.height - heights.current[i]!) * k;
+      const delay = reduced ? 0 : (el.layout.col - 1) * 0.035 + (el.layout.row - 1) * 0.012;
+      if (since >= delay) heights.current[i]! += (tg.height - heights.current[i]!) * k;
       const lift = el.z === selected || compared?.includes(el.z) ? 0.25 : el.z === hover ? 0.12 : 0;
       const [x, z] = cellPos(el);
       m4.makeScale(1, heights.current[i]! + lift, 1).setPosition(x, 0, z);
@@ -209,22 +243,127 @@ function TableLabelProjector() {
   return <LabelProjector anchors={anchors} />;
 }
 
+/**
+ * Tendencia GENERAL de cada propiedad (sentido en que aumenta) a lo largo de un periodo y al bajar en un
+ * grupo. ESQUEMA: resume la regla de examen; hay excepciones (EI: Be > B, N > O; AE: Cl > F…).
+ */
+export const TREND: Record<PropertyId, { period: 1 | -1 | 0; group: 1 | -1 | 0 }> = {
+  radio: { period: -1, group: 1 },
+  ei1: { period: 1, group: -1 },
+  ae: { period: 1, group: -1 },
+  en: { period: 1, group: -1 },
+  zeff: { period: 1, group: 0 },
+  masa: { period: 1, group: 1 },
+};
+
+const PERIOD_ARROW_Z = -5.0;
+const GROUP_ARROW_X = -10.9;
+
+function Arrow({ from, to, color }: { from: [number, number, number]; to: [number, number, number]; color: string }) {
+  const a = new THREE.Vector3(...from);
+  const b = new THREE.Vector3(...to);
+  const len = a.distanceTo(b);
+  const mid = a.clone().add(b).multiplyScalar(0.5);
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+  return (
+    <group position={mid} quaternion={q}>
+      <mesh>
+        <cylinderGeometry args={[0.035, 0.035, len - 0.5, 10]} />
+        <meshBasicMaterial color={color} toneMapped={false} transparent opacity={0.85} />
+      </mesh>
+      <mesh position-y={len / 2 - 0.22}>
+        <coneGeometry args={[0.16, 0.44, 20]} />
+        <meshBasicMaterial color={color} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
+function TrendArrows({ prop }: { prop: PropSel }) {
+  if (prop === 'ninguna') return null;
+  const t = TREND[prop];
+  const c = '#f2a93b';
+  return (
+    <group position-y={0.06}>
+      {t.period !== 0 && <Arrow from={t.period > 0 ? [-8.6, 0, PERIOD_ARROW_Z] : [8.6, 0, PERIOD_ARROW_Z]} to={t.period > 0 ? [8.6, 0, PERIOD_ARROW_Z] : [-8.6, 0, PERIOD_ARROW_Z]} color={c} />}
+      {t.group !== 0 && <Arrow from={t.group > 0 ? [GROUP_ARROW_X, 0, -3.4] : [GROUP_ARROW_X, 0, 3.0]} to={t.group > 0 ? [GROUP_ARROW_X, 0, 3.0] : [GROUP_ARROW_X, 0, -3.4]} color={c} />}
+    </group>
+  );
+}
+
+/** Base de la exposición: losa oscura con la retícula de casillas grabada (incluye los huecos vacíos). */
+function Plinth() {
+  const tex = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = 2048;
+    c.height = 1024;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#101115';
+    g.fillRect(0, 0, c.width, c.height);
+    // 20,4 × 10,2 unidades → 100 px por unidad
+    const U = 100;
+    const ox = c.width / 2;
+    const oz = c.height / 2 - 0.3 * U;
+    g.strokeStyle = 'rgba(236,230,220,0.07)';
+    g.lineWidth = 2;
+    for (let col = 1; col <= 18; col++)
+      for (let row = 1; row <= 7; row++) {
+        const x = (col - 9.5) * 1.06 * U + ox;
+        const z = (row - 4.2) * 1.06 * U + oz;
+        g.strokeRect(x - 0.49 * U, z - 0.49 * U, 0.98 * U, 0.98 * U);
+      }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 8;
+    return t;
+  }, []);
+  useEffect(() => () => tex.dispose(), [tex]);
+  return (
+    <group>
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0.0, 0.3]} receiveShadow>
+        <planeGeometry args={[20.48, 10.24]} />
+        <meshStandardMaterial map={tex} roughness={0.45} metalness={0.2} />
+      </mesh>
+      <mesh position={[0, -0.12, 0.3]}>
+        <boxGeometry args={[20.6, 0.22, 10.36]} />
+        <meshPhysicalMaterial color="#17181c" metalness={0.6} roughness={0.35} />
+      </mesh>
+    </group>
+  );
+}
+
+function axisAnchors(): Anchor[] {
+  const out: Anchor[] = [];
+  for (let g = 1; g <= 18; g++) out.push({ id: `ax-g${g}`, position: [(g - 9.5) * 1.06, 0.05, -4.3] });
+  for (let p = 1; p <= 7; p++) out.push({ id: `ax-p${p}`, position: [-10.05, 0.05, (p - 4.2) * 1.06] });
+  out.push({ id: 'tr-period', position: [0, 0.1, PERIOD_ARROW_Z - 0.45] }, { id: 'tr-group', position: [GROUP_ARROW_X - 0.2, 0.1, 3.55] });
+  return out;
+}
+
 export function PeriodicScene() {
   const view = usePeriodic((s) => s.view);
+  const prop = usePeriodic((s) => s.prop);
   const anchors = useMemo(sizeAnchors, []);
+  const axes = useMemo(axisAnchors, []);
   return (
-    <Stage camera={view === 'tabla' ? [0, 17.5, 15.5] : [0, 17, 10.5]} fov={34} key={view}>
+    <Stage mood="periodico" camera={view !== 'tamanos' ? [0, 17.2, 14.4] : [0, 17, 10.5]} fov={34} key={view === 'tamanos' ? 'tamanos' : 'tabla'}>
       <ambientLight intensity={0.35} />
       <directionalLight position={[6, 14, 8]} intensity={2.4} color="#ffe6c8" castShadow />
       <directionalLight position={[-8, 6, -6]} intensity={0.9} color="#a8c4ea" />
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.01} receiveShadow>
-        <planeGeometry args={[60, 40]} />
-        <meshStandardMaterial color="#100f0e" roughness={0.6} />
-      </mesh>
-      {view === 'tabla' ? (
+      {view !== 'tamanos' ? (
+        <Plinth />
+      ) : (
+        <mesh rotation-x={-Math.PI / 2} position-y={-0.01} receiveShadow>
+          <planeGeometry args={[60, 40]} />
+          <meshStandardMaterial color="#0c0d10" roughness={0.55} />
+        </mesh>
+      )}
+      {view !== 'tamanos' ? (
         <>
           <Blocks />
           <TableLabelProjector />
+          <TrendArrows prop={prop} />
+          <LabelProjector anchors={axes} />
         </>
       ) : (
         <>
@@ -250,22 +389,50 @@ const PROP_OPTIONS: { id: PropSel; label: string }[] = [
 ];
 
 function ElementLabels() {
-  const { selected, compared, prop } = usePeriodic();
+  const { selected, compared, prop, hover } = usePeriodic();
   return (
     <LabelLayer>
-      {ELEMENTS.map((el) => {
+      {ELEMENTS.filter((el) => el.z === selected || el.z === hover || compared?.includes(el.z)).map((el) => {
         const on = el.z === selected || compared?.includes(el.z);
         return (
           <AnchoredLabel key={el.z} id={`pt-${el.z}`} align="bottom">
             <span style={{ display: 'block', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 11, lineHeight: 1.05, color: on ? 'var(--ink)' : 'rgb(236 230 220 / 0.78)', textShadow: '0 1px 6px rgb(0 0 0 / 0.9)', pointerEvents: 'none', fontWeight: on ? 700 : 500 }}>
               {el.symbol}
               {prop !== 'ninguna' && on && (
-                <span style={{ display: 'block', fontSize: 10, color: 'var(--accent)' }}>{PROPERTIES[prop].get(el) === null ? 'sin dato' : fmt(PROPERTIES[prop].get(el)!, 3)}</span>
+                <span style={{ display: 'block', fontSize: 10, color: 'var(--accent)' }}>{prop === 'ae' && affinityStatus(el) === 'no-ligado' ? '≤ 0' : PROPERTIES[prop].get(el) === null ? 'sin dato' : fmt(PROPERTIES[prop].get(el)!, 3)}</span>
               )}
             </span>
           </AnchoredLabel>
         );
       })}
+    </LabelLayer>
+  );
+}
+
+function AxisLabels({ prop }: { prop: PropSel }) {
+  const t = prop === 'ninguna' ? null : TREND[prop];
+  return (
+    <LabelLayer>
+      {Array.from({ length: 18 }, (_, i) => (
+        <AnchoredLabel key={`g${i}`} id={`ax-g${i + 1}`}>
+          <span className="axis-label">{i + 1}</span>
+        </AnchoredLabel>
+      ))}
+      {Array.from({ length: 7 }, (_, i) => (
+        <AnchoredLabel key={`p${i}`} id={`ax-p${i + 1}`}>
+          <span className="axis-label">{i + 1}</span>
+        </AnchoredLabel>
+      ))}
+      {t && t.period !== 0 && (
+        <AnchoredLabel id="tr-period">
+          <span className="scene-label scene-label--part">{PROPERTIES[prop as PropertyId].short} aumenta en el periodo {t.period > 0 ? '→' : '←'} · tendencia general</span>
+        </AnchoredLabel>
+      )}
+      {t && t.group !== 0 && (
+        <AnchoredLabel id="tr-group">
+          <span className="scene-label scene-label--part">{t.group > 0 ? 'aumenta al bajar ↓' : 'aumenta al subir ↑'}</span>
+        </AnchoredLabel>
+      )}
     </LabelLayer>
   );
 }
@@ -441,7 +608,7 @@ export function PeriodicOverlay() {
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
     const v = query.get('tab');
-    if (v === 'tamanos' || v === 'tabla') st.set({ view: v });
+    if (v === 'tamanos' || v === 'tabla' || v === 'tendencias') st.set({ view: v });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.get('tab')]);
   const sel = st.selected ? elementByZ(st.selected)! : null;
@@ -451,6 +618,7 @@ export function PeriodicOverlay() {
   return (
     <div className="workspace">
       {st.view === 'tabla' ? <ElementLabels /> : <SizeLabels />}
+      {st.view === 'tabla' && <AxisLabels prop={st.prop} />}
       <div style={{ position: 'relative' }}>
         {hov && st.view === 'tabla' && (
           <div className="card desktop-only fade" style={{ position: 'absolute', left: 'var(--gutter)', top: 8, padding: '10px 14px', pointerEvents: 'none', minWidth: 220 }}>
@@ -460,13 +628,14 @@ export function PeriodicOverlay() {
                 <span className="small" style={{ fontWeight: 600 }}>
                   {hov.name} <span className="faint mono">Z = {hov.z}</span>
                 </span>
-                <span className="small muted">{st.prop === 'ninguna' ? CATEGORY_LABEL[hov.category] : `${PROPERTIES[st.prop].short}: ${PROPERTIES[st.prop].get(hov) === null ? 'sin dato' : fmt(PROPERTIES[st.prop].get(hov)!, 4) + ' ' + PROPERTIES[st.prop].unit}`}</span>
+                <span className="small muted">{st.prop === 'ninguna' ? CATEGORY_LABEL[hov.category] : `${PROPERTIES[st.prop].short}: ${propertyText(st.prop, hov)}`}</span>
               </span>
             </div>
           </div>
         )}
+        {st.view === 'tendencias' && !mobile && <TrendsChart />}
         <div className="stage-caption desktop-only">
-          {st.view === 'tabla' ? (
+          {st.view !== 'tamanos' ? (
             st.prop === 'ninguna' ? <EpiTag kind="esquema">Disposición de la tabla de TEO p.17 (Lu y Lr en el grupo 3)</EpiTag> : <EpiTag kind="calculo">Altura proporcional a {PROPERTIES[st.prop].label.toLowerCase()} · datos reales</EpiTag>
           ) : (
             <EpiTag kind="calculo">Esferas a escala: radio covalente (gris) frente a radio iónico de Shannon (NC 6). Catión: coral · anión: lavanda</EpiTag>
@@ -487,8 +656,13 @@ export function PeriodicOverlay() {
             <button type="button" role="tab" aria-selected={st.view === 'tamanos'} style={{ flex: 1 }} onClick={() => st.set({ view: 'tamanos' })}>
               Átomos e iones
             </button>
+            <button type="button" role="tab" aria-selected={st.view === 'tendencias'} style={{ flex: 1 }} onClick={() => st.set({ view: 'tendencias' })}>
+              Tendencias
+            </button>
           </div>
-          {st.view === 'tabla' ? (
+          {st.view === 'tendencias' ? (
+            <TrendsPanel showChart={mobile} />
+          ) : st.view === 'tabla' ? (
             <>
               <section className="section">
                 <span className="eyebrow">Propiedad</span>
@@ -508,6 +682,21 @@ export function PeriodicOverlay() {
                   ))}
                 </div>
                 <Legend prop={st.prop} color={st.color} />
+              </section>
+              <section className="section">
+                <Prediction
+                  resetKey="pt-radio"
+                  question="Del litio al cesio (bajando por el grupo 1), ¿cómo cambia el radio atómico?"
+                  options={[
+                    { id: 'aumenta', label: 'Aumenta' },
+                    { id: 'disminuye', label: 'Disminuye' },
+                    { id: 'igual', label: 'No cambia' },
+                  ]}
+                  correct="aumenta"
+                  explanation="Cada periodo añade una capa (n crece) y la carga nuclear efectiva sobre el electrón externo apenas cambia: el electrón de valencia está cada vez más lejos. Li 133 pm → Cs 232 pm (radios covalentes de Pyykkö, los mismos de la tabla)."
+                  onRun={() => st.set({ prop: 'radio', color: 'propiedad', selected: 55, compared: null })}
+                  runLabel="Mostrar el radio en la tabla"
+                />
               </section>
               {st.compareMode && <Feedback tone="info">Toca otro elemento de la tabla para compararlo con el {sel?.name.toLowerCase()}.</Feedback>}
               {st.compared && <ComparisonCard a={elementByZ(st.compared[0])!} b={elementByZ(st.compared[1])!} prop={cmpProp} />}

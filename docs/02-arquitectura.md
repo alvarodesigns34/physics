@@ -97,3 +97,10 @@ Settings        { alias, quality, reducedMotion, sound, textScale, configOrder }
 - `prefers-reduced-motion` y un ajuste propio: sin vuelos de cámara, sin rotaciones automáticas y partículas estáticas.
 - El color nunca es el único canal: las líneas espectrales llevan etiqueta de λ y las partículas, forma o texto.
 - Contraste AA verificado en los tokens. Foco visible. Escala de texto de 90 % a 130 %.
+
+## Actualización ATOM 3.0
+- Estilos: `src/styles/tokens.css` (sistema de diseño, temas claro y oscuro) antes de `global.css`.
+- Navegación: `src/app/Navigation.tsx` (raíl lateral y búsqueda global); `src/learning/search.ts` (índice local).
+- Cálculo fuera del hilo principal: cliente genérico `src/workers/computeClient.ts` (superficies, nubes y comparación de orbitales).
+- Pedagogía: `src/ui/MathText.tsx` (fórmulas), `src/ui/Pedagogy.tsx` (resoluciones, figuras, desarrollo), `src/learning/resolutions.ts`, `generators/reasoning.ts`, `history.ts`, `architectChallenges.ts`, `massInverse.ts`, `training/StudyPath.tsx`.
+- Calidad: `tools/a11y.mjs` (axe, en CI), `tools/visual.mjs` (regresión visual), `tools/stats.mjs` (cifras), `tools/shots.mjs` (capturas escritorio/iPad).

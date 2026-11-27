@@ -1,0 +1,390 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   Capa de diseño 2 · profundidad, color por bloque y microinteracciones
+   ══════════════════════════════════════════════════════════════════════════ */
+
+
+/* Fondo de las páginas de estudio: resplandores y retícula de puntos que se desvanece */
+.page-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 50% at 15% -10%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%),
+    radial-gradient(50% 45% at 100% 10%, color-mix(in srgb, var(--b5) 8%, transparent), transparent 60%),
+    radial-gradient(40% 40% at 50% 110%, color-mix(in srgb, var(--b3) 7%, transparent), transparent 60%),
+    var(--surface);
+}
+
+.page-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(color-mix(in srgb, var(--ink) 7%, transparent) 1px, transparent 1.2px);
+  background-size: 26px 26px;
+  mask-image: linear-gradient(180deg, black 0%, transparent 55%);
+  -webkit-mask-image: linear-gradient(180deg, black 0%, transparent 55%);
+}
+
+/* Marca: un pequeño átomo antes de ATOM */
+.brand__mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand__mark::before {
+  content: '';
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent) 0 2.5px, transparent 3px), conic-gradient(from 30deg, transparent 0 40%, color-mix(in srgb, var(--accent) 90%, transparent) 45%, transparent 55% 100%);
+  box-shadow: inset 0 0 0 1.25px color-mix(in srgb, var(--accent) 55%, transparent);
+  animation: atom-spin 9s linear infinite;
+}
+
+@keyframes atom-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* Botones con relieve */
+.btn {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.035), transparent);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  transition: background var(--dur-fast) var(--ease-std), border-color var(--dur-fast), box-shadow var(--dur-fast), transform var(--dur-fast) var(--ease-out), color var(--dur-fast);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn--primary {
+  background-image: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  border-color: var(--accent);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 6px 18px -8px color-mix(in srgb, var(--accent) 70%, transparent);
+  font-weight: 650;
+}
+
+.btn--primary:hover {
+  background-image: linear-gradient(180deg, var(--accent), var(--accent));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4), var(--glow);
+}
+
+.btn--ghost {
+  background-image: none;
+  box-shadow: none;
+}
+
+/* Tarjetas con relieve y respuesta al cursor */
+.card,
+.widget,
+.worked,
+.formula,
+.source-card,
+.trick-card,
+.skill-card,
+.hub-quick__item {
+  box-shadow: var(--lift);
+}
+
+.widget {
+  background: radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 55%), linear-gradient(180deg, var(--surface-raised), var(--surface-raised));
+}
+
+.hub-quick__item:hover,
+.source-card:hover,
+.trick-card:hover {
+  box-shadow: var(--lift), 0 0 0 1px var(--accent-line);
+}
+
+/* Control segmentado: la opción activa brilla */
+.segmented button[aria-selected='true'],
+.segmented button[aria-pressed='true'] {
+  background: linear-gradient(180deg, var(--surface-raised), var(--surface-raised-2));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--ink);
+}
+
+/* Paneles laterales de los laboratorios */
+.side {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-raised) 92%, transparent), color-mix(in srgb, var(--surface-raised) 94%, transparent));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 20px 60px -20px hsl(var(--shadow-color) / 0.8);
+}
+
+/* Números de bloque con su color */
+.block-num {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--surface-raised);
+  background: var(--bc, var(--accent));
+  margin-right: 6px;
+  vertical-align: 2px;
+}
+
+[data-block='1'] { --bc: var(--b1); }
+[data-block='2'] { --bc: var(--b2); }
+[data-block='3'] { --bc: var(--b3); }
+[data-block='4'] { --bc: var(--b4); }
+[data-block='5'] { --bc: var(--b5); }
+[data-block='6'] { --bc: var(--b6); }
+[data-block='7'] { --bc: var(--b7); }
+
+/* Guía: navegación con color de bloque */
+.guide-nav a > .mono:first-child {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  background: var(--surface-raised-2);
+}
+
+.guide-nav a[data-block] > .mono:first-child {
+  background: color-mix(in srgb, var(--bc) 22%, transparent);
+  color: var(--bc);
+}
+
+.guide-nav a[aria-current='page'][data-block] {
+  box-shadow: inset 2px 0 0 var(--bc);
+}
+
+.guide-nav a[aria-current='page'][data-block] > .mono:first-child {
+  background: var(--bc);
+  color: var(--surface-raised);
+}
+
+/* Cabecera de lección con numeral gigante */
+.lesson-hero {
+  position: relative;
+  padding: 28px 28px 24px;
+  border-radius: 20px;
+  border: 1px solid var(--hairline-strong);
+  background: radial-gradient(90% 120% at 100% 0%, color-mix(in srgb, var(--bc) 16%, transparent), transparent 60%), linear-gradient(180deg, var(--surface-raised), var(--surface-raised));
+  box-shadow: var(--lift);
+  overflow: hidden;
+}
+
+.lesson-hero__num {
+  position: absolute;
+  right: 18px;
+  top: -24px;
+  font-family: var(--font-display);
+  font-weight: 650;
+  letter-spacing: var(--tracking-display);
+  font-size: 11rem;
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1.5px color-mix(in srgb, var(--bc) 45%, transparent);
+  pointer-events: none;
+  user-select: none;
+}
+
+.lesson-hero .eyebrow {
+  color: var(--bc);
+}
+
+@media (max-width: 640px) {
+  .lesson-hero {
+    padding: 20px 18px;
+  }
+  .lesson-hero__num {
+    font-size: 7rem;
+    top: -10px;
+    right: 8px;
+  }
+}
+
+/* Encabezado de sección con número en píldora */
+.guide-sec__num {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--bc, var(--accent)) 45%, transparent);
+  color: var(--bc, var(--accent));
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+/* Fórmulas: barra de acento y expresión más grande */
+.formula {
+  position: relative;
+  padding-left: 20px;
+}
+
+.formula::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 20%, transparent));
+}
+
+.formula__expr {
+  font-size: 1.5rem;
+}
+
+/* Trucos */
+.callout--trick {
+  border-color: color-mix(in srgb, var(--b3) 35%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--b3) 10%, transparent), color-mix(in srgb, var(--b3) 4%, transparent));
+}
+
+.callout--trick .callout__title {
+  color: var(--b3);
+}
+
+.callout--trick .callout__title::before {
+  content: '✦ ';
+}
+
+.tricks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: 8px;
+}
+
+.trick-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--b3) 22%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--b3) 8%, transparent), var(--surface-raised));
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast);
+}
+
+.trick-card:hover {
+  transform: translateY(-2px);
+}
+
+.strategy {
+  padding: 20px 22px;
+  border-radius: 16px;
+  border: 1px solid var(--accent-line);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), color-mix(in srgb, var(--accent) 2%, transparent));
+  box-shadow: var(--lift);
+}
+
+.strategy ol {
+  margin: 10px 0 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9875rem;
+  line-height: 1.5;
+}
+
+/* Ejercicios resueltos: pasos con número destacado */
+.worked__label::before {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--accent-quiet);
+  font-size: 0.6875rem;
+}
+
+/* Títulos de página */
+.display {
+  letter-spacing: -0.01em;
+}
+
+.guide-title,
+.training-title {
+  color: var(--ink);
+}
+
+/* Tarjetas de ejercicios por nivel: franja de color */
+.source-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.source-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+}
+
+.source-card[data-level='1']::before { background: var(--ok); }
+.source-card[data-level='2']::before { background: var(--accent); }
+.source-card[data-level='3']::before { background: var(--bad); }
+
+@media (prefers-reduced-motion: reduce) {
+  .brand__mark::before {
+    animation: none;
+  }
+}
+
+.study-path {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.study-path li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--hairline);
+  background: var(--surface-raised);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--ink-muted);
+}
+
+.study-path b {
+  display: block;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.study-path__n {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--surface-raised);
+  background: var(--bc, var(--accent));
+}
+
+@media (max-width: 760px) {
+  .study-path {
+    grid-template-columns: 1fr 1fr;
+  }
+}

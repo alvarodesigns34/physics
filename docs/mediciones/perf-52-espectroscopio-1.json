@@ -1,0 +1,42 @@
+{
+  "date": "2026-11-27T21:42:43.134Z",
+  "renderer": "SwiftShader (software)",
+  "method": "ATOM 5.0: fotogramas dibujados, no rAF; heap tras gc()",
+  "results": [
+    {
+      "route": "/fotones?tab=espectroscopio",
+      "readyMs": 293,
+      "rafHz": 60.1,
+      "idleFrames": 0,
+      "dragFps": 5,
+      "dragP95Ms": 233.3,
+      "longTasks": 90,
+      "longMaxMs": 249,
+      "calls": 44,
+      "triangles": 2213,
+      "programs": 18,
+      "geometries": 33,
+      "textures": 23,
+      "heapMB": 12.2
+    },
+    {
+      "route": "cuantico:n=3",
+      "interactionMs": 2487,
+      "longTasks": 19,
+      "longMaxMs": 897
+    },
+    {
+      "route": "cuantico:l=2",
+      "interactionMs": 2957,
+      "longTasks": 17,
+      "longMaxMs": 1111
+    },
+    {
+      "route": "cuantico:subnivel",
+      "interactionMs": 2908,
+      "longTasks": 15,
+      "longMaxMs": 943
+    }
+  ],
+  "stability": []
+}

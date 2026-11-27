@@ -1,0 +1,98 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   ATOM 3.0 · Visor de laboratorio (escritorio y iPad)
+   La escena 3D ocupa un visor de tono pizarra a la izquierda del panel; la interfaz es clara.
+   ══════════════════════════════════════════════════════════════════════════ */
+@media (min-width: 761px) {
+  .app[data-kind='laboratorio'] {
+    --viewer-top: var(--topbar-h);
+    --viewer-gap: 12px;
+  }
+  .app[data-kind='laboratorio'] .stage,
+  .app[data-kind='laboratorio'] .label-layer {
+    top: var(--viewer-top);
+    left: calc(var(--rail-w) + var(--viewer-gap));
+    right: calc(var(--panel-w) + var(--gutter) + var(--viewer-gap));
+    bottom: var(--gutter);
+    inset-inline-end: calc(var(--panel-w) + var(--gutter) + var(--viewer-gap));
+  }
+  .app[data-kind='laboratorio'] .stage {
+    border-radius: 20px;
+    overflow: hidden;
+    background: var(--viewer);
+    box-shadow: var(--elev-2), inset 0 0 0 1px var(--hairline);
+  }
+  .app[data-kind='laboratorio'] .label-layer {
+    position: fixed;
+    border-radius: 20px;
+  }
+}
+
+/* Todo lo que se dibuja SOBRE el visor usa la tinta del visor, sea cual sea el tema. */
+.label-layer {
+  --ink: var(--ink-on-viewer);
+  --ink-muted: var(--ink-on-viewer-muted);
+  --ink-faint: #8790a1;
+  --hairline: rgb(233 236 242 / 0.1);
+  --hairline-strong: rgb(233 236 242 / 0.2);
+  --surface-raised: #1c2333;
+  --surface-raised-2: #232b3d;
+  --accent: #8fb0ff;
+  --accent-quiet: rgb(143 176 255 / 0.14);
+  --accent-line: rgb(143 176 255 / 0.45);
+  --shadow-color: 222 40% 4%;
+  color: var(--ink);
+}
+
+.topbar {
+  height: var(--topbar-h);
+  min-height: 0;
+  padding-block: 0;
+}
+@media (min-width: 761px) {
+  /* Columna de la escena dentro del área superpuesta: coincide con el visor y usa su tinta. */
+  .app[data-kind='laboratorio'] .workspace > :not(.side):not(.label-layer) {
+    --ink: var(--ink-on-viewer);
+    --ink-muted: var(--ink-on-viewer-muted);
+    --ink-faint: #8790a1;
+    --hairline: rgb(233 236 242 / 0.1);
+    --hairline-strong: rgb(233 236 242 / 0.2);
+    --surface-raised: #1c2333;
+    --surface-raised-2: #232b3d;
+    --surface-sunken: #0d1118;
+    --accent: #8fb0ff;
+    --accent-quiet: rgb(143 176 255 / 0.14);
+    --accent-line: rgb(143 176 255 / 0.45);
+    color: var(--ink);
+    position: relative;
+    margin: 0 var(--viewer-gap) var(--gutter) var(--viewer-gap);
+    border-radius: 20px;
+  }
+  .app[data-kind='laboratorio'] .side {
+    margin: 0 var(--gutter) var(--gutter) 0;
+    box-shadow: var(--elev-2);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--surface-raised);
+  }
+}
+
+/* ATOM 5.0 · Colores de estado sobre el visor oscuro (en cualquier tema). Los del tema claro (p. ej. el
+   ámbar #a8670d de «ESQUEMA») daban 3,4:1 sobre la pizarra; estos superan 4,5:1 (comprobado con axe). */
+.label-layer {
+  --ok: #5fd39a;
+  --warn: #f2b45c;
+  --bad: #ff8f7d;
+  --electron: #8fbcff;
+  --proton: #ff9a7a;
+}
+/* En móvil la leyenda va debajo del visor, sobre fondo claro: allí se quedan los colores del tema. */
+@media (min-width: 761px) {
+  .stage-caption,
+  .app[data-kind='laboratorio'] .workspace > :not(.side):not(.label-layer) {
+    --ok: #5fd39a;
+    --warn: #f2b45c;
+    --bad: #ff8f7d;
+    --electron: #8fbcff;
+    --proton: #ff9a7a;
+  }
+}

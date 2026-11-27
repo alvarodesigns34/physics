@@ -82,3 +82,9 @@ M = Σ mᵢ·xᵢ con Σ xᵢ = 1. El corrector comprueba que las abundancias su
 - Orbitales reales muestreados con |ψ_nlm|² (radial por inversión de la CDF y angular por rechazo). El color indica el signo de ψ (fase), no carga. El corte muestra la losa |z| < 0,09·r₉₀ para revelar los nodos (n − l − 1 radiales y l angulares).
 - Incertidumbre: paquete gaussiano exacto con σx·σp = ħ/2.
 - Cajas: código 0, ↑, ↓, ↑↓ y ↑↑ (prohibido). El diagnóstico aplica Pauli, Hund (apareamiento con orbitales vacíos o espines no paralelos) y Aufbau (huecos por debajo), y reconoce el estado fundamental real aunque sea una excepción.
+
+## Actualización ATOM 3.0
+- Umbral de probabilidad: la fracción encerrada se calcula sobre todo el conjunto ρ ≥ u (empates incluidos).
+- Escala de los orbitales: cuantil radial analítico (r que encierra el 90 %), igual para la superficie, la nube y la comparación de dos orbitales.
+- Espectrómetro de masas: problema inverso con la media MEDIDA (ruido 1/√N) y abundancia x = (M − m₂)/(m₁ − m₂).
+- Tendencias periódicas: las excepciones se detectan en los datos (NIST, Pyykkö, CRC), no en una lista fija.

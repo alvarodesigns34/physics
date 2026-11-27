@@ -1,3 +1,7 @@
+import { annotateParts } from './attribution';
+import { familyResolution } from './familyResolutions';
+import { ATOM51_GENERATORS } from './generators/atom51';
+import { REASONING_GENERATORS } from './generators/reasoning';
 /**
  * Registro de generadores y ejercicios de las fuentes (TEO y AMP), con su resolución verificada.
  */
@@ -47,8 +51,9 @@ import { SOURCE_EXERCISES_2 } from './sources2';
 import { SOURCE_EXERCISES_3 } from './sources3';
 import { EXAM_GENERATORS } from './generators/exam';
 import { EXAM2_GENERATORS } from './generators/exam2';
+import { QUANTUM4_GENERATORS } from './generators/quantum4';
 
-export const GENERATORS: ExerciseGenerator[] = [
+const RAW_GENERATORS: ExerciseGenerator[] = [
   speciesGenerator,
   isotopeGenerator,
   isoelectronicGenerator,
@@ -78,7 +83,21 @@ export const GENERATORS: ExerciseGenerator[] = [
   miscGenerator,
   ...EXAM_GENERATORS,
   ...EXAM2_GENERATORS,
+  ...REASONING_GENERATORS,
+  ...QUANTUM4_GENERATORS,
+  ...ATOM51_GENERATORS,
 ];
+
+/** Generadores con atribución granular por paso (véase attribution.ts). */
+/** ATOM 5.1: las familias sin resolución propia reciben la específica de su familia (familyResolutions). */
+function withFamilyResolution(ex: Exercise): Exercise {
+  if (ex.resolution) return ex;
+  const r = familyResolution(ex);
+  return r ? { ...ex, resolution: r } : ex;
+}
+
+export const GENERATORS: ExerciseGenerator[] = RAW_GENERATORS.map((gen) => ({ ...gen, create: (seed, d) => withFamilyResolution(annotateParts(gen.create(seed, d))) }));
+
 
 export const GENERATOR_BY_ID = new Map(GENERATORS.map((g) => [g.id, g]));
 
@@ -174,7 +193,7 @@ const SOURCE_EXERCISES_1: SourceExercise[] = [
   { ref: 'TEO ej. 8 · Br', nodeIds: ['6.3', '7.2'], build: () => buildConfigExercise(35, 2, 'src:TEO8c', 'TEO ej. 8') },
 ];
 
-export const SOURCE_EXERCISES: SourceExercise[] = [...SOURCE_EXERCISES_1, ...SOURCE_EXERCISES_2, ...SOURCE_EXERCISES_3];
+export const SOURCE_EXERCISES: SourceExercise[] = [...SOURCE_EXERCISES_1, ...SOURCE_EXERCISES_2, ...SOURCE_EXERCISES_3].map((s) => ({ ...s, build: () => annotateParts(s.build(), s.ref) }));
 
 /** Nivel orientativo de un ejercicio de las fuentes (1 básico, 2 examen, 3 avanzado). */
 export function sourceLevel(s: SourceExercise): 1 | 2 | 3 {

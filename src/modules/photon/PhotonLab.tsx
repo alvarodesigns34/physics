@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useHydroView } from './PotentialWell';
+import { absorptionLines } from '../../science/data/spectralLines';
+import { Prediction } from '../../ui/Prediction';
 import { usePhoton, type PhotonTab } from './state';
 import { WaveScene, HydrogenScene } from './scenes';
 import { SpectroscopeScene, PRISM } from './Spectroscope';
@@ -58,9 +61,10 @@ export function PhotonScene() {
   const tab = usePhoton((s) => s.tab);
   const el = usePhoton((s) => s.spectroElement);
   const mode = usePhoton((s) => s.spectroMode);
+  const gas = usePhoton((s) => s.spectroGas);
   useTabFromRoute();
   if (tab === 'ondas') return <WaveScene />;
-  if (tab === 'espectroscopio') return <SpectroscopeScene symbol={el} mode={mode} />;
+  if (tab === 'espectroscopio') return <SpectroscopeScene symbol={el} mode={mode} gas={gas} />;
   return <HydrogenScene />;
 }
 
@@ -180,7 +184,7 @@ function LevelPicker({ label, value, onChange, disabled }: { label: string; valu
       </span>
       <div className="segmented" role="radiogroup" aria-labelledby={`lp-${label}`} style={{ width: '100%', justifyContent: 'space-between' }}>
         {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-          <button key={n} type="button" role="radio" aria-checked={value === n} aria-pressed={value === n} disabled={disabled(n)} onClick={() => onChange(n)} style={{ flex: 1, padding: '7px 0', opacity: disabled(n) ? 0.3 : 1 }} className="mono">
+          <button key={n} type="button" role="radio" aria-checked={value === n} disabled={disabled(n)} onClick={() => onChange(n)} style={{ flex: 1, padding: '7px 0', opacity: disabled(n) ? 0.3 : 1 }} className="mono">
             {n}
           </button>
         ))}
@@ -192,7 +196,12 @@ function LevelPicker({ label, value, onChange, disabled }: { label: string; valu
 function HydrogenPanel() {
   const { mode, from, to, setMode, setFrom, setTo, fire, runCascade, detected, clearDetector } = usePhoton();
   const [cascadeN, setCascadeN] = useState(4);
+  const [predict, setPredict] = useState(false);
+  const [revealed, setRevealed] = useState<string | null>(null);
   const t = from !== to ? transition(from, to, SIM_CONSTANTS) : null;
+  const key = `${mode}-${from}-${to}`;
+  const hideCalc = predict && revealed !== key;
+  const hydroView = useHydroView();
   const doFire = () => {
     const r = fire();
     if (r) announce(`${r.type === 'emision' ? 'Emitido' : 'Absorbido'} un fotón de ${fmt(r.wavelength * 1e9, 4)} nanómetros, serie de ${r.series?.name ?? '—'}, región ${r.region.name}.`);
@@ -201,6 +210,20 @@ function HydrogenPanel() {
     <>
       <section className="section">
         <span className="eyebrow">Átomo de hidrógeno</span>
+        <div className="segmented" role="radiogroup" aria-label="Representación">
+          <button type="button" role="radio" aria-checked={hydroView.view === 'diagrama'} onClick={() => hydroView.set('diagrama')}>
+            Diagrama de niveles
+          </button>
+          <button type="button" role="radio" aria-checked={hydroView.view === 'pozo'} onClick={() => hydroView.set('pozo')}>
+            Pozo de potencial 3D
+          </button>
+        </div>
+        {hydroView.view === 'pozo' && (
+          <p className="small muted" style={{ margin: 0 }}>
+            La altura es la energía (escala lineal, la misma del diagrama). La pared es la energía potencial V(r) = −27,2 eV·a₀/r: cada nivel la corta en r = 2n²·a₀. Por eso los niveles se apiñan arriba: la pared se aplana. Ionizar es salir del pozo.
+          </p>
+        )}
+        {hydroView.view === 'pozo' && <EpiTag kind="esquema">Radio comprimido (∝ √r); el electrón sobre el anillo es la imagen de Bohr</EpiTag>}
         <div className="segmented" role="tablist" aria-label="Tipo de proceso">
           <button type="button" role="tab" aria-selected={mode === 'emision'} onClick={() => setMode('emision')}>
             Emisión
@@ -211,13 +234,36 @@ function HydrogenPanel() {
         </div>
         <LevelPicker label="Nivel inicial" value={from} onChange={(n) => { setFrom(n); if (mode === 'emision' && to >= n) setTo(Math.max(1, n - 1)); if (mode === 'absorcion' && to <= n) setTo(Math.min(7, n + 1)); }} disabled={(n) => (mode === 'emision' ? n === 1 : n === 7)} />
         <LevelPicker label="Nivel final" value={to} onChange={setTo} disabled={(n) => (mode === 'emision' ? n >= from : n <= from)} />
-        <button type="button" className="btn btn--primary" onClick={doFire} disabled={!t}>
-          {mode === 'emision' ? `Emitir fotón ${from} → ${to}` : `Absorber fotón ${from} → ${to}`}
-        </button>
+        <label className="row small" style={{ gap: 8 }}>
+          <input type="checkbox" checked={predict} onChange={(e) => setPredict(e.target.checked)} />
+          Predecir antes de ver (oculta el cálculo hasta comprobarlo)
+        </label>
+        {predict && t ? (
+          <Prediction
+            resetKey={key}
+            question={`¿En qué región del espectro estará el fotón ${mode === 'emision' ? 'emitido' : 'absorbido'} en el salto ${from} → ${to}?`}
+            options={[
+              { id: 'uv', label: 'Ultravioleta' },
+              { id: 'visible', label: 'Visible' },
+              { id: 'ir', label: 'Infrarrojo' },
+            ]}
+            correct={t.region.id === 'visible' || t.region.id === 'uv' || t.region.id === 'ir' ? t.region.id : 'uv'}
+            explanation={`El salto termina (o empieza) en n = ${t.n1}: serie de ${t.series?.name ?? '—'}. ${t.n1 === 1 ? 'Todos los saltos a n = 1 llevan al menos 10,2 eV: ultravioleta.' : t.n1 === 2 ? 'Los saltos a n = 2 llevan entre 1,9 y 3,4 eV: las primeras líneas son visibles y las más altas pasan al ultravioleta cercano.' : 'Los saltos que terminan en n ≥ 3 llevan menos de 1,6 eV: infrarrojo.'} Aquí: E = ${fmt(t.energyEV, 3)} eV → λ = ${fmt(t.wavelength * 1e9, 4)} nm.`}
+            onRun={() => {
+              doFire();
+              setRevealed(key);
+            }}
+            runLabel={mode === 'emision' ? `Emitir y comprobar` : 'Absorber y comprobar'}
+          />
+        ) : (
+          <button type="button" className="btn btn--primary" onClick={doFire} disabled={!t}>
+            {mode === 'emision' ? `Emitir fotón ${from} → ${to}` : `Absorber fotón ${from} → ${to}`}
+          </button>
+        )}
         <span className="small faint">También puedes tocar los niveles en la escena.</span>
       </section>
 
-      {t && (
+      {t && !hideCalc && (
         <section className="section" aria-label="Cálculo de Rydberg">
           <div className="row row--between">
             <span className="h3">
@@ -307,7 +353,7 @@ function HydrogenPanel() {
 // ── Pestaña Espectroscopio ────────────────────────────────────────────────
 
 function SpectroPanel() {
-  const { spectroElement, spectroMode, setSpectro, guess } = usePhoton();
+  const { spectroElement, spectroMode, spectroGas, setSpectro, guess } = usePhoton();
   const sample = useSpectroSample();
   const [verdict, setVerdict] = useState<{ ok: boolean; msg: string } | null>(null);
   const ref = VISIBLE_SPECTRA.find((s) => s.symbol === spectroElement)!;
@@ -341,8 +387,21 @@ function SpectroPanel() {
             </button>
           ))}
         </div>
-        <VisibleSpectrum lines={ref.lines} mode={spectroMode} label={`Espectro de ${spectroMode} del ${ref.name.toLowerCase()}`} />
+        {spectroMode === 'absorcion' && (
+          <div className="segmented" role="radiogroup" aria-label="Estado del gas">
+            <button type="button" role="radio" aria-checked={spectroGas === 'frio'} onClick={() => setSpectro({ spectroGas: 'frio' })}>
+              Gas frío (laboratorio)
+            </button>
+            <button type="button" role="radio" aria-checked={spectroGas === 'caliente'} onClick={() => setSpectro({ spectroGas: 'caliente' })}>
+              Gas caliente (estrella)
+            </button>
+          </div>
+        )}
+        <VisibleSpectrum lines={spectroMode === 'absorcion' ? absorptionLines(ref, spectroGas) : ref.lines} mode={spectroMode} label={`Espectro de ${spectroMode} del ${ref.name.toLowerCase()}${spectroMode === 'absorcion' ? (spectroGas === 'frio' ? ', gas frío' : ', gas caliente') : ''}`} />
         <VisibleAxis />
+        <a className="btn btn--sm btn--primary" style={{ alignSelf: 'flex-start' }} href="#/entrenamiento?gen=espectro-problema">
+          Ponte a prueba: identifica una muestra desconocida
+        </a>
         <details className="details-plain">
           <summary className="small">Medidas del prisma: índice y desviación de cada línea</summary>
           <div className="table-wrap" style={{ marginTop: 8 }}>
@@ -377,7 +436,13 @@ function SpectroPanel() {
           </p>
         </details>
         <p className="small faint">
-          {spectroMode === 'emision' ? 'Gas excitado: emite solo unas longitudes de onda (líneas brillantes).' : 'Luz blanca que atraviesa el gas: faltan exactamente las mismas longitudes de onda (líneas oscuras).'}
+          {spectroMode === 'emision'
+            ? 'Gas excitado: emite solo unas longitudes de onda (líneas brillantes).'
+            : spectroGas === 'frio'
+              ? absorptionLines(ref, 'frio').length
+                ? `Gas frío: casi todos los átomos están en el estado fundamental, así que solo absorben las líneas que parten de él (en el ${ref.name.toLowerCase()}, el doblete D). Las demás líneas de emisión no aparecen.`
+                : `Gas frío: ninguna línea visible del ${ref.name.toLowerCase()} parte del estado fundamental; sus líneas de absorción están en el ultravioleta. En el visible no se ve ninguna línea oscura.`
+              : 'Gas caliente (p. ej., la atmósfera de una estrella): hay átomos en niveles excitados y aparecen como líneas oscuras líneas que en el gas frío faltan. Cada línea de absorción coincide con una de emisión. Las profundidades dibujadas son ilustrativas: dependen de la temperatura.'}
         </p>
       </section>
       <section className="section">
@@ -389,7 +454,9 @@ function SpectroPanel() {
             </button>
           )}
         </div>
-        <VisibleSpectrum lines={sampleSpec.lines} mode={sampleMode} label="Muestra desconocida" />
+        {/* La muestra se compara en absorción como gas caliente (p. ej., una estrella): en frío, varios
+            elementos no tendrían ninguna línea visible que comparar. */}
+        <VisibleSpectrum lines={sampleMode === 'absorcion' ? absorptionLines(sampleSpec, 'caliente') : sampleSpec.lines} mode={sampleMode} label={sampleMode === 'absorcion' ? 'Muestra desconocida (gas caliente)' : 'Muestra desconocida'} />
         <VisibleAxis />
         <span className="small muted">¿Qué elemento produce este espectro?</span>
         <div className="row row--wrap" style={{ gap: 6 }}>
@@ -410,7 +477,26 @@ function SpectroPanel() {
 
 function SceneLabels({ tab }: { tab: PhotonTab }) {
   const level = usePhoton((s) => s.level);
+  const hydroView = useHydroView((s) => s.view);
   const lambdaNm = usePhoton((s) => s.lambdaNm);
+  if (tab === 'hidrogeno' && hydroView === 'pozo')
+    return (
+      <LabelLayer>
+        {[1, 2, 3].map((n) => (
+          <AnchoredLabel key={n} id={`pz-${n}`} align="left">
+            <span className="scene-label" style={{ color: n === level ? 'var(--accent)' : undefined }}>
+              n = {n} · r = {2 * n * n} a₀
+            </span>
+          </AnchoredLabel>
+        ))}
+        <AnchoredLabel id="pz-inf" align="center">
+          <span className="scene-label" style={{ color: 'var(--ink-faint)' }}>E = 0: fuera del pozo (ionizado)</span>
+        </AnchoredLabel>
+        <AnchoredLabel id="pz-wall" align="right">
+          <span className="scene-label scene-label--part">Pared: V(r) = −27,2 eV·a₀/r</span>
+        </AnchoredLabel>
+      </LabelLayer>
+    );
   if (tab === 'hidrogeno')
     return (
       <LabelLayer>
