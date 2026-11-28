@@ -85,19 +85,19 @@
 }
 
 .btn--primary {
-  background: var(--accent);
-  background-image: linear-gradient(180deg, var(--accent), var(--accent-strong));
-  border-color: var(--accent);
-  color: var(--accent-ink);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 6px 18px -8px color-mix(in srgb, var(--accent) 70%, transparent);
-  font-weight: 650;
+  background: var(--action);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.08), transparent);
+  border-color: var(--action);
+  color: var(--action-ink);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 1px 2px hsl(var(--shadow-color) / 0.2), 0 6px 16px -8px hsl(var(--shadow-color) / 0.45);
+  font-weight: 600;
 }
 
 .btn--primary:hover {
-  background: var(--accent);
-  background-image: linear-gradient(180deg, var(--accent), var(--accent));
-  border-color: var(--accent);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4), var(--glow);
+  background: var(--action-hover);
+  background-image: none;
+  border-color: var(--action-hover);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14), 0 2px 4px hsl(var(--shadow-color) / 0.2), 0 10px 22px -10px hsl(var(--shadow-color) / 0.5);
 }
 
 .btn--ghost {
@@ -185,8 +185,8 @@
 }
 
 .card {
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-inner);
+  border: 1px solid transparent;
+  border-radius: var(--r-outer);
   background: var(--surface-raised);
   padding: 16px;
 }
@@ -230,9 +230,9 @@
   display: inline-flex;
   padding: 3px;
   gap: 2px;
-  border-radius: 10px;
-  background: var(--surface-sunken);
-  border: 1px solid var(--hairline);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--surface-sunken) 80%, var(--surface));
+  box-shadow: inset 0 0 0 1px var(--hairline);
 }
 
 .segmented button {
@@ -240,7 +240,8 @@
   background: transparent;
   color: var(--ink-muted);
   padding: 7px 14px;
-  border-radius: 7px;
+  min-height: 34px;
+  border-radius: 8px;
   font-size: 0.875rem;
   font-weight: 550;
   cursor: pointer;
@@ -252,7 +253,7 @@
 .segmented button[aria-checked='true'] {
   background: var(--surface-raised);
   color: var(--ink);
-  box-shadow: var(--elev-1), inset 0 0 0 1px var(--hairline);
+  box-shadow: 0 0 0 1px hsl(var(--shadow-color) / 0.07), 0 1px 3px hsl(var(--shadow-color) / 0.12);
 }
 
 .field {

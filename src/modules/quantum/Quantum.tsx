@@ -288,7 +288,8 @@ function OrbitalSurface({ n, l, m, subshell, scale, slice, res, p, onInfo, slot 
   }, [meshes, slice, clip, rich]);
   useFrame((_, dt) => {
     if (!group.current) return;
-    group.current.scale.setScalar(scale * 0.74);
+    // ATOM 6.0: margen respecto al título y a la leyenda (antes, los lóbulos de los d tocaban el título).
+    group.current.scale.setScalar(scale * 0.66);
     if (!reduced && !slice) group.current.rotation.z += dt * 0.08;
     if (slice) group.current.rotation.z += (0 - group.current.rotation.z) * Math.min(1, dt * 4);
   });
@@ -725,10 +726,10 @@ export function QuantumOverlay() {
                   <span className="label" id="q-view">Representación</span>
                   <div className="segmented" role="radiogroup" aria-labelledby="q-view">
                     <button type="button" role="radio" aria-checked={st.view === 'superficie'} onClick={() => st.set({ view: 'superficie' })}>
-                      Superficie de probabilidad
+                      Superficie
                     </button>
                     <button type="button" role="radio" aria-checked={st.view === 'nube'} onClick={() => st.set({ view: 'nube' })}>
-                      Nube de probabilidad
+                      Nube de puntos
                     </button>
                   </div>
                   <span className="small faint">{st.view === 'superficie' ? `La forma que dibujan los libros: dentro de esa superficie hay un ${Math.round(st.fraction * 100)} % de probabilidad de encontrar al electrón. No es un borde: el electrón también puede estar fuera.` : 'Cada punto es una posición posible del electrón: donde hay más puntos, más probabilidad.'}</span>

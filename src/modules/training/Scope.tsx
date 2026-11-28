@@ -6,15 +6,16 @@ export const coveredBlocks = BLOCKS.filter((b) => COVERED_NODES.some((n) => NODE
 
 export function ScopePicker({ value, onChange }: { value: number[]; onChange: (v: number[]) => void }) {
   return (
-    <div className="row row--wrap" style={{ gap: 6 }} role="group" aria-label="Bloques del temario">
-      <button type="button" className="btn btn--sm" aria-pressed={value.length === 0} onClick={() => onChange([])} style={value.length === 0 ? { borderColor: 'var(--accent-line)', background: 'var(--accent-quiet)' } : undefined}>
-        Todo lo disponible
+    <div className="scope-chips" role="group" aria-label="Bloques del temario">
+      <button type="button" className="scope-chip" aria-pressed={value.length === 0} onClick={() => onChange([])}>
+        Todo
       </button>
       {coveredBlocks.map((b) => {
         const on = value.includes(b.id);
         return (
-          <button key={b.id} type="button" className="btn btn--sm" aria-pressed={on} onClick={() => onChange(on ? value.filter((x) => x !== b.id) : [...value, b.id])} style={on ? { borderColor: 'var(--accent-line)', background: 'var(--accent-quiet)' } : undefined}>
-            {b.id}. {b.short}
+          <button key={b.id} type="button" className="scope-chip" aria-pressed={on} onClick={() => onChange(on ? value.filter((x) => x !== b.id) : [...value, b.id])} style={{ ['--bc' as string]: `var(--b${b.id})` }}>
+            <span className="scope-chip__dot" aria-hidden="true" />
+            {b.short}
           </button>
         );
       })}

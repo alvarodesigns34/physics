@@ -138,8 +138,10 @@
   transform: translateY(0);
 }
 .hcard--hero {
-  background: linear-gradient(160deg, var(--surface-tint), var(--surface-raised) 70%);
-  border-color: var(--accent-line);
+  /* ATOM 6.0: superficie limpia con un trazo de acento, no un bloque tintado */
+  background: var(--surface-raised);
+  border-color: transparent;
+  box-shadow: var(--elev-2), inset 3px 0 0 var(--accent);
   min-height: 200px;
 }
 .hcard__icon {
@@ -173,12 +175,14 @@
   align-self: flex-start;
   padding: 10px 16px;
   border-radius: var(--r-pill);
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--action);
+  color: var(--action-ink);
   font-weight: 600;
   font-size: var(--fs-sm);
+  box-shadow: 0 1px 2px hsl(var(--shadow-color) / 0.2);
 }
 .hcard__cta.hcard__cta--quiet {
+  box-shadow: none;
   background: transparent;
   color: var(--accent-strong);
   padding-left: 0;

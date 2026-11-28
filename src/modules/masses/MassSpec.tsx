@@ -71,6 +71,12 @@ function Spectrometer() {
   const radii = isotopes.map((i) => sectorRadius(i.mass, 1, accel, B) * SCALE);
   const rMean = radii.length ? radii.reduce((a, b) => a + b, 0) / radii.length : 2;
   const ions = useRef<Ion[]>([]);
+  // ATOM 6.0 · Al cambiar de muestra, los iones en vuelo pertenecen a la anterior: su índice de isótopo no
+  // vale en la nueva lista (de Hg, 7 isótopos, a Cu, 2, rompía la escena con «reading 'a'»). Se vacía el haz.
+  useEffect(() => {
+    ions.current = [];
+    carry.current = 0;
+  }, [isotopes]);
   const mesh = useRef<THREE.InstancedMesh>(null);
   const carry = useRef(0);
   const rng = useMemo(() => mulberry32(77), []);
@@ -107,7 +113,9 @@ function Spectrometer() {
     if (done.length) {
       const counts = { ...st.counts };
       for (const d of done) {
-        const a = isotopes[d]!.a;
+        const iso = isotopes[d];
+        if (!iso) continue;
+        const a = iso.a;
         sfx.detector(1 + d * 0.12);
         counts[a] = (counts[a] ?? 0) + 1;
       }
@@ -115,6 +123,7 @@ function Spectrometer() {
     }
     const mm = mesh.current;
     if (!mm) return;
+    ions.current = ions.current.filter((ion) => ion.iso < radii.length);
     ions.current.slice(0, 400).forEach((ion, i) => {
       ionPosition(ion.t, radii[ion.iso]!, tmp);
       m4.makeTranslation(tmp.x, tmp.y, tmp.z);

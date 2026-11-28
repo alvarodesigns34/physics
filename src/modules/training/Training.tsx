@@ -131,7 +131,7 @@ function Practice({ initialScope, fixedExercise, onClearFixed, forceVariant }: {
   const node = sel?.nodeId;
   return (
     <div className="stack-16">
-      <div className="row row--wrap" style={{ gap: 24, alignItems: 'flex-end' }}>
+      <div className="practice-toolbar">
         {!initialScope.length && !fixedExercise && (
           <div className="stack-8">
             <span className="small muted">Ámbito</span>
@@ -150,10 +150,9 @@ function Practice({ initialScope, fixedExercise, onClearFixed, forceVariant }: {
             ))}
           </div>
         </div>
+        <p className="small muted practice-toolbar__help">{VARIANTS.find((v) => v.id === variant)!.help}</p>
       </div>
-      <p className="small faint" style={{ margin: '-8px 0 0' }}>
-        {VARIANTS.find((v) => v.id === variant)!.help}
-      </p>
+
       {exercise && (
         <div className="card enter" style={{ padding: 24 }} key={exercise.id}>
           {!fixedExercise && sel && (

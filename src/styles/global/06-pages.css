@@ -436,3 +436,59 @@
   margin: -16px 0 0;
   max-width: 70ch;
 }
+
+/* ── ATOM 6.0 · Barra de práctica: ámbito y modo en una sola superficie ───── */
+.practice-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px 32px;
+  padding: 16px 18px;
+  border-radius: var(--r-outer);
+  background: var(--surface-raised);
+  box-shadow: var(--elev-1);
+}
+.practice-toolbar__help {
+  flex-basis: 100%;
+  margin: -6px 0 0;
+}
+.scope-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.scope-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 13px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline-strong);
+  background: transparent;
+  color: var(--ink);
+  font: 550 var(--fs-sm) var(--font-ui);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-std),
+    border-color var(--dur-fast) var(--ease-std),
+    color var(--dur-fast) var(--ease-std);
+}
+.scope-chip:hover {
+  border-color: color-mix(in srgb, var(--ink) 30%, transparent);
+}
+.scope-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.scope-chip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bc, var(--ink-muted));
+}
+.scope-chip[aria-pressed='true'] {
+  background: var(--action);
+  border-color: var(--action);
+  color: var(--action-ink);
+}

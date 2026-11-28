@@ -243,6 +243,13 @@ try {
   await page.goto(base + '#/masas');
   await page.waitForFunction(() => /\d+,\d+ u/.test(document.querySelector('aside')?.textContent ?? ''), null, { timeout: 60000 }).catch(() => {});
   check(/\d+,\d+ u/.test(await page.locator('aside').innerText()), 'Mass Spectrometry: masa media medida');
+  // ATOM 6.0 · Regresión: cambiar de muestra con iones en vuelo (de 7 isótopos a 2) rompía la escena.
+  const errBefore = errors.length;
+  await page.click('button:text-is("Hg")');
+  await page.waitForTimeout(1500);
+  await page.click('button:text-is("Cu")');
+  await page.waitForTimeout(1500);
+  check(errors.length === errBefore, 'Mass Spectrometry: cambiar de muestra con iones en vuelo no da errores');
   await page.screenshot({ path: `${OUT}/10-masas.png` });
   await page.click('.prediction [role=radio]:text-is("Se reduce a la mitad")');
   await page.click('.prediction button:has-text("comprobar")');

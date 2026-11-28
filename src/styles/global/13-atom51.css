@@ -38,13 +38,13 @@
 .app[data-kind="laboratorio"] .map-title .muted { color: rgb(236 230 220 / 0.7); }
 
 /* ATOM 5.1 · Pestañas con indicador deslizante */
-.stabs { position: relative; display: inline-flex; flex-wrap: nowrap; gap: 2px; padding: 4px; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; scroll-behavior: smooth; border-radius: 14px; background: var(--surface-sunken, rgb(127 127 127 / 0.08)); border: 1px solid var(--hairline); }
+.stabs { position: relative; display: flex; flex-wrap: nowrap; gap: 4px; padding: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; scroll-behavior: smooth; border-radius: 0; background: transparent; box-shadow: inset 0 -1px 0 var(--hairline-strong); }
 .stabs::-webkit-scrollbar { display: none; }
 .stabs[data-fade-r="true"] { mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent); }
 .stabs[data-fade-l="true"] { mask-image: linear-gradient(90deg, transparent, #000 40px); }
 .stabs[data-fade-l="true"][data-fade-r="true"] { mask-image: linear-gradient(90deg, transparent, #000 40px, #000 calc(100% - 40px), transparent); }
-.stabs__ind { position: absolute; top: 0; left: 0; border-radius: 10px; background: var(--surface-raised); box-shadow: 0 1px 2px rgb(0 0 0 / 0.08), 0 4px 14px rgb(0 0 0 / 0.06); transition: transform 420ms var(--ease-spring), width 420ms var(--ease-spring), height 420ms var(--ease-spring); pointer-events: none; }
-.stabs__tab { position: relative; z-index: 1; flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-muted); font: 500 0.9375rem/1.2 var(--font-ui); cursor: pointer; white-space: nowrap; transition: color 160ms var(--ease-std); }
+.stabs__ind { position: absolute; top: 0; left: 0; border-radius: 0; background: transparent; box-shadow: inset 0 -2px 0 var(--ink); transition: transform 420ms var(--ease-spring), width 420ms var(--ease-spring), height 420ms var(--ease-spring); pointer-events: none; }
+.stabs__tab { position: relative; z-index: 1; flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 10px 12px 12px; border: 0; border-radius: 8px 8px 0 0; background: transparent; color: var(--ink-muted); font: 500 0.9375rem/1.2 var(--font-ui); cursor: pointer; white-space: nowrap; transition: color 160ms var(--ease-std); }
 .stabs__tab[aria-selected="true"] { color: var(--ink); font-weight: 600; }
 .stabs__tab:hover { color: var(--ink); }
 .stabs__tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -53,9 +53,9 @@
 .app[data-motion="reducido"] .stabs__ind { transition: none; }
 
 /* Entrenamiento: navegación fija y titular por modo */
-.training-nav { position: sticky; top: 0; z-index: 5; padding: 8px 0; margin: -8px 0 0; background: linear-gradient(var(--surface) 70%, transparent); }
+.training-nav { position: sticky; top: 0; z-index: 5; padding: 4px 0 0; margin: -8px 0 0; background: var(--surface); }
 .training-hero { display: grid; gap: 10px; animation: hero-in 520ms var(--ease-out) backwards; }
-.training-hero__title { margin: 0; font-family: var(--font-display); font-weight: 650; font-size: clamp(2.25rem, 4.4vw, 3.5rem); line-height: 1.02; letter-spacing: var(--tracking-display); color: var(--ink); text-wrap: balance; }
+.training-hero__title { margin: 0; font-family: var(--font-display); font-weight: 640; font-size: clamp(2rem, 3.6vw, 3rem); line-height: 1.05; letter-spacing: var(--tracking-display); color: var(--ink); text-wrap: balance; }
 .training-hero__lead { margin: 0; max-width: 62ch; font-size: 1.0625rem; line-height: 1.55; color: var(--ink-muted); }
 @keyframes hero-in { from { opacity: 0; transform: translateY(12px); } }
 @media (prefers-reduced-motion: reduce) { .training-hero { animation: none; } }

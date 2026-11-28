@@ -34,6 +34,10 @@
   --accent-ink: #ffffff;
   --accent-quiet: rgb(47 91 211 / 0.08);
   --accent-line: rgb(47 91 211 / 0.35);
+  /* ATOM 6.0 · Acción principal en TINTA (no en color): el cobalto queda para selección, enlaces y foco. */
+  --action: #16181d;
+  --action-hover: #2a2e36;
+  --action-ink: #ffffff;
 
   /* ── Partículas (identidad física; legibles sobre claro y sobre el visor) ── */
   --proton: #d4573a;
@@ -88,16 +92,17 @@
   --s-10: 40px;
   --s-12: 48px;
 
-  /* ── Radios ── */
-  --r-outer: 16px;
-  --r-inner: 10px;
+  /* ── Radios ── (ATOM 6.0: algo más generosos, una sola escala) */
+  --r-outer: 18px;
+  --r-inner: 12px;
   --r-pill: 999px;
 
   /* ── Elevación (sombras cortas y suaves; nunca gigantes) ── */
   --shadow-color: 220 20% 20%;
-  --elev-1: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 1px 1px hsl(var(--shadow-color) / 0.04);
-  --elev-2: 0 1px 2px hsl(var(--shadow-color) / 0.05), 0 4px 12px -2px hsl(var(--shadow-color) / 0.08);
-  --elev-3: 0 2px 4px hsl(var(--shadow-color) / 0.05), 0 12px 32px -8px hsl(var(--shadow-color) / 0.16);
+  /* ATOM 6.0 · Elevación en capas: un anillo de 1 px (define el borde sin línea dura) + sombra difusa corta. */
+  --elev-1: 0 0 0 1px hsl(var(--shadow-color) / 0.05), 0 1px 2px hsl(var(--shadow-color) / 0.05);
+  --elev-2: 0 0 0 1px hsl(var(--shadow-color) / 0.05), 0 2px 4px -1px hsl(var(--shadow-color) / 0.06), 0 12px 28px -14px hsl(var(--shadow-color) / 0.18);
+  --elev-3: 0 0 0 1px hsl(var(--shadow-color) / 0.06), 0 4px 8px -2px hsl(var(--shadow-color) / 0.06), 0 24px 48px -20px hsl(var(--shadow-color) / 0.26);
   --lift: var(--elev-2);
   --glow: 0 0 0 3px var(--accent-quiet);
 
@@ -141,6 +146,9 @@
   --accent-ink: #0d1118;
   --accent-quiet: rgb(122 156 245 / 0.12);
   --accent-line: rgb(122 156 245 / 0.4);
+  --action: #eceef3;
+  --action-hover: #ffffff;
+  --action-ink: #0d1118;
   --proton: #ef7f63;
   --neutron: #a9adb6;
   --electron: #79b2f0;

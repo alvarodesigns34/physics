@@ -148,11 +148,12 @@
 }
 
 .guide-sec__body p {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   font-size: 1.0625rem;
-  line-height: 1.68;
-  color: var(--ink-muted);
-  max-width: 68ch;
+  line-height: 1.7;
+  /* ATOM 6.0: el texto de estudio va en tinta (antes, gris medio: cansaba en lecturas largas) */
+  color: color-mix(in srgb, var(--ink) 88%, var(--surface));
+  max-width: 66ch;
 }
 
 .guide-sec__body p:last-child {
