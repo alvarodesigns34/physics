@@ -73,10 +73,7 @@ function Spectrometer() {
   const ions = useRef<Ion[]>([]);
   // ATOM 6.0 · Al cambiar de muestra, los iones en vuelo pertenecen a la anterior: su índice de isótopo no
   // vale en la nueva lista (de Hg, 7 isótopos, a Cu, 2, rompía la escena con «reading 'a'»). Se vacía el haz.
-  useEffect(() => {
-    ions.current = [];
-    carry.current = 0;
-  }, [isotopes]);
+  const forList = useRef(isotopes);
   const mesh = useRef<THREE.InstancedMesh>(null);
   const carry = useRef(0);
   const rng = useMemo(() => mulberry32(77), []);
@@ -92,6 +89,13 @@ function Spectrometer() {
   useFrame((_, dt) => {
     const st = useMass.getState();
     if (!isotopes.length) return;
+    // Reinicio SÍNCRONO del haz al cambiar de muestra (un efecto llegaría un fotograma tarde y contaría
+    // iones de la muestra anterior como isótopos de la nueva).
+    if (forList.current !== isotopes) {
+      forList.current = isotopes;
+      ions.current = [];
+      carry.current = 0;
+    }
     if (running) {
       carry.current += Math.min(dt, 0.05) * 90;
       while (carry.current >= 1) {
@@ -112,14 +116,16 @@ function Spectrometer() {
     });
     if (done.length) {
       const counts = { ...st.counts };
+      let counted = 0;
       for (const d of done) {
         const iso = isotopes[d];
         if (!iso) continue;
+        counted++;
         const a = iso.a;
         sfx.detector(1 + d * 0.12);
         counts[a] = (counts[a] ?? 0) + 1;
       }
-      st.set({ counts, total: st.total + done.length });
+      if (counted) st.set({ counts, total: st.total + counted });
     }
     const mm = mesh.current;
     if (!mm) return;

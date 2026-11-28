@@ -192,20 +192,24 @@ function Practice({ initialScope, fixedExercise, onClearFixed, forceVariant }: {
 function FamilyFollowUp({ gen, difficulty, variant, current }: { gen: string; difficulty: number; variant?: Variant; current: Exercise }) {
   const prep = PREP_BY_GEN.get(gen);
   const history = useStore((s) => s.history);
-  const [exhausted, setExhausted] = useState(false);
+  const [exhausted, setExhausted] = useState<number | null>(null);
   // ATOM 6.0 (final): «otro equivalente» es otro PROBLEMA, no otra semilla: se descartan los ya vistos
   // (mismos datos, aunque cambie el id o el orden) según el historial de esta familia.
   const to = (d: number, modo: Variant) => {
-    const seen = new Set<string>([problemKey(current), ...history.filter((h) => h.exerciseId.startsWith(`${gen}:${d}:`)).map((h) => problemKeyOfId(h.exerciseId))]);
+    const seen = new Map<string, number>([[problemKey(current), 1]]);
+    for (const h of history) if (h.exerciseId.startsWith(`${gen}:${d}:`)) {
+      const k = problemKeyOfId(h.exerciseId);
+      seen.set(k, (seen.get(k) ?? 0) + 1);
+    }
     const { seed, exhausted: ex } = freshSeed(gen, d as 1 | 2 | 3, seen);
-    setExhausted(ex);
+    setExhausted(ex ? d : null);
     navigate(`/entrenamiento?gen=${gen}&d=${d}&modo=${modo}&s=${seed}`);
   };
   return (
     <div className="family-follow" role="group" aria-label="Siguiente paso en esta familia">
       <span className="small muted">
         {prep ? prep.title : 'Esta familia'} · {variant === 'guiado' ? 'ejemplo guiado' : variant === 'desafio' ? 'nivel exigente' : variant === 'revision' ? 'resolución explicada' : 'sin ayuda'}
-        {exhausted && <span className="family-follow__note"> · Ya has visto todas las variantes de este nivel: este problema se repite{prep?.hard ? '; prueba «Más exigente»' : ''}.</span>}
+        {exhausted !== null && <span className="family-follow__note"> · Ya has visto todas las variantes de este nivel: se repite la que menos has visto{prep?.hard && exhausted !== prep.hard ? '; prueba «Más exigente»' : ''}.</span>}
       </span>
       <span className="row row--wrap" style={{ gap: 6 }}>
         {variant !== 'autonomo' && (

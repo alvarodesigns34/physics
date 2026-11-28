@@ -313,6 +313,8 @@ export function buildTrendOrderExercise(prop: PropertyId, els: ElementRecord[], 
   return {
     id: seedId,
     generatorId: 'tendencia-ordenar',
+    // ATOM 6.0: el problema lo definen la propiedad y el CONJUNTO de elementos, no el orden de la lista.
+    equivalence: `${prop}|${els.map((e) => e.z).sort((a, b) => a - b).join(',')}`,
     nodeIds: exceptions.length ? [nodeOf[prop]!, '7.13'] : [nodeOf[prop]!, '7.6'],
     difficulty,
     title: `Ordenar por ${P.short}`,

@@ -226,35 +226,8 @@ const MARKER_X = -1.6;
 const AXIS_X = -2.75;
 export const ENERGY_TICKS = [-13.6, -12, -10, -8, -6, -4, -2, 0];
 
-/**
- * ATOM 6.0 · Flechas agrupadas por serie (como el diagrama de TEO p.10): cada serie ocupa su columna, con un
- * hueco entre series, y se rotula bajo su nivel de llegada.
- */
-export interface SeriesGroup {
-  n1: number;
-  name: string;
-  xs: number[];
-  labelX: number;
-}
-export function arrowLayout(lines: { t: Transition }[]): { x: Map<string, number>; groups: SeriesGroup[] } {
-  const sorted = [...lines].sort((a, b) => a.t.n1 - b.t.n1 || a.t.n2 - b.t.n2);
-  const x = new Map<string, number>();
-  const groups: SeriesGroup[] = [];
-  let cur = -1.05;
-  let last = -1;
-  for (const d of sorted) {
-    if (d.t.n1 !== last) {
-      if (last !== -1) cur += 0.22;
-      groups.push({ n1: d.t.n1, name: d.t.series?.name ?? `n = ${d.t.n1}`, xs: [], labelX: 0 });
-      last = d.t.n1;
-    }
-    x.set(`${d.t.from}-${d.t.to}`, cur);
-    groups[groups.length - 1]!.xs.push(cur);
-    cur += 0.13;
-  }
-  for (const g of groups) g.labelX = (g.xs[0]! + g.xs[g.xs.length - 1]!) / 2;
-  return { x, groups };
-}
+import { arrowLayout, type SeriesGroup } from './arrowLayout';
+export { arrowLayout };
 
 export function hydrogenAnchors(groups: SeriesGroup[]): Anchor[] {
   return [

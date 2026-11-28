@@ -126,3 +126,69 @@ describe('peso de la repetición y cuaderno de errores, por problema', () => {
     expect(freshSeed('nivel-energia', 2, seen, rand).exhausted).toBe(true);
   });
 });
+
+describe('ATOM 6.0 · la clave no confunde problemas distintos (revisión independiente)', () => {
+  it('cuanticos-validez: los signos y el orden de (n, l, m_l, m_s) distinguen problemas', () => {
+    const g = GENERATOR_BY_ID.get('cuanticos-validez')!;
+    const by = new Map<string, Set<string>>();
+    for (let i = 0; i < 300; i++) {
+      const e = g.create(i * 7919 + 13, 2);
+      const k = problemKey(e);
+      const set = by.get(k) ?? new Set<string>();
+      set.add(e.statement);
+      by.set(k, set);
+    }
+    for (const set of by.values()) expect(set.size).toBe(1);
+  });
+  it('en ninguna familia una misma clave agrupa enunciados que difieren en algo más que el orden de una lista', () => {
+    for (const id of ['nucleo-especie', 'rydberg', 'onda-lambda', 'configuracion', 'cuanticos-validez', 'ion-misterioso', 'luz-ionizante']) {
+      const g = GENERATOR_BY_ID.get(id)!;
+      const d = g.difficulties.includes(2) ? 2 : g.difficulties[0]!;
+      const by = new Map<string, Set<string>>();
+      for (let i = 0; i < 150; i++) {
+        const e = g.create(i * 104729 + 7, d);
+        const set = by.get(problemKey(e)) ?? new Set<string>();
+        set.add(e.statement);
+        by.set(problemKey(e), set);
+      }
+      for (const set of by.values()) expect(set.size, id).toBe(1);
+    }
+  });
+  it('la misma lista en otro orden es el mismo problema (ordenar por radio o por una propiedad)', () => {
+    for (const id of ['radio-ionico', 'tendencia-ordenar']) {
+      const g = GENERATOR_BY_ID.get(id)!;
+      const by = new Map<string, Set<string>>();
+      for (let i = 0; i < 300; i++) {
+        const e = g.create(i * 7919 + 13, 2);
+        const set = by.get(problemKey(e)) ?? new Set<string>();
+        set.add(e.statement);
+        by.set(problemKey(e), set);
+      }
+      expect([...by.values()].some((s) => s.size > 1), id).toBe(true);
+    }
+  });
+});
+
+describe('ATOM 6.0 · dificultades y semillas (revisión independiente)', () => {
+  it('acertar problemas BÁSICOS no completa los problemas distintos exigidos al nivel de práctica', () => {
+    const g = GENERATOR_BY_ID.get('nivel-energia')!;
+    const seeds: number[] = [];
+    const keys = new Set<string>();
+    for (let s = 1; seeds.length < 3; s++) {
+      const k = problemKey(g.create(s, 1));
+      if (!keys.has(k)) (keys.add(k), seeds.push(s));
+    }
+    const h = seeds.map((s, i) => att(`nivel-energia:1:${s}`, 1, i));
+    const r = familyReadiness('nivel-energia', h);
+    expect(r.distinctSolved).toBe(0);
+    expect(r.level).not.toBe('solida');
+  });
+  it('sin variantes nuevas, «otro equivalente» devuelve la MENOS vista', () => {
+    const g = GENERATOR_BY_ID.get('grafica-ei')!;
+    const counts = new Map<string, number>();
+    for (let s = 1; counts.size < familyVariety('grafica-ei', 2); s++) counts.set(problemKey(g.create(s, 2)), counts.size === 0 ? 5 : 1);
+    const r = freshSeed('grafica-ei', 2, counts, mulberry32(3));
+    expect(r.exhausted).toBe(true);
+    expect(counts.get(problemKey(g.create(r.seed, 2)))).toBe(1);
+  });
+});

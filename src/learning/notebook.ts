@@ -98,8 +98,9 @@ export function registerClean(list: NotebookEntry[], ex: CleanExercise, now: num
       resolved++;
       return { ...x, resolvedAt: now, resolvedBy: 'variante' as const };
     }
-    // El mismo problema (de los documentos, o generado con los mismos datos) solo cuenta pasados ≥ 2 días.
-    if (same && (isSourceExercise(x) || !!ex.sameProblem) && now - x.at >= 2 * DAY) {
+    // Repetir el mismo problema solo cierra la entrada en los ejercicios de los documentos (enunciado fijo,
+    // sin variantes) y pasados ≥ 2 días; en los generados hace falta una variante DISTINTA.
+    if (same && isSourceExercise(x) && now - x.at >= 2 * DAY) {
       resolved++;
       return { ...x, resolvedAt: now, resolvedBy: 'mismo-dias-despues' as const };
     }

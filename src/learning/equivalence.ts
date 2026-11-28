@@ -16,15 +16,18 @@ import { exerciseFromId } from './examSession';
 import { GENERATOR_BY_ID } from './registry';
 import type { Difficulty, Exercise } from './types';
 
+/** Normaliza sin perder lo que distingue problemas: signos (−, +, -), «=», «/», cifras, sub/superíndices. */
 const norm = (s: string) =>
   s
     .toLowerCase()
     .normalize('NFC')
     .replace(/\*\*/g, '')
-    .replace(/[^\p{L}\p{N}⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺₀₁₂₃₄₅₆₇₈₉,.·→]+/gu, ' ')
+    .replace(/[−–]/g, '-')
+    .replace(/[^\p{L}\p{N}⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺₀₁₂₃₄₅₆₇₈₉½,.·→=+\-/]+/gu, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 
-const bag = (s: string) => norm(s).split(' ').filter(Boolean).sort().join(' ');
+const escapeRe = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 function fnv(s: string): string {
   let h = 0x811c9dc5;
@@ -34,7 +37,14 @@ function fnv(s: string): string {
 
 export function problemKey(ex: Exercise): string {
   if (ex.equivalence) return `${ex.generatorId}:${ex.difficulty}:${fnv(ex.equivalence)}`;
-  const data = (ex.data ?? []).map((d) => `${d.label}=${d.value}`).sort().join('|');
+  // El enunciado se compara EN ORDEN y con sus signos: (1, 0, −1, +½) y (1, 0, 1, −½) son problemas
+  // distintos. La única excepción es la lista que el propio ejercicio pide ordenar: sus elementos se
+  // quitan del enunciado (quedan representados, ya ordenados, en la respuesta), así que la misma lista
+  // presentada en otro orden es el mismo problema.
+  let st = norm(ex.statement);
+  const items = ex.parts.flatMap((p) => (p.answer.kind === 'order' ? p.answer.items.map((i) => norm(i.text)) : [])).filter(Boolean);
+  for (const it of [...items].sort((a, b) => b.length - a.length)) st = st.replace(new RegExp(`(^|[\\s,])${escapeRe(it)}(?=$|[\\s,.])`, 'g'), '$1§');
+  const data = (ex.data ?? []).map((d) => `${norm(d.label)}=${norm(d.value)}`).sort().join('|');
   const parts = ex.parts
     .map((p) => {
       const a = p.answer;
@@ -44,11 +54,11 @@ export function problemKey(ex: Exercise): string {
           : a.kind === 'order'
             ? a.correctOrder.map((id) => norm(a.items.find((i) => i.id === id)?.text ?? id)).join('>')
             : norm(p.canonical);
-      return `${bag(p.prompt)}::${ans}`;
+      return `${norm(p.prompt)}::${ans}`;
     })
     .sort()
     .join('||');
-  return `${ex.generatorId}:${fnv(`${bag(ex.statement)}##${data}##${parts}`)}`;
+  return `${ex.generatorId}:${fnv(`${st}##${data}##${parts}`)}`;
 }
 
 const KEY_CACHE = new Map<string, string>();
@@ -86,15 +96,19 @@ export function familyVariety(generatorId: string, d: Difficulty): number {
  * Semilla para «otro equivalente»: un problema de la misma familia y dificultad cuya clave NO esté entre las
  * ya vistas. Si la familia no tiene más variantes, devuelve la que menos se ha visto y lo indica.
  */
-export function freshSeed(generatorId: string, d: Difficulty, seen: Set<string>, rand: () => number = Math.random): { seed: number; exhausted: boolean } {
+export function freshSeed(generatorId: string, d: Difficulty, seen: Set<string> | Map<string, number>, rand: () => number = Math.random): { seed: number; exhausted: boolean } {
   const g = GENERATOR_BY_ID.get(generatorId);
   if (!g) return { seed: Math.floor(rand() * 1e9), exhausted: false };
-  let fallback = -1;
-  for (let i = 0; i < 80; i++) {
-    const seed = Math.floor(rand() * 1e9);
+  const count = (k: string) => (seen instanceof Map ? (seen.get(k) ?? 0) : seen.has(k) ? 1 : 0);
+  // 1) semillas al azar; 2) barrido determinista (por si las variantes no se reparten por igual entre semillas).
+  const tried: { seed: number; key: string }[] = [];
+  const candidates = [...Array.from({ length: 60 }, () => Math.floor(rand() * 1e9)), ...Array.from({ length: 240 }, (_, i) => i * 7919 + 13)];
+  for (const seed of candidates) {
     const key = problemKey(g.create(seed, d));
-    if (!seen.has(key)) return { seed, exhausted: false };
-    if (fallback < 0) fallback = seed;
+    if (!count(key)) return { seed, exhausted: false };
+    tried.push({ seed, key });
   }
-  return { seed: fallback, exhausted: true };
+  // Sin variantes nuevas: la menos vista.
+  tried.sort((a, b) => count(a.key) - count(b.key));
+  return { seed: tried[0]!.seed, exhausted: true };
 }

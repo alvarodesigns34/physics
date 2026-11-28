@@ -232,7 +232,11 @@ export function familyReadiness(generatorId: string, history: AttemptForPrep[], 
   const indep = own.filter((h) => (h.evidence ? h.evidence === 'demostrada' || h.evidence === 'posible-azar' : h.hintsUsed === 0));
   const openErrors = notebook.filter((n) => n.generatorId === generatorId && !n.resolvedAt).length;
   const demonstrated = (h: AttemptForPrep) => (h.evidence ? h.evidence === 'demostrada' : h.hintsUsed === 0);
-  const solvedKeys = new Set(indep.filter((h) => h.score >= 0.8 && demonstrated(h)).map((h) => problemKeyOfId(h.exerciseId)));
+  const pfam = PREP_BY_GEN.get(generatorId);
+  const dPrep = (pfam?.difficulty ?? 2) as Difficulty;
+  const dOf = (h: AttemptForPrep) => Number(h.exerciseId.split(':')[1]) || h.difficulty;
+  // Solo cuentan problemas de la dificultad de práctica o superior: acertar los básicos no demuestra el nivel.
+  const solvedKeys = new Set(indep.filter((h) => h.score >= 0.8 && demonstrated(h) && dOf(h) >= dPrep).map((h) => problemKeyOfId(h.exerciseId)));
   const distinctSolved = solvedKeys.size;
   const guessed = indep.filter((h) => h.score >= 0.8 && !demonstrated(h)).length;
   // Media ponderada de los últimos 4 intentos sin ayuda.
@@ -246,14 +250,15 @@ export function familyReadiness(generatorId: string, history: AttemptForPrep[], 
   const last = weighted.slice(-4);
   const wsum = last.reduce((a, x) => a + x.w, 0);
   const mean = wsum ? last.reduce((a, x) => a + x.s * x.w, 0) / wsum : 0;
-  const pf = PREP_BY_GEN.get(generatorId);
-  const d = (pf?.difficulty ?? 2) as Difficulty;
+  const pf = pfam;
+  const d = dPrep;
   // La variedad solo se mide (≈ 96 ejercicios generados) cuando decide entre «en progreso» y «sólida».
   const decides = indep.length >= 2 && openErrors === 0 && mean >= 0.85 && distinctSolved >= 1;
   const variety = decides ? familyVariety(generatorId, d) : 0;
   const need = !decides ? 2 : variety >= 6 ? 2 : Math.max(1, Math.min(3, variety));
-  const hardSolved = !!pf?.hard && indep.some((h) => h.score >= 0.8 && demonstrated(h) && Number(h.exerciseId.split(':')[1]) === pf.hard);
-  const allSeen = decides && variety > 0 && variety < 6 && new Set(own.map((h) => problemKeyOfId(h.exerciseId))).size >= variety;
+  const hardSolved = !!pf?.hard && indep.some((h) => h.score >= 0.8 && demonstrated(h) && dOf(h) === pf.hard);
+  // «Todas vistas» se compara con la variedad de la MISMA dificultad (la variedad se mide a esa dificultad).
+  const allSeen = decides && variety > 0 && variety < 6 && new Set(own.filter((h) => dOf(h) === d).map((h) => problemKeyOfId(h.exerciseId))).size >= variety;
   const base = { attempts: own.length, independent: indep.length, distinctSolved, openErrors, lastAt: own.at(-1)?.at, variety };
   const pl = (n: number, s: string, p = `${s}s`) => `${n} ${n === 1 ? s : p}`;
   if (!own.length) return { ...base, level: 'sin-evidencia', text: openErrors ? `Tienes ${pl(openErrors, 'error')} sin resolver en el cuaderno.` : 'Aún no has resuelto ningún ejercicio de esta familia.' };
