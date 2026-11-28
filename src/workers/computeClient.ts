@@ -18,6 +18,12 @@ export function createComputeClient<Req extends object, Res>(opts: {
   bytes: (res: Res) => number;
   transfer: (res: Res) => Transferable[];
   maxBytes: number;
+  /**
+   * ATOM 6.0 · Grupo de una petición: dos peticiones del mismo grupo son versiones de lo MISMO (p. ej., la
+   * vista previa 32³ y la versión refinada del mismo orbital). La refinada no aborta la vista previa en
+   * curso: espera a que termine (antes, en un dispositivo lento, la vista previa se perdía siempre).
+   */
+  group?: (req: Req) => string;
 }): ComputeClient<Req, Res> {
   const cache = new Map<string, Res>();
   let cacheBytes = 0;
@@ -26,7 +32,8 @@ export function createComputeClient<Req extends object, Res>(opts: {
   let nextId = 1;
   let busy = false;
   let pending: { req: Req; resolve: (r: Res | null) => void; reject: (e: unknown) => void } | null = null;
-  const inflight = new Map<number, { key: string; resolve: (r: Res | null) => void; reject: (e: unknown) => void }>();
+  const inflight = new Map<number, { key: string; group: string; resolve: (r: Res | null) => void; reject: (e: unknown) => void }>();
+  const groupOf = (req: Req) => (opts.group ? opts.group(req) : opts.key(req));
   let cancelled = 0;
   /**
    * Cancelación real (ATOM 4.0): si llega una petición distinta mientras el Worker calcula otra, la del
@@ -45,8 +52,12 @@ export function createComputeClient<Req extends object, Res>(opts: {
 
   const remember = (key: string, r: Res) => {
     if (cache.has(key)) return;
+    const size = opts.bytes(r);
+    // ATOM 6.0: una entrada mayor que todo el presupuesto no se guarda (antes se quedaba sola en la caché,
+    // por encima del límite, hasta la siguiente).
+    if (size > opts.maxBytes) return;
     cache.set(key, r);
-    cacheBytes += opts.bytes(r);
+    cacheBytes += size;
     while (cacheBytes > opts.maxBytes && cache.size > 1) {
       const oldest = cache.keys().next().value!;
       cacheBytes -= opts.bytes(cache.get(oldest)!);
@@ -77,6 +88,13 @@ export function createComputeClient<Req extends object, Res>(opts: {
               job.resolve(e.data.res);
             } else job.reject(new Error(e.data.error));
           }
+          pump();
+        };
+        // ATOM 6.0: un mensaje que no se puede deserializar no debe dejar el cliente «ocupado» para siempre.
+        worker.onmessageerror = () => {
+          busy = false;
+          for (const j of inflight.values()) j.reject(new Error('Mensaje del Worker ilegible'));
+          inflight.clear();
           pump();
         };
         worker.onerror = () => {
@@ -118,8 +136,23 @@ export function createComputeClient<Req extends object, Res>(opts: {
     }
     const id = nextId++;
     busy = true;
-    inflight.set(id, { key, resolve: job.resolve, reject: job.reject });
-    w.postMessage({ id, ...job.req });
+    inflight.set(id, { key, group: groupOf(job.req), resolve: job.resolve, reject: job.reject });
+    try {
+      w.postMessage({ id, ...job.req });
+    } catch {
+      // ATOM 6.0: si postMessage falla (p. ej., DataCloneError), antes el cliente quedaba con busy = true y
+      // ninguna petición posterior se atendía. Ahora se libera y se calcula en el hilo principal.
+      inflight.delete(id);
+      busy = false;
+      try {
+        const r = opts.compute(job.req);
+        remember(key, r);
+        job.resolve(r);
+      } catch (e) {
+        job.reject(e);
+      }
+      pump();
+    }
   };
   return {
     cached,
@@ -130,7 +163,8 @@ export function createComputeClient<Req extends object, Res>(opts: {
         if (pending) pending.resolve(null);
         pending = { req, resolve, reject };
         const k = opts.key(req);
-        if (busy && ![...inflight.values()].some((j) => j.key === k)) abortInflight();
+        const g = groupOf(req);
+        if (busy && ![...inflight.values()].some((j) => j.key === k || j.group === g)) abortInflight();
         pump();
       });
     },
