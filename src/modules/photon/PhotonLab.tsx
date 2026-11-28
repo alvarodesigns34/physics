@@ -581,7 +581,8 @@ function SceneLabels({ tab }: { tab: PhotonTab }) {
             <span className="scene-axis-tick">{v === 0 ? '0' : fmt(v, 3)}</span>
           </AnchoredLabel>
         ))}
-        {seriesGroups.map((g) => (
+        {/* Hasta Brackett: más arriba los niveles convergen y las etiquetas se pisarían (Humphreys, fuera del temario). */}
+        {seriesGroups.filter((g) => g.n1 <= 4).map((g) => (
           <AnchoredLabel key={g.n1} id={`series-${g.n1}`}>
             <span className="scene-label scene-label--series">{g.name}</span>
           </AnchoredLabel>

@@ -19,7 +19,7 @@ const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=sw
 const errors = [];
 const ONLY = process.env.SHOTS ? process.env.SHOTS.split(',') : null;
 const STEPS = [
-  ['hidrogeno-cascada', '#/fotones?tab=hidrogeno', async (p) => { await p.selectOption('#casc', '5'); await p.click('button:has-text("Lanzar")'); await p.waitForTimeout(4200); await p.click('.preset:has-text("Hβ")'); await p.waitForTimeout(2400); }],
+  ['hidrogeno-cascada', '#/fotones?tab=hidrogeno', async (p) => { await p.selectOption('#casc', '7'); await p.click('button:has-text("Lanzar")'); await p.waitForTimeout(6500); await p.click('.preset:has-text("Hβ")'); await p.waitForTimeout(2400); }],
   ['ondas-comparar', '#/fotones?tab=ondas', async (p) => { await p.click('.preset:has-text("UV-C")'); await p.click('button:has-text("Fijar esta para comparar")'); await p.click('.preset:has-text("Hα")'); await p.waitForTimeout(1500); }],
   ['forja-caso', '#/forja', async (p) => { await p.click('.preset:has-text("²⁷Al³⁺")'); await p.waitForTimeout(3000); }],
   ['tubo-caso', '#/historia?tab=tubo', async (p) => { const b = p.locator('.preset').nth(2); if (await b.count()) await b.click(); await p.waitForTimeout(3000); }],
