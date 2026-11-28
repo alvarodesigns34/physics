@@ -188,6 +188,7 @@ try {
   await page.waitForSelector('.exam-grade', { timeout: T });
   const rep = await page.locator('.exam-report').innerText();
   check(/sin responder/.test(rep) && /\/ 10/.test(rep), 'Simulacro: informe con nota, apartados y preguntas sin responder');
+  check(rep.includes('Ruta de repaso') && /Pregunta 1 ·/.test(rep) && (await page.locator('.exam-report a:text-is("Ejemplo guiado")').count()) >= 1, 'Simulacro: ruta de repaso por familias con ejemplo guiado');
 
   // Laboratorios de las fases 2–4
   await page.goto(base + '#/periodico');

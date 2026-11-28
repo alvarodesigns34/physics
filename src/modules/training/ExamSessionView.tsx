@@ -7,6 +7,7 @@ import { explainIssue, procedureCheckpoints } from '../../learning/procedure';
 import { structuredResolution } from '../../learning/autoResolution';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { PREP_BY_GEN } from '../../learning/examPrep';
 import { gradeSession, isValidSession, questionState, exerciseFromId, type ExamReport, type ExamSession, type PartValue } from '../../learning/examSession';
 import { buildEvidence } from '../../learning/evidence';
 import { SKILLS, ERROR_LABEL } from '../../learning/evidence';
@@ -237,6 +238,21 @@ const displayValue = (v: PartValue | undefined, ex: Exercise, partId: string) =>
   return v || '—';
 };
 
+type ErrorCategory = 'concepto' | 'algebra' | 'unidades' | 'procedimiento';
+const ERROR_CATEGORY: Partial<Record<string, ErrorCategory>> = {
+  concepto: 'concepto', 'idea-erronea': 'concepto', regla: 'concepto',
+  inverso: 'algebra', signo: 'algebra', calculo: 'algebra', redondeo: 'algebra',
+  'unidad-falta': 'unidades', 'unidad-incompatible': 'unidades', 'orden-de-magnitud': 'unidades',
+  cifras: 'procedimiento', formato: 'procedimiento',
+};
+const CATEGORY_LABEL: Record<ErrorCategory, string> = { concepto: 'conceptuales', algebra: 'algebraicos o de cálculo', unidades: 'de unidades y conversiones', procedimiento: 'de presentación (cifras, formato)' };
+const CATEGORY_ADVICE: Record<ErrorCategory, string> = {
+  concepto: 'Predominan los conceptuales: antes de más problemas, relee la teoría de esas preguntas y resuelve un ejemplo guiado.',
+  algebra: 'Predominan los de despeje y cálculo: escribe el procedimiento completo y comprueba el orden de magnitud del resultado.',
+  unidades: 'Predominan los de unidades: convierte todo al SI antes de sustituir y arrastra las unidades en cada línea.',
+  procedimiento: 'Predominan los de presentación: revisa cifras significativas y el formato de la respuesta.',
+};
+
 export function ExamReportView({ report, session, onNew }: { report: ExamReport; session: ExamSession; onNew: () => void }) {
   const skillAgg = new Map<SkillId, { sum: number; n: number }>();
   const errorCount = new Map<string, number>();
@@ -253,6 +269,18 @@ export function ExamReportView({ report, session, onNew }: { report: ExamReport;
   const nodes = Object.entries(report.byNode).sort((a, b) => a[0].localeCompare(b[0], 'es', { numeric: true }));
   const weak = nodes.filter(([, v]) => v.total > 0 && v.ok / v.total < 0.6).map(([n]) => n);
   const unansweredNodes = nodes.filter(([, v]) => v.unanswered > 0 && v.total === 0).map(([n]) => n);
+  // ATOM 6.0 · Ruta de repaso por FAMILIAS (lo que de verdad se practica): preguntas ordenadas por puntos
+  // perdidos, con su ejemplo guiado y otro enunciado equivalente sin ayuda.
+  const review = report.questions
+    .map((q, i) => ({ q, i, lost: q.points - q.earned, prep: PREP_BY_GEN.get(q.exercise.generatorId) }))
+    .filter((x) => x.lost > 0.05 && x.q.state !== 'sin-responder')
+    .sort((a, b) => b.lost - a.lost)
+    .slice(0, 5);
+  const cats = new Map<ErrorCategory, number>();
+  for (const [k, n] of errorCount) {
+    const c = ERROR_CATEGORY[k as keyof typeof ERROR_CATEGORY];
+    if (c) cats.set(c, (cats.get(c) ?? 0) + n);
+  }
   return (
     <div className="stack-24 enter exam-report">
       <header className="exam-report__head">
@@ -326,6 +354,49 @@ export function ExamReportView({ report, session, onNew }: { report: ExamReport;
           )}
         </div>
       </section>
+
+      {(review.length > 0 || cats.size > 0) && (
+        <section className="panel-card stack-12" aria-labelledby="exam-review-route">
+          <span className="h3" id="exam-review-route">
+            Ruta de repaso
+          </span>
+          {cats.size > 0 && (
+            <p className="small" style={{ margin: 0 }}>
+              Tus errores, por tipo:{' '}
+              {[...cats.entries()]
+                .sort((a, b) => b[1] - a[1])
+                .map(([c, n]) => `${CATEGORY_LABEL[c]} ×${n}`)
+                .join(' · ')}
+              . {CATEGORY_ADVICE[[...cats.entries()].sort((a, b) => b[1] - a[1])[0]![0]]}
+            </p>
+          )}
+          <ol className="study-list">
+            {review.map(({ q, i, lost, prep }) => (
+              <li key={q.exercise.id + i}>
+                <span className="small">
+                  <b>
+                    Pregunta {i + 1} · {prep?.title ?? q.exercise.title}
+                  </b>{' '}
+                  — {lost.toLocaleString('es-ES', { maximumFractionDigits: 2 })} puntos perdidos.{prep ? ` ${prep.pitfalls[0]}` : ''}
+                </span>
+                <span className="row row--wrap" style={{ gap: 6 }}>
+                  <a className="btn btn--primary btn--sm" href={`#/entrenamiento?gen=${q.exercise.generatorId}&d=${q.exercise.difficulty}&modo=guiado`}>
+                    Ejemplo guiado
+                  </a>
+                  <a className="btn btn--sm" href={`#/entrenamiento?gen=${q.exercise.generatorId}&d=${q.exercise.difficulty}&modo=autonomo`}>
+                    Otro sin ayuda
+                  </a>
+                  {prep && (
+                    <a className="btn btn--ghost btn--sm" href={`#/preparar?b=${prep.block}`}>
+                      Bloque {prep.block}
+                    </a>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       <section className="panel-card stack-12">
         <span className="h3">Qué hacer ahora</span>
