@@ -7,7 +7,7 @@ import { OrbitControls } from '@react-three/drei';
 import { LabelProjector, type Anchor } from '../../render/labels';
 import * as THREE from 'three';
 import { Stage } from '../../render/Stage';
-import { useReducedMotion } from '../../app/hooks';
+import { useMediaQuery, useReducedMotion } from '../../app/hooks';
 import { levelEnergyEV, type Transition } from '../../science/hydrogen';
 import { wavelengthToLinearRGB, isVisible } from '../../science/photon';
 import { VISIBLE_SPECTRA } from '../../science/data/spectralLines';
@@ -416,6 +416,7 @@ function HydrogenLadder() {
   const from = usePhoton((s) => s.from);
   const detected = usePhoton((s) => s.detected);
   const anchors = useMemo(() => hydrogenAnchors(arrowLayout(detected).groups), [detected]);
+  const portrait = useMediaQuery('(orientation: portrait) and (min-width: 761px)');
   const onPick = (n: number) => {
     // Primer toque: origen; segundo: destino.
     if (n === from) return;
@@ -423,7 +424,9 @@ function HydrogenLadder() {
     else setFrom(n);
   };
   return (
-    <Stage mood="fotones" camera={[0.4, 0.9, 8.6]} fov={40} key="diagrama">
+    // ATOM 6.0 · En vertical (iPad) el detector y las etiquetas ocupan la parte baja del visor: el diagrama se
+    // aleja y sube para quedar entero en la zona libre (antes, n = 1 y las flechas de Lyman quedaban tapadas).
+    <Stage mood="fotones" camera={portrait ? [0.4, -0.5, 11.6] : [0.4, 0.9, 8.6]} fov={40} key={portrait ? 'diagrama-v' : 'diagrama'}>
       <ambientLight intensity={0.3} />
       {LEVELS.map((n) => (
         <Level key={n} n={n} active={n === level} onPick={onPick} />
@@ -443,7 +446,7 @@ function HydrogenLadder() {
       {flights.map((f) => (
         <Photon key={f.stamp} t={f.t} delay={f.delay} createdAt={f.createdAt} />
       ))}
-      <OrbitControls target={[0.2, -0.1, 0]} enablePan={false} enableDamping minDistance={5} maxDistance={13} minAzimuthAngle={-0.7} maxAzimuthAngle={0.7} minPolarAngle={1.1} maxPolarAngle={2.0} />
+      <OrbitControls target={portrait ? [0.2, -1.55, 0] : [0.2, -0.1, 0]} enablePan={false} enableDamping minDistance={5} maxDistance={14} minAzimuthAngle={-0.7} maxAzimuthAngle={0.7} minPolarAngle={1.1} maxPolarAngle={2.0} />
     </Stage>
   );
 }
