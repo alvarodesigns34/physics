@@ -1,0 +1,428 @@
+{
+  "date": "2026-11-28T04:05:20.666Z",
+  "renderer": "SwiftShader (software), 1440x900, calidad media",
+  "method": "tools/memlong.mjs: ciclos con interacciones reales en los 11 laboratorios, preparación, entrenamiento y guía; gc() antes de cada lectura; instantáneas del montón en el ciclo 2 y en el último",
+  "cycles": 12,
+  "stability": [
+    {
+      "ciclo": 1,
+      "segundos": 382,
+      "heapMB": 36,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 17,
+        "calls": 34,
+        "triangles": 18713
+      },
+      "canvases": 1,
+      "domNodes": 451,
+      "canvasOwners": [
+        "stage"
+      ]
+    },
+    {
+      "ciclo": 2,
+      "segundos": 358,
+      "heapMB": 40.67,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 17,
+        "calls": 34,
+        "triangles": 18713
+      },
+      "canvases": 1,
+      "domNodes": 451,
+      "canvasOwners": [
+        "stage"
+      ]
+    },
+    {
+      "ciclo": 3,
+      "segundos": 371,
+      "heapMB": 42.4,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 17,
+        "calls": 34,
+        "triangles": 18713
+      },
+      "canvases": 1,
+      "domNodes": 451,
+      "canvasOwners": [
+        "stage"
+      ]
+    },
+    {
+      "ciclo": 4,
+      "segundos": 396,
+      "heapMB": 43.14,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 17,
+        "calls": 34,
+        "triangles": 18713
+      },
+      "canvases": 1,
+      "domNodes": 451,
+      "canvasOwners": [
+        "stage"
+      ]
+    },
+    {
+      "ciclo": 5,
+      "segundos": 404,
+      "heapMB": 43.02,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 17,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 451,
+      "canvasOwners": [
+        "stage"
+      ]
+    },
+    {
+      "ciclo": 6,
+      "segundos": 339,
+      "heapMB": 43.43,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 17,
+        "calls": 34,
+        "triangles": 18713
+      },
+      "canvases": 1,
+      "domNodes": 451,
+      "canvasOwners": [
+        "stage"
+      ]
+    },
+    {
+      "ciclo": 7,
+      "segundos": 334,
+      "heapMB": 43.51,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 17,
+        "calls": 34,
+        "triangles": 18713
+      },
+      "canvases": 1,
+      "domNodes": 451,
+      "canvasOwners": [
+        "stage"
+      ]
+    },
+    {
+      "ciclo": 8,
+      "segundos": 348,
+      "heapMB": 44.09,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 17,
+        "calls": 34,
+        "triangles": 18713
+      },
+      "canvases": 1,
+      "domNodes": 451,
+      "canvasOwners": [
+        "stage"
+      ]
+    },
+    {
+      "ciclo": 9,
+      "segundos": 324,
+      "heapMB": 44.72,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 17,
+        "calls": 34,
+        "triangles": 18713
+      },
+      "canvases": 1,
+      "domNodes": 451,
+      "canvasOwners": [
+        "stage"
+      ]
+    },
+    {
+      "ciclo": 10,
+      "segundos": 325,
+      "heapMB": 45.24,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 17,
+        "calls": 34,
+        "triangles": 18713
+      },
+      "canvases": 1,
+      "domNodes": 451,
+      "canvasOwners": [
+        "stage"
+      ]
+    },
+    {
+      "ciclo": 11,
+      "segundos": 328,
+      "heapMB": 45.6,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 17,
+        "calls": 34,
+        "triangles": 18713
+      },
+      "canvases": 1,
+      "domNodes": 451,
+      "canvasOwners": [
+        "stage"
+      ]
+    },
+    {
+      "ciclo": 12,
+      "segundos": 340,
+      "heapMB": 45.62,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 17,
+        "calls": 34,
+        "triangles": 18713
+      },
+      "canvases": 1,
+      "domNodes": 451,
+      "canvasOwners": [
+        "stage"
+      ]
+    }
+  ],
+  "heapDiff": [
+    {
+      "name": "(code)",
+      "dCount": 9949,
+      "dSizeKB": 2272.1
+    },
+    {
+      "name": "system / JSArrayBufferData",
+      "dCount": 8,
+      "dSizeKB": 1423.1
+    },
+    {
+      "name": "(array)",
+      "dCount": 2168,
+      "dSizeKB": 245.5
+    },
+    {
+      "name": "system / WeakArrayList",
+      "dCount": 927,
+      "dSizeKB": 143.8
+    },
+    {
+      "name": "(closure)",
+      "dCount": 4020,
+      "dSizeKB": 125.4
+    },
+    {
+      "name": "Object",
+      "dCount": 2083,
+      "dSizeKB": 52.5
+    },
+    {
+      "name": "WebGLUniformLocation",
+      "dCount": 710,
+      "dSizeKB": 38.8
+    },
+    {
+      "name": "blink::ScriptTimingInfo",
+      "dCount": 241,
+      "dSizeKB": 32
+    },
+    {
+      "name": "Array",
+      "dCount": 2026,
+      "dSizeKB": 31.7
+    },
+    {
+      "name": "PerformanceScriptTiming",
+      "dCount": 241,
+      "dSizeKB": 28.2
+    },
+    {
+      "name": "PerformanceLongAnimationFrameTiming",
+      "dCount": 137,
+      "dSizeKB": 23.5
+    },
+    {
+      "name": "Fm",
+      "dCount": 710,
+      "dSizeKB": 22.2
+    },
+    {
+      "name": "blink::HeapVectorBacking<blink::WebGLRenderingContextBase::TextureUnitState>",
+      "dCount": 10,
+      "dSizeKB": 17.6
+    },
+    {
+      "name": "WebGLShader",
+      "dCount": 220,
+      "dSizeKB": 17.2
+    },
+    {
+      "name": "WebGL2RenderingContext",
+      "dCount": 10,
+      "dSizeKB": 16.4
+    },
+    {
+      "name": "blink::HeapHashTableBacking<blink::HashTable<blink::FontCacheKey, blink::KeyValuePair<blink::FontCacheKey, cppgc::internal::BasicMember<const blink::SimpleFontData, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::KeyValuePairExtractor, blink::HashMapValueTraits<blink::HashTraits<FontCacheKey>, blink::HashTraits<cppgc::internal::BasicMember<const blink::SimpleFontData, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>>, blink::HashTraits<FontCacheKey>, blink::HeapAllocator>>",
+      "dCount": 0,
+      "dSizeKB": 14
+    },
+    {
+      "name": "blink::HeapHashTableBacking<blink::HashTable<blink::FontCacheKey, blink::KeyValuePair<blink::FontCacheKey, cppgc::internal::BasicMember<const blink::SegmentedFontData, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::KeyValuePairExtractor, blink::HashMapValueTraits<blink::HashTraits<FontCacheKey>, blink::HashTraits<cppgc::internal::BasicMember<const blink::SegmentedFontData, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>>, blink::HashTraits<FontCacheKey>, blink::HeapAllocator>>",
+      "dCount": 0,
+      "dSizeKB": 14
+    },
+    {
+      "name": "LargestContentfulPaint",
+      "dCount": 90,
+      "dSizeKB": 12
+    },
+    {
+      "name": "system / ArrayList",
+      "dCount": 0,
+      "dSizeKB": 11.4
+    },
+    {
+      "name": "WebGLProgram",
+      "dCount": 110,
+      "dSizeKB": 10.3
+    },
+    {
+      "name": "ExtensionTracker",
+      "dCount": 400,
+      "dSizeKB": 9.4
+    },
+    {
+      "name": "InteractionContentfulPaint",
+      "dCount": 90,
+      "dSizeKB": 9.1
+    },
+    {
+      "name": "blink::HeapHashTableBacking<blink::HashTable<cppgc::internal::BasicMember<blink::MediaQueryList, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>, blink::KeyValuePair<cppgc::internal::BasicMember<blink::MediaQueryList, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>, unsigned int>, blink::KeyValuePairExtractor, blink::HashMapValueTraits<blink::HashTraits<cppgc::internal::BasicMember<blink::MediaQueryList, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::HashTraits<unsigned int>>, blink::HashTraits<cppgc::internal::BasicMember<blink::MediaQueryList, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::HeapAllocator>>",
+      "dCount": 0,
+      "dSizeKB": 8
+    },
+    {
+      "name": "blink::HeapHashTableBacking<blink::HashTable<cppgc::internal::BasicMember<blink::Node, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>, blink::KeyValuePair<cppgc::internal::BasicMember<blink::Node, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>, cppgc::internal::BasicMember<blink::SoftNavigationPaintAttributionTracker::NodeState, cppgc::internal::StrongMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::KeyValuePairExtractor, blink::HashMapValueTraits<blink::HashTraits<cppgc::internal::BasicMember<blink::Node, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::HashTraits<cppgc::internal::BasicMember<blink::SoftNavigationPaintAttributionTracker::NodeState, cppgc::internal::StrongMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>>, blink::HashTraits<cppgc::internal::BasicMember<blink::Node, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::HeapAllocator>>",
+      "dCount": 0,
+      "dSizeKB": 8
+    },
+    {
+      "name": "blink::HeapHashTableBacking<blink::HashTable<cppgc::internal::BasicMember<blink::ContextLifecycleObserver, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>, blink::KeyValuePair<cppgc::internal::BasicMember<blink::ContextLifecycleObserver, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>, unsigned int>, blink::KeyValuePairExtractor, blink::HashMapValueTraits<blink::HashTraits<cppgc::internal::BasicMember<blink::ContextLifecycleObserver, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::HashTraits<unsigned int>>, blink::HashTraits<cppgc::internal::BasicMember<blink::ContextLifecycleObserver, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::HeapAllocator>>",
+      "dCount": 0,
+      "dSizeKB": 8
+    },
+    {
+      "name": "blink::HeapHashTableBacking<blink::HashTable<unsigned long, blink::KeyValuePair<unsigned long, cppgc::internal::BasicMember<blink::SoftNavigationContext, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::KeyValuePairExtractor, blink::HashMapValueTraits<blink::HashTraits<unsigned long>, blink::HashTraits<cppgc::internal::BasicMember<blink::SoftNavigationContext, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>>, blink::HashTraits<unsigned long>, blink::HeapAllocator>>",
+      "dCount": 0,
+      "dSizeKB": 8
+    },
+    {
+      "name": "blink::ElementAnimations",
+      "dCount": 10,
+      "dSizeKB": 6.9
+    },
+    {
+      "name": "system / Context / scope @110599",
+      "dCount": 100,
+      "dSizeKB": 6.3
+    },
+    {
+      "name": "system / ProtectedFixedArray",
+      "dCount": 390,
+      "dSizeKB": 6.2
+    },
+    {
+      "name": "q",
+      "dCount": 260,
+      "dSizeKB": 6.1
+    },
+    {
+      "name": "<canvas data-engine=\"three.js r187\" width=\"888\" height=\"808\" style=\"display: block; width: 888px; height: 808px; touch-action: auto;\">",
+      "dCount": 10,
+      "dSizeKB": 6.1
+    },
+    {
+      "name": "yh",
+      "dCount": 100,
+      "dSizeKB": 5.9
+    },
+    {
+      "name": "e",
+      "dCount": 280,
+      "dSizeKB": 5.8
+    },
+    {
+      "name": "ul",
+      "dCount": 20,
+      "dSizeKB": 5.5
+    },
+    {
+      "name": "WebGLFramebuffer",
+      "dCount": 30,
+      "dSizeKB": 5.2
+    },
+    {
+      "name": "WebGLTexture",
+      "dCount": 70,
+      "dSizeKB": 4.9
+    },
+    {
+      "name": "blink::HeapVectorBacking<blink::CSSPropertyValue>",
+      "dCount": 10,
+      "dSizeKB": 4.8
+    },
+    {
+      "name": "blink::UniqueElementData",
+      "dCount": 40,
+      "dSizeKB": 4.4
+    },
+    {
+      "name": "system / Context / scope @242813",
+      "dCount": 10,
+      "dSizeKB": 4.1
+    },
+    {
+      "name": "NavigationHistoryEntry",
+      "dCount": 22,
+      "dSizeKB": 4.1
+    }
+  ],
+  "errors": [
+    "button:text-is(\"Neón\"): locator.click: Timeout 4000ms exceeded.",
+    "[role=radio]:text-is(\"1\"): locator.click: Timeout 4000ms exceeded.",
+    ".preset:has-text(\"¹⁶O²⁻\"): locator.click: Timeout 4000ms exceeded.",
+    ".preset:has-text(\"4 · E y B\"): locator.click: Timeout 4000ms exceeded.",
+    "button:text-is(\"Radio\"): locator.click: Timeout 4000ms exceeded.",
+    "button:text-is(\"χ\"): locator.click: Timeout 4000ms exceeded.",
+    "button:text-is(\"Sodio\"): locator.click: Timeout 4000ms exceeded.",
+    "button:text-is(\"Hg\"): locator.click: Timeout 4000ms exceeded.",
+    "[role=radio]:text-is(\"3\"): locator.click: Timeout 4000ms exceeded.",
+    "button:has-text(\"Subnivel completo\"): locator.click: Timeout 4000ms exceeded.",
+    "button:text-is(\"EI₁\"): locator.click: Timeout 4000ms exceeded.",
+    "button[aria-label^=\"Añadir\"]: locator.click: Timeout 4000ms exceeded."
+  ]
+}

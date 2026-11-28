@@ -346,7 +346,19 @@ const AXIS_ANCHORS = [
   { id: 'ax-z', position: [0, 4.15, 0] as [number, number, number] },
 ];
 
+/**
+ * ATOM 6.0 · Los materiales de superficie se comparten dentro de una visita, pero NO entre visitas: three.js
+ * registra en cada material un oyente de «dispose» que retiene su WebGLRenderer (y con él el contexto WebGL).
+ * Con el mapa a nivel de módulo nunca liberado, cada visita a Quantum Space dejaba un contexto retenido
+ * (medido con tools/ctxprobe.mjs: 4 visitas → 4 contextos). Al salir, se liberan y el mapa se vacía.
+ */
+export function releaseSurfaceMaterials() {
+  for (const mat of SURFACE_MATERIALS.values()) mat.dispose();
+  SURFACE_MATERIALS.clear();
+}
+
 export function QuantumScene() {
+  useEffect(() => releaseSurfaceMaterials, []);
   const { n, l, m, slice, bohr, subshell, view, fraction, compare } = useQuantum();
   const setInfo = useSurfaceInfo((st) => st.set);
   const q = useQuality();
