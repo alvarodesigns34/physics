@@ -106,6 +106,17 @@ try {
   await page.click('.prediction [role=radio]:text-is("Visible")');
   await page.click('.prediction button:has-text("comprobar")');
   check((await page.locator('aside').innerText()).includes('Predicción correcta'), 'Predicción: Hα en el visible, comprobada en la escena');
+  // ATOM 6.0 · Casos predefinidos: Paschen α reproduce 4 → 3 en el IR; un caso de los apuntes (AMP 7) NO
+  // muestra la solución: activa «Predecir antes de ver».
+  await page.uncheck('text=Predecir antes de ver');
+  await page.click('.preset:has-text("Paschen α")');
+  await page.waitForFunction(() => /1875|1 875/.test(document.querySelector('aside')?.textContent ?? ''), null, { timeout: T }).catch(() => {});
+  const pa = await page.locator('aside').innerText();
+  check(/1\s?875/.test(pa) && pa.includes('Paschen') && (await page.locator('.series-chart').count()) === 1, 'Photon Lab: caso Paschen α (4 → 3, 1875 nm) con la gráfica de su serie');
+  await page.click('.preset:has-text("Fotón 3 → 1")');
+  await page.waitForTimeout(300);
+  const amp = await page.locator('aside').innerText();
+  check(!amp.includes('102,57') && (await page.locator('.prediction').count()) === 1, 'Photon Lab: el caso AMP 7 no revela la solución (pide predecir)');
 
   await page.goto(base + '#/entrenamiento?v=fuentes');
   await page.waitForSelector('.source-card', { timeout: T });
@@ -232,6 +243,12 @@ try {
   await page.click('.challenge-card button:has-text("Regla de Hund")');
   check((await page.locator('.challenge-card').innerText()).includes('Correcto: incumple'), 'Desafío «Repara: nitrógeno»: regla de Hund identificada');
 
+  // ATOM 6.0 · Método de Thomson: el caso «E y B compensados» deja el haz recto y permite medir e/m.
+  await page.goto(base + '#/historia?tab=tubo');
+  await page.waitForSelector('.preset:has-text("4 · E y B")', { timeout: T });
+  await page.click('.preset:has-text("4 · E y B")');
+  await page.waitForTimeout(500);
+  check((await page.locator('.preset[aria-pressed="true"]').innerText()).includes('compensados') && (await page.locator('aside').innerText()).includes('Haz recto'), 'Time Machine: caso «E y B compensados»: haz recto y medida de q/m');
   await page.goto(base + '#/historia?tab=geiger');
   await page.waitForSelector('[role=radio]:has-text("Átomo nuclear")', { timeout: T });
   await page.click('[role=radio]:has-text("Átomo nuclear")');
