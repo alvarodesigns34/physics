@@ -173,5 +173,5 @@ try {
   await browser.close();
   server.kill();
 }
-writeFileSync(out, JSON.stringify({ date: new Date().toISOString(), renderer: 'SwiftShader (software), 1440x900, calidad media', method: 'tools/memlong.mjs: ciclos con interacciones reales en los 11 laboratorios, preparación, entrenamiento y guía; gc() antes de cada lectura; instantáneas del montón en el ciclo 2 y en el último', cycles: CYCLES, stability, heapDiff: diff, errors: [...new Set(errors)].slice(0, 50) }, null, 2));
+writeFileSync(out, JSON.stringify({ date: new Date().toISOString(), renderer: 'SwiftShader (software), 1440x900, calidad media', method: 'tools/memlong.mjs: ciclos con interacciones reales en los 11 laboratorios, preparación, entrenamiento y guía; gc() antes de cada lectura; instantáneas del montón en el ciclo 2 y en el último', cycles: CYCLES, stability, heapDiff: diff, interactionWarningsTotal: errors.length, errors: [...new Set(errors)].slice(0, 50) }, null, 2));
 if (errors.length) console.log(`Avisos (${new Set(errors).size} distintos):`, [...new Set(errors)].slice(0, 12).join(' | '));
