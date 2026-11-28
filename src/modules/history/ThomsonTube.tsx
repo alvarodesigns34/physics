@@ -417,11 +417,13 @@ function Bench() {
     <group position={[0.3, -1.66, 0]}>
       <mesh receiveShadow>
         <boxGeometry args={[9.6, 0.12, 3.2]} />
-        <meshStandardMaterial color="#120c08" roughness={0.62} metalness={0.1} envMapIntensity={0.25} />
+        {/* ATOM 6.0: superficie de laboratorio (fenólica) visible, no un plano casi negro */}
+        <meshStandardMaterial color="#2b241e" roughness={0.72} metalness={0.05} envMapIntensity={0.45} />
       </mesh>
       {/* Filete de latón solo en el perímetro del banco */}
       <mesh geometry={trim}>
-        <meshStandardMaterial color="#b38a4a" metalness={1} roughness={0.35} />
+        {/* ATOM 6.0: latón satinado y discreto (antes, metal pulido que el bloom convertía en una línea naranja) */}
+        <meshStandardMaterial color="#7d6440" metalness={0.85} roughness={0.55} envMapIntensity={0.5} />
       </mesh>
       {/* Cunas que sujetan el tubo: poste desde el banco y medio anillo bajo el vidrio */}
       <mesh geometry={cradles}>

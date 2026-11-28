@@ -133,3 +133,13 @@ export function upperLevelFromFrequency(n1: number, frequency: number, k: Consta
   const nearest = Math.round(exact);
   return { exact, nearest: nearest > n1 && Math.abs(exact - nearest) < 0.05 ? nearest : null };
 }
+
+/**
+ * ATOM 6.0 · Líneas de una serie (n₁ fijo) para la gráfica sincronizada del laboratorio: n₂ = n₁ + 1 … n₁ + k
+ * y el límite de la serie (n₂ → ∞). Longitudes de onda en el vacío, en nm, con R_H (masa reducida).
+ */
+export function seriesLines(n1: number, count = 10, k: ConstantSet = SIM_CONSTANTS): { lines: { n2: number; nm: number }[]; limitNm: number } {
+  assertLevel(n1);
+  const lines = Array.from({ length: count }, (_, i) => n1 + 1 + i).map((n2) => ({ n2, nm: transition(n2, n1, k).wavelength * 1e9 }));
+  return { lines, limitNm: seriesLimitWavelength(n1, k) * 1e9 };
+}

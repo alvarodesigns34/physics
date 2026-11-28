@@ -1,3 +1,4 @@
+import { LabPresets, type LabPreset } from '../../ui/LabPresets';
 import { CalmOrbitControls } from '../../render/CalmControls';
 import { AnchoredLabel, LabelLayer, LabelProjector } from '../../render/labels';
 import { DRIFT, PLATE_GAP, PLATE_LEN, ThomsonTubeScene, type TubeView } from './ThomsonTube';
@@ -752,6 +753,18 @@ function ModelsPanel() {
   );
 }
 
+/**
+ * ATOM 6.0 · El método de Thomson (1897) en cinco pasos: haz recto, desviación por E (carga negativa),
+ * desviación por B, E y B compensados (v = E/B) y, con más tensión de aceleración, menos desviación.
+ */
+const TUBE_PRESETS: (LabPreset & { plates: number; accel: number; B: number | 'equilibrio'; view: 'perspectiva' | 'lateral' | 'pantalla' })[] = [
+  { id: 'sin', label: '1 · Sin campos', detail: 'el haz va recto', plates: 0, accel: 2000, B: 0, view: 'perspectiva' },
+  { id: 'e', label: '2 · Solo E', detail: 'se curva hacia +', plates: 200, accel: 2000, B: 0, view: 'lateral' },
+  { id: 'b', label: '3 · Solo B', detail: 'se curva al revés', plates: 0, accel: 2000, B: 0.4, view: 'lateral' },
+  { id: 'eq', label: '4 · E y B compensados', detail: 'recto: v = E/B', plates: 200, accel: 2000, B: 'equilibrio', view: 'lateral' },
+  { id: 'v', label: '5 · Más aceleración', detail: 'más v, menos desvío', plates: 200, accel: 4000, B: 0, view: 'lateral' },
+];
+
 function TubePanel() {
   const st = useHistory();
   const res = cathodeBeam(setupFrom(st));
@@ -788,6 +801,19 @@ function TubePanel() {
           explanation="Los rayos catódicos son atraídos por la placa positiva: su carga es negativa. Ese fue el primer argumento de Thomson para decir que están hechos de partículas con carga, no de luz (la luz no se desvía en un campo eléctrico)."
           onRun={() => st.set({ plates: 250, B: 0, tubeView: 'lateral' })}
           runLabel="Aplicar 250 V y mirar de lado"
+        />
+      </section>
+      <section className="section">
+        <LabPresets
+          title="El experimento de Thomson, paso a paso"
+          presets={TUBE_PRESETS}
+          active={TUBE_PRESETS.find((p) => p.plates === st.plates && p.accel === st.accel && (p.B === 'equilibrio' ? st.B > 0 && Math.abs(st.B - cathodeBeam(setupFrom({ ...st })).balanceB * 1000) < 0.002 : p.B === st.B))?.id}
+          onPick={(id) => {
+            const p = TUBE_PRESETS.find((x) => x.id === id)!;
+            const base = { ...st, plates: p.plates, accel: p.accel, B: 0 };
+            const B = p.B === 'equilibrio' ? Number((cathodeBeam(setupFrom(base)).balanceB * 1000).toFixed(4)) : p.B;
+            st.set({ plates: p.plates, accel: p.accel, B, tubeView: p.view });
+          }}
         />
       </section>
       <section className="section">

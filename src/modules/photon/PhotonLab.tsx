@@ -3,7 +3,10 @@ import { useHydroView } from './PotentialWell';
 import { absorptionLines } from '../../science/data/spectralLines';
 import { Prediction } from '../../ui/Prediction';
 import { usePhoton, type PhotonTab } from './state';
-import { WaveScene, HydrogenScene } from './scenes';
+import { LabPresets, type LabPreset } from '../../ui/LabPresets';
+import { SeriesChart } from './SeriesChart';
+import { EnergyChart } from './EnergyChart';
+import { WaveScene, HydrogenScene, ENERGY_TICKS, arrowLayout } from './scenes';
 import { SpectroscopeScene, PRISM } from './Spectroscope';
 import { DetectorStrip, EMBand, VisibleSpectrum, VisibleAxis } from './Spectra';
 import { fromWavelength, colorName, wavelengthToCss, isVisible } from '../../science/photon';
@@ -73,10 +76,24 @@ export function PhotonScene() {
 const LOG_MIN = -14;
 const LOG_MAX = 4;
 
+/** Radiaciones de referencia (con su contexto). */
+const WAVE_PRESETS: (LabPreset & { nm: number })[] = [
+  { id: 'v500', label: '500 nm', detail: 'verde', nm: 500 },
+  { id: 'ha', label: 'Hα', detail: '656 nm · rojo', nm: 656.3 },
+  { id: 'na', label: 'Sodio D', detail: '589 nm', nm: 589 },
+  { id: 'uvc', label: 'UV-C', detail: '254 nm · lámpara de Hg', nm: 254 },
+  { id: 'x', label: 'Rayos X', detail: '0,1 nm', nm: 0.1 },
+  { id: 'g', label: 'Rayos γ', detail: '1 pm', nm: 1e-3 },
+  { id: 'ir', label: 'IR', detail: '10 µm · calor', nm: 1e4 },
+  { id: 'mw', label: 'Microondas', detail: '12,2 cm', nm: 1.22e8 },
+  { id: 'fm', label: 'Radio FM', detail: '3 m', nm: 3e9 },
+];
+
 function WavePanel() {
   const lambdaNm = usePhoton((s) => s.lambdaNm);
   const setLambda = usePhoton((s) => s.setLambda);
   const [text, setText] = useState('');
+  const [pinned, setPinned] = useState<number | null>(null);
   const lambda = lambdaNm * 1e-9;
   const p = fromWavelength(lambda, SIM_CONSTANTS);
   const sliderVal = Math.log10(lambda);
@@ -116,22 +133,12 @@ function WavePanel() {
             Fijar
           </button>
         </div>
-        <div className="row row--wrap" style={{ gap: 6 }}>
-          {[
-            ['γ', 1e-12],
-            ['X', 1e-10],
-            ['UV', 2e-7],
-            ['Na', 589e-9],
-            ['Hα', 656.3e-9],
-            ['IR', 1e-5],
-            ['μondas', 0.122],
-            ['FM', 3],
-          ].map(([l, v]) => (
-            <button key={l as string} type="button" className="btn btn--sm" onClick={() => setLambda((v as number) * 1e9)}>
-              {l}
-            </button>
-          ))}
-        </div>
+        <LabPresets
+          title="Radiaciones de referencia"
+          presets={WAVE_PRESETS}
+          active={WAVE_PRESETS.find((p) => Math.abs(p.nm / lambdaNm - 1) < 1e-6)?.id}
+          onPick={(id) => setLambda(WAVE_PRESETS.find((p) => p.id === id)!.nm)}
+        />
       </section>
       <section className="section" aria-live="polite">
         <div className="row row--between">
@@ -168,6 +175,22 @@ function WavePanel() {
             <dd>{fmt(p.energyEV, 4)} eV</dd>
           </div>
         </dl>
+        <div className="row row--between row--wrap" style={{ gap: 8 }}>
+          <span className="eyebrow">Comparar dos radiaciones</span>
+          {pinned === null ? (
+            <button type="button" className="btn btn--sm" onClick={() => setPinned(lambda)}>
+              Fijar esta para comparar
+            </button>
+          ) : (
+            <span className="row" style={{ gap: 6 }}>
+              <span className="small muted num">fijada: {fmt(pinned, 3)} m</span>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPinned(null)}>
+                Quitar
+              </button>
+            </span>
+          )}
+        </div>
+        <EnergyChart lambdaM={lambda} pinnedM={pinned} />
         <p className="small faint">h = 6,626 070 15·10⁻³⁴ J·s · c = 299 792 458 m/s (CODATA, exactas). Los ejercicios usan los datos de su enunciado.</p>
       </section>
     </>
@@ -192,6 +215,17 @@ function LevelPicker({ label, value, onChange, disabled }: { label: string; valu
     </div>
   );
 }
+
+/** Casos del temario y de los ejercicios de clase (el cálculo lo hace siempre el núcleo científico). */
+const HYDROGEN_PRESETS: (LabPreset & { mode: 'emision' | 'absorcion'; from: number; to: number })[] = [
+  { id: 'ha', label: 'Hα', detail: '3 → 2 · rojo', mode: 'emision', from: 3, to: 2 },
+  { id: 'hb', label: 'Hβ', detail: '4 → 2 · cian', mode: 'emision', from: 4, to: 2 },
+  { id: 'lya', label: 'Lyman α', detail: '2 → 1 · UV', source: 'AMP 8', mode: 'emision', from: 2, to: 1 },
+  { id: 'amp7', label: 'Fotón 3 → 1', detail: 'Lyman β', source: 'AMP 7', mode: 'emision', from: 3, to: 1 },
+  { id: 'teo1', label: 'Fotón 4 → 1', detail: 'Lyman γ', source: 'TEO ej. 1', mode: 'emision', from: 4, to: 1 },
+  { id: 'pa', label: 'Paschen α', detail: '4 → 3 · IR', mode: 'emision', from: 4, to: 3 },
+  { id: 'abs', label: 'Absorción 2 → 4', detail: 'misma λ que Hβ', mode: 'absorcion', from: 2, to: 4 },
+];
 
 function HydrogenPanel() {
   const { mode, from, to, setMode, setFrom, setTo, fire, runCascade, detected, clearDetector } = usePhoton();
@@ -232,6 +266,25 @@ function HydrogenPanel() {
             Absorción
           </button>
         </div>
+        <LabPresets
+          presets={HYDROGEN_PRESETS}
+          active={HYDROGEN_PRESETS.find((p) => p.mode === mode && p.from === from && p.to === to)?.id}
+          onPick={(id) => {
+            const p = HYDROGEN_PRESETS.find((x) => x.id === id)!;
+            const st = usePhoton.getState();
+            st.setMode(p.mode);
+            st.setFrom(p.from);
+            st.setTo(p.to);
+            // Un caso de los ejercicios de clase NO se resuelve solo: se activa «Predecir antes de ver».
+            if (p.source) {
+              setPredict(true);
+              announce(`${p.label} (${p.source}) preparado: predice la región y después compruébalo.`);
+              return;
+            }
+            const r = st.fire();
+            if (r) announce(`${p.label}: ${fmt(r.wavelength * 1e9, 4)} nanómetros, serie de ${r.series?.name ?? '—'}.`);
+          }}
+        />
         <LevelPicker label="Nivel inicial" value={from} onChange={(n) => { setFrom(n); if (mode === 'emision' && to >= n) setTo(Math.max(1, n - 1)); if (mode === 'absorcion' && to <= n) setTo(Math.min(7, n + 1)); }} disabled={(n) => (mode === 'emision' ? n === 1 : n === 7)} />
         <LevelPicker label="Nivel final" value={to} onChange={setTo} disabled={(n) => (mode === 'emision' ? n >= from : n <= from)} />
         <label className="row small" style={{ gap: 8 }}>
@@ -291,6 +344,7 @@ function HydrogenPanel() {
               ΔE = E<sub>{to}</sub> − E<sub>{from}</sub> = {fmt(t.deltaEJ / CODATA.e, 4)} eV ({t.type === 'emision' ? 'se emite' : 'se absorbe'})
             </span>
           </div>
+          <SeriesChart n1={t.n1} n2={t.n2} />
           <p className="small faint">
             R<sub>H</sub> = {fmt(R_H, 7)} m⁻¹ (con masa reducida). Límite de la serie: λ∞ = {fmt(seriesLimitWavelength(t.n1) * 1e9, 4)} nm.
           </p>
@@ -477,6 +531,8 @@ function SpectroPanel() {
 
 function SceneLabels({ tab }: { tab: PhotonTab }) {
   const level = usePhoton((s) => s.level);
+  const detectedLines = usePhoton((s) => s.detected);
+  const seriesGroups = useMemo(() => arrowLayout(detectedLines).groups, [detectedLines]);
   const hydroView = useHydroView((s) => s.view);
   const lambdaNm = usePhoton((s) => s.lambdaNm);
   if (tab === 'hidrogeno' && hydroView === 'pozo')
@@ -518,10 +574,18 @@ function SceneLabels({ tab }: { tab: PhotonTab }) {
           </span>
         </AnchoredLabel>
         <AnchoredLabel id="axis-energy">
-          <span className="eyebrow" style={{ display: 'block', writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 10 }}>
-            Energía · escala lineal
-          </span>
+          <span className="scene-label faint">E (eV) · escala lineal</span>
         </AnchoredLabel>
+        {ENERGY_TICKS.map((v) => (
+          <AnchoredLabel key={v} id={`etick-${v}`} align="right" className="desktop-only">
+            <span className="scene-axis-tick">{v === 0 ? '0' : fmt(v, 3)}</span>
+          </AnchoredLabel>
+        ))}
+        {seriesGroups.map((g) => (
+          <AnchoredLabel key={g.n1} id={`series-${g.n1}`}>
+            <span className="scene-label scene-label--series">{g.name}</span>
+          </AnchoredLabel>
+        ))}
         <AnchoredLabel id="electron">
           <span className="scene-label" style={{ color: 'var(--electron)' }}>e⁻</span>
         </AnchoredLabel>

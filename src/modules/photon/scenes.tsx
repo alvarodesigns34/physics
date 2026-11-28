@@ -222,13 +222,69 @@ const Y_TOP = 2.25;
 export const yOfEnergy = (eV: number) => Y_BOTTOM + ((eV + 13.6057) / 13.6057) * (Y_TOP - Y_BOTTOM);
 const MARKER_X = -1.6;
 
-export const HYDROGEN_ANCHORS: Anchor[] = [
-  ...[1, 2, 3, 4].map((n) => ({ id: `lvl-${n}`, position: [2.2, yOfEnergy(levelEnergyEV(n)), 0] as [number, number, number], offset: [8, 0] as [number, number] })),
-  { id: 'lvl-high', position: [2.2, yOfEnergy(levelEnergyEV(6)), 0], offset: [8, 0] },
-  { id: 'lvl-inf', position: [2.2, yOfEnergy(0), 0], offset: [8, 0] },
-  { id: 'axis-energy', position: [-2.6, 0, 0] },
-  { id: 'electron', object: electronLabelRefProxy() },
-];
+/** ATOM 6.0 · Eje de energía con marcas reales en eV (escala lineal), a la izquierda del diagrama. */
+const AXIS_X = -2.75;
+export const ENERGY_TICKS = [-13.6, -12, -10, -8, -6, -4, -2, 0];
+
+/**
+ * ATOM 6.0 · Flechas agrupadas por serie (como el diagrama de TEO p.10): cada serie ocupa su columna, con un
+ * hueco entre series, y se rotula bajo su nivel de llegada.
+ */
+export interface SeriesGroup {
+  n1: number;
+  name: string;
+  xs: number[];
+  labelX: number;
+}
+export function arrowLayout(lines: { t: Transition }[]): { x: Map<string, number>; groups: SeriesGroup[] } {
+  const sorted = [...lines].sort((a, b) => a.t.n1 - b.t.n1 || a.t.n2 - b.t.n2);
+  const x = new Map<string, number>();
+  const groups: SeriesGroup[] = [];
+  let cur = -1.05;
+  let last = -1;
+  for (const d of sorted) {
+    if (d.t.n1 !== last) {
+      if (last !== -1) cur += 0.22;
+      groups.push({ n1: d.t.n1, name: d.t.series?.name ?? `n = ${d.t.n1}`, xs: [], labelX: 0 });
+      last = d.t.n1;
+    }
+    x.set(`${d.t.from}-${d.t.to}`, cur);
+    groups[groups.length - 1]!.xs.push(cur);
+    cur += 0.13;
+  }
+  for (const g of groups) g.labelX = (g.xs[0]! + g.xs[g.xs.length - 1]!) / 2;
+  return { x, groups };
+}
+
+export function hydrogenAnchors(groups: SeriesGroup[]): Anchor[] {
+  return [
+    ...[1, 2, 3, 4].map((n) => ({ id: `lvl-${n}`, position: [2.2, yOfEnergy(levelEnergyEV(n)), 0] as [number, number, number], offset: [8, 0] as [number, number] })),
+    { id: 'lvl-high', position: [2.2, yOfEnergy(levelEnergyEV(6)), 0], offset: [8, 0] },
+    { id: 'lvl-inf', position: [2.2, yOfEnergy(0), 0], offset: [8, 0] },
+    ...ENERGY_TICKS.map((v) => ({ id: `etick-${v}`, position: [AXIS_X - 0.08, yOfEnergy(v), 0] as [number, number, number], offset: [-4, 0] as [number, number] })),
+    { id: 'axis-energy', position: [AXIS_X, Y_TOP + 0.32, 0] },
+    ...groups.map((g) => ({ id: `series-${g.n1}`, position: [g.labelX, yOfEnergy(levelEnergyEV(g.n1)) - 0.2, 0.2] as [number, number, number] })),
+    { id: 'electron', object: electronLabelRefProxy() },
+  ];
+}
+export const HYDROGEN_ANCHORS: Anchor[] = hydrogenAnchors([]);
+
+function EnergyAxis() {
+  return (
+    <group position-x={AXIS_X}>
+      <mesh position-y={(Y_BOTTOM + Y_TOP) / 2}>
+        <boxGeometry args={[0.012, Y_TOP - Y_BOTTOM + 0.2, 0.012]} />
+        <meshBasicMaterial color="#ece6dc" transparent opacity={0.45} />
+      </mesh>
+      {ENERGY_TICKS.map((v) => (
+        <mesh key={v} position={[-0.04, yOfEnergy(v), 0]}>
+          <boxGeometry args={[0.09, 0.01, 0.01]} />
+          <meshBasicMaterial color="#ece6dc" transparent opacity={0.6} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
 
 function electronLabelRefProxy(): React.RefObject<THREE.Object3D | null> {
   return { get current() { return electronLabelRef.current; } } as React.RefObject<THREE.Object3D | null>;
@@ -307,12 +363,13 @@ function Photon({ t, delay, createdAt }: { t: Transition; delay: number; created
 function TransitionArrows() {
   const detected = usePhoton((s) => s.detected);
   const sorted = [...detected].sort((a, b) => a.t.n1 - b.t.n1 || a.t.n2 - b.t.n2);
+  const layout = arrowLayout(detected);
   return (
     <group>
-      {sorted.map((d, i) => {
+      {sorted.map((d) => {
         const yA = yOfEnergy(levelEnergyEV(d.t.from));
         const yB = yOfEnergy(levelEnergyEV(d.t.to));
-        const x = -0.9 + i * 0.13;
+        const x = layout.x.get(`${d.t.from}-${d.t.to}`) ?? 0;
         const len = Math.abs(yA - yB);
         const col = lineColor(d.t.wavelength * 1e9, 2.2);
         const down = yB < yA;
@@ -384,6 +441,8 @@ function HydrogenLadder() {
   const setFrom = usePhoton((s) => s.setFrom);
   const setTo = usePhoton((s) => s.setTo);
   const from = usePhoton((s) => s.from);
+  const detected = usePhoton((s) => s.detected);
+  const anchors = useMemo(() => hydrogenAnchors(arrowLayout(detected).groups), [detected]);
   const onPick = (n: number) => {
     // Primer toque: origen; segundo: destino.
     if (n === from) return;
@@ -404,7 +463,8 @@ function HydrogenLadder() {
       </group>
       {/* Los niveles altos están a pocos píxeles (escala lineal): las etiquetas se separan HACIA ARRIBA, donde
           hay espacio, con una línea guía hasta su nivel. */}
-      <LabelProjector anchors={HYDROGEN_ANCHORS} avoidOverlap="up" />
+      <LabelProjector anchors={anchors} avoidOverlap="up" />
+      <EnergyAxis />
       <TransitionArrows />
       <Electron reduced={reduced} />
       {flights.map((f) => (

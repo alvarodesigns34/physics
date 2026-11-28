@@ -1,3 +1,4 @@
+import { LabPresets, type LabPreset } from '../../ui/LabPresets';
 import { CalmOrbitControls } from '../../render/CalmControls';
 import { Prediction } from '../../ui/Prediction';
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
@@ -301,6 +302,22 @@ function ElementPicker({ table, onPick }: { table: NuclideTable | null; onPick: 
   );
 }
 
+/**
+ * ATOM 6.0 · Especies típicas del temario (composición calculada aquí: N = A − Z, e⁻ = Z − carga). Sin
+ * referencias a ejercicios concretos: la ficha muestra Z, N y e⁻, que son la respuesta de esos ejercicios.
+ */
+const sp6 = (z: number, a: number, q = 0) => ({ z, n: a - z, e: z - q });
+const FORGE_PRESETS: (LabPreset & { z: number; n: number; e: number })[] = [
+  { id: 'h1', label: '¹H', detail: 'protio: N = 0', ...sp6(1, 1) },
+  { id: 'h2', label: '²H', detail: 'deuterio', ...sp6(1, 2) },
+  { id: 'c12', label: '¹²C', detail: 'isótopo estable', ...sp6(6, 12) },
+  { id: 'c14', label: '¹⁴C', detail: 'radiactivo', ...sp6(6, 14) },
+  { id: 'o2', label: '¹⁶O²⁻', detail: 'anión, 10 e⁻', ...sp6(8, 16, -2) },
+  { id: 'al3', label: '²⁷Al³⁺', detail: 'catión, 10 e⁻', ...sp6(13, 27, 3) },
+  { id: 'cl35', label: '³⁵Cl⁻', detail: 'cloruro', ...sp6(17, 35, -1) },
+  { id: 'fe3', label: '⁵⁶Fe³⁺', detail: '23 e⁻', ...sp6(26, 56, 3) },
+];
+
 export function ForgeOverlay() {
   const [sp, setSp] = useSpecies();
   const configOrder = useStore((s) => s.settings.configOrder);
@@ -430,6 +447,18 @@ export function ForgeOverlay() {
             )}
           </section>
 
+          <LabPresets
+            title="Casos típicos"
+            presets={FORGE_PRESETS}
+            active={FORGE_PRESETS.find((p) => p.z === sp.z && p.n === sp.n && p.e === sp.e)?.id}
+            onPick={(pid) => {
+              const p = FORGE_PRESETS.find((x) => x.id === pid)!;
+              setSp({ z: p.z, n: p.n, e: p.e });
+              sfx.transmute();
+              const nid = identify({ z: p.z, n: p.n, e: p.e });
+              announce(`${p.label}: ${p.z} protones, ${p.n} neutrones, ${p.e} electrones. ${KIND_LABEL[nid.kind]}.`);
+            }}
+          />
           <section className="section" aria-label="Partículas">
             <Dispenser kind="p" value={sp.z} onAdd={() => change('p', 1)} onRemove={() => change('p', -1)} onDragStart={onDragStart} />
             <Dispenser kind="n" value={sp.n} onAdd={() => change('n', 1)} onRemove={() => change('n', -1)} onDragStart={onDragStart} />
