@@ -332,6 +332,14 @@
   padding-top: 24px;
   border-top: 1px solid var(--hairline);
 }
+/* ATOM 6.0: los títulos de lección largos pueden partirse (antes nowrap desbordaba en pantallas estrechas). */
+.guide-pager .btn {
+  white-space: normal;
+  text-align: left;
+  max-width: 100%;
+  min-height: 44px;
+  padding-block: 8px;
+}
 
 @media (max-width: 900px) {
   .guide {

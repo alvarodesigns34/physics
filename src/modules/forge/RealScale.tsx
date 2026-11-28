@@ -84,7 +84,7 @@ export function RealScale({ z, a }: { z: number; a: number }) {
       ctx.arc(cx, cy, 9, 0, Math.PI * 2);
       ctx.stroke();
       ctx.fillStyle = 'rgba(232,119,92,0.95)';
-      ctx.font = '500 11px "Inter Tight Variable", system-ui, sans-serif';
+      ctx.font = '500 11px "Inter Atom", system-ui, sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(rn < 0.5 ? 'núcleo (menor que un píxel)' : 'núcleo', cx + 13, cy + 4);
     }

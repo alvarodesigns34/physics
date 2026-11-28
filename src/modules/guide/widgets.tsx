@@ -269,7 +269,7 @@ function dimension(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: nu
   const ang = Math.atan2(y2 - y1, x2 - x1);
   arrowHead(ctx, x2, y2, ang);
   arrowHead(ctx, x1, y1, ang + Math.PI);
-  ctx.font = '500 13px "Inter Tight Variable", system-ui, sans-serif';
+  ctx.font = '500 13px "Inter Atom", system-ui, sans-serif';
   ctx.textAlign = labelSide === 'right' ? 'left' : 'center';
   ctx.textBaseline = labelSide === 'below' ? 'top' : 'middle';
   const mx = (x1 + x2) / 2;
@@ -283,7 +283,7 @@ function drawWave(c: HTMLCanvasElement, t: number, s: { mode: WaveMode; lambda: 
   const mid = h / 2;
   const left = 16;
   const right = w - 16;
-  ctx.font = '500 12px "Inter Tight Variable", system-ui, sans-serif';
+  ctx.font = '500 12px "Inter Atom", system-ui, sans-serif';
   if (s.mode === 'cuerda') {
     const spanM = 8; // metros visibles
     const pxPerM = (right - left) / spanM;
@@ -494,7 +494,7 @@ function drawPlot(c: HTMLCanvasElement, t: number, s: { mode: WaveMode; lambda: 
   ctx.lineTo(left, h - 8);
   ctx.stroke();
   ctx.fillStyle = MUTED;
-  ctx.font = '500 11px "Inter Tight Variable", system-ui, sans-serif';
+  ctx.font = '500 11px "Inter Atom", system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillText(s.mode === 'cuerda' ? 'y(t) del punto rojo' : 'E(t) en un punto fijo', left + 6, 4);

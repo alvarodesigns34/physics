@@ -14,7 +14,7 @@ const COLS = 16;
 const ROWS = 8;
 const CELL = 128;
 
-export function buildAtlas(fontFamily = '"Inter Tight Variable", "Inter Tight", system-ui, sans-serif'): THREE.CanvasTexture {
+export function buildAtlas(fontFamily = '"Inter Atom", system-ui, sans-serif'): THREE.CanvasTexture {
   const c = document.createElement('canvas');
   c.width = COLS * CELL;
   c.height = ROWS * CELL;

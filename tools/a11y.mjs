@@ -13,10 +13,10 @@ const axeSource = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const PORT = 4186;
 // ATOM 5.0: cobertura ampliada (todos los laboratorios y pestañas, progreso, documentos, simulacro EN CURSO
 // e informe, ambos temas). Cada entrada: [ruta, tema, acción previa opcional].
-const BASE_VIEWS = ['#/', '#/guia?b=3', '#/guia?b=6', '#/entrenamiento', '#/entrenamiento?v=examen', '#/entrenamiento?gen=desarrollo', '#/entrenamiento?gen=pauli-hund', '#/entrenamiento?v=ruta&n=3.6', '#/entrenamiento?v=cuaderno', '#/entrenamiento?v=progreso', '#/entrenamiento?v=fuentes', '#/entrenamiento?v=repaso', '#/forja', '#/historia', '#/historia?tab=tubo', '#/historia?tab=geiger', '#/fotones', '#/fotones?tab=hidrogeno', '#/fotones?tab=espectroscopio', '#/masas', '#/cuantico', '#/cuantico?tab=incertidumbre', '#/arquitecto', '#/periodico', '#/periodico?tab=atomos', '#/periodico?tab=tendencias', '#/campana'];
+const BASE_VIEWS = ['#/', '#/guia?b=3', '#/guia?b=6', '#/entrenamiento', '#/entrenamiento?v=examen', '#/entrenamiento?gen=desarrollo', '#/entrenamiento?gen=pauli-hund', '#/entrenamiento?v=ruta&n=3.6', '#/entrenamiento?v=cuaderno', '#/entrenamiento?v=progreso', '#/entrenamiento?v=fuentes', '#/entrenamiento?v=repaso', '#/forja', '#/historia', '#/historia?tab=tubo', '#/historia?tab=geiger', '#/fotones', '#/fotones?tab=hidrogeno', '#/fotones?tab=espectroscopio', '#/masas', '#/cuantico', '#/cuantico?tab=incertidumbre', '#/arquitecto', '#/periodico', '#/periodico?tab=atomos', '#/periodico?tab=tendencias', '#/campana', '#/preparar?b=3', '#/preparar?b=7', '#/entrenamiento?gen=absorcion-fundamental&d=3&modo=guiado', '#/entrenamiento?gen=electrones-por-numeros&d=3&modo=autonomo'];
 const VIEWS = [
   ...BASE_VIEWS.map((v) => [v, 'claro']),
-  ...['#/', '#/guia?b=3', '#/entrenamiento', '#/entrenamiento?v=progreso', '#/fotones?tab=hidrogeno', '#/cuantico'].map((v) => [v, 'oscuro']),
+  ...['#/', '#/guia?b=3', '#/entrenamiento', '#/entrenamiento?v=progreso', '#/fotones?tab=hidrogeno', '#/cuantico', '#/preparar?b=5'].map((v) => [v, 'oscuro']),
   ['#/entrenamiento?v=examen', 'claro', 'simulacro'],
 ];
 

@@ -58,10 +58,10 @@
   --b7: #c2477f; /* periodicidad */
 
   /* ── Tipografía ──
-     Una sola familia sans (Inter Tight, variable, autoalojada) para títulos y texto; JetBrains Mono solo
-     para magnitudes, datos y código. Instrument Serif retirada (ATOM 2.0). */
-  --font-display: 'Inter Tight Variable', 'Inter Tight', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-ui: 'Inter Tight Variable', 'Inter Tight', system-ui, -apple-system, 'Segoe UI', sans-serif;
+     ATOM 6.0: una sola familia sans, Inter 4 con tamaño óptico (véase styles/fonts.css: por qué se
+     sustituyó Inter Tight), para títulos y texto; JetBrains Mono solo para magnitudes, datos y código. */
+  --font-display: 'Inter Atom', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-ui: 'Inter Atom', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   /* Escala (razón ≈ 1,25) */
   --fs-xs: 0.8125rem; /* 13 */
@@ -72,8 +72,10 @@
   --fs-2xl: 1.75rem; /* 28 */
   --fs-3xl: 2.25rem; /* 36 */
   --fs-4xl: 3rem; /* 48 */
-  --tracking-tight: -0.022em;
-  --tracking-display: -0.035em;
+  /* Con opsz, Inter ya estrecha el espaciado en tamaños grandes: el tracking negativo se reduce
+     (antes −0,035em sobre Inter Tight apelmazaba los titulares). */
+  --tracking-tight: -0.011em;
+  --tracking-display: -0.018em;
 
   /* ── Espaciado (base 4) ── */
   --s-1: 4px;

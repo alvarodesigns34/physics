@@ -555,7 +555,7 @@
   line-height: 1.5;
   color: var(--ink);
   font-weight: 450;
-  letter-spacing: -0.005em;
+  letter-spacing: var(--tracking-tight);
   max-width: 62ch;
 }
 .derivation {
@@ -633,7 +633,7 @@
 }
 .lab-row .lab-glyph { width: 44px; height: 44px; color: var(--lab); transition: transform var(--dur-base) var(--ease-out); }
 .lab-row__text { display: grid; gap: 2px; min-width: 0; }
-.lab-row__name { font-family: var(--font-display); font-weight: 600; font-size: 1.0625rem; letter-spacing: -0.01em; }
+.lab-row__name { font-family: var(--font-display); font-weight: 600; font-size: 1.0625rem; letter-spacing: var(--tracking-tight); }
 .lab-row__blurb { font-size: 0.875rem; color: var(--ink-muted); line-height: 1.45; }
 .lab-row__topics { font-family: var(--font-mono); font-size: 0.6875rem; color: var(--ink-faint); white-space: nowrap; }
 .lab-row__go { color: var(--ink-faint); opacity: 0; transform: translateX(-4px); transition: opacity var(--dur-fast) var(--ease-std), transform var(--dur-base) var(--ease-out); }

@@ -42,7 +42,9 @@ try {
   await page.waitForSelector('.lab-row', { timeout: T });
   check((await page.locator('.lab-row').count()) === 8, 'Inicio: siete laboratorios y la campaña a un clic');
   check((await page.locator('.signature svg rect[width="2.5"]').count()) === 5, 'Inicio: firma espectral con las 5 líneas de Balmer calculadas');
-  check((await page.locator('.rail__item').count()) === 10, 'Raíl lateral: inicio, guía, práctica y siete laboratorios');
+  check((await page.locator('.rail__item').count()) === 11, 'Raíl lateral: inicio, guía, examen, práctica y siete laboratorios');
+  // ATOM 6.0 · Preparar examen: accesible desde el inicio y con los siete bloques.
+  check((await page.locator('a.hcard--prep[href="#/preparar"]').count()) === 1, 'Inicio: acceso directo a «Preparar examen»');
   await page.keyboard.press('Control+k');
   await page.waitForSelector('.palette input', { timeout: T });
   await page.fill('.palette input', 'Rydberg');
@@ -249,6 +251,28 @@ try {
   await page.waitForSelector('text=Muestra desconocida X', { timeout: T });
   const massSide = await page.locator('aside').innerText();
   check(massSide.includes('X-') && massSide.includes('oculto'), 'Mass Spectrometry: muestra desconocida con nombre y tabla ocultos');
+
+  // ATOM 6.0 · Preparar examen: siete bloques, sesión, ficha de familia y secuencia guiado → sin ayuda.
+  await page.goto(base + '#/preparar?b=3');
+  await page.waitForSelector('.prep-card', { timeout: T });
+  check((await page.locator('.prep-blocks__btn').count()) === 7, 'Preparar examen: siete bloques');
+  check((await page.locator('.prep-step').count()) > 0, 'Preparar examen: sesión de hoy con pasos');
+  check((await page.locator('.prep-card h4:text-is("Absorción desde el estado fundamental")').count()) === 1, 'Preparar examen: espectros incluye la familia nueva de absorción');
+  await page.click('.prep-blocks__btn:has-text("Bohr")');
+  await page.waitForSelector('.prep-card h4:text-is("Energías y radios de Bohr")', { timeout: T });
+  check(page.url().includes('b=4'), 'Preparar examen: el bloque elegido queda en la dirección');
+  await page.click('.prep-card:has(h4:text-is("Energías y radios de Bohr")) a:text-is("Ejemplo guiado")');
+  await page.waitForSelector('.family-follow', { timeout: T });
+  check((await page.locator('.family-follow').innerText()).includes('ejemplo guiado'), 'Familia: el ejemplo guiado abre en modo guiado');
+  const firstId = await page.evaluate(() => document.querySelector('.card header p')?.textContent);
+  await page.click('.family-follow button:has-text("Otro equivalente sin ayuda")');
+  await page.waitForFunction(() => location.hash.includes('modo=autonomo') && location.hash.includes('&s='), null, { timeout: T });
+  await page.waitForTimeout(300);
+  const secondId = await page.evaluate(() => document.querySelector('.card header p')?.textContent);
+  check(page.url().includes('d=2') && firstId !== secondId, 'Familia: «otro equivalente» genera un enunciado nuevo, sin ayuda');
+  await page.goto(base + '#/');
+  await page.waitForSelector('.resume', { timeout: T });
+  check((await page.locator('.resume').getAttribute('href'))?.includes('/entrenamiento?gen=nivel-energia'), 'Inicio: «Retomar» lleva al último ejercicio exacto');
 
   const stored = await page.evaluate(() => localStorage.getItem('atom:v1'));
   check(!!stored && stored.includes('"I-1"'), 'Progreso persistido en localStorage');
