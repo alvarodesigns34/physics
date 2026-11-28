@@ -115,7 +115,7 @@ export const SOURCE_EXERCISES_2 = [
     q: 'Na⁺ y Ne tienen 10 electrones. ¿Por qué la energía de ionización del Na⁺ es mayor?',
     options: [O('ok', 'El Na⁺ tiene 11 protones frente a 10: atrae más a la misma nube electrónica'), O('carga', 'Porque el Na⁺ tiene menos electrones', 'Tienen los mismos (10); la diferencia está en el núcleo.'), O('capas', 'Porque el Ne tiene una capa más', 'Ambos son 1s² 2s² 2p⁶.')],
     correct: 'ok',
-    explanation: 'Especies isoelectrónicas: misma configuración; el Na⁺ tiene un protón más y una carga positiva neta. Arrancar un electrón a un ion ya positivo cuesta más: 4562 kJ/mol (2.ª EI del Na) frente a 2081 kJ/mol del Ne.',
+    explanation: 'Ne y Na⁺ son isoelectrónicas (10 e⁻) y, en este caso, tienen además la misma configuración, 1s² 2s² 2p⁶; el Na⁺ tiene un protón más y una carga positiva neta. Arrancar un electrón a un ion ya positivo cuesta más: 4562 kJ/mol (2.ª EI del Na) frente a 2081 kJ/mol del Ne.',
     nodes: ['7.9', '1.5'],
   }),
   concept('AMP 28', {

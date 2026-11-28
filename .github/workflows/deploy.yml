@@ -1,4 +1,4 @@
-# Compila, prueba y publica ATOM en GitHub Pages.
+# Comprueba (flujo completo de ci.yml), compila y publica ATOM en GitHub Pages.
 # Requisito único: Settings → Pages → Build and deployment → Source: «GitHub Actions».
 name: Publicar en GitHub Pages
 
@@ -17,7 +17,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ATOM 6.0: puerta de calidad. Antes, este flujo solo ejecutaba las pruebas unitarias y compilaba: una
+  # regresión de E2E, accesibilidad o resiliencia se publicaba igualmente. Ahora la publicación depende
+  # de que pase el flujo completo de «Comprobaciones».
+  checks:
+    uses: ./.github/workflows/ci.yml
+
   build:
+    needs: checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +33,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm test
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

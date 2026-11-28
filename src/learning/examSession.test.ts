@@ -131,3 +131,43 @@ describe('ATOM 5.1 · integración: gradeSession usa el reloj de la sesión', as
     expect(isValidSession({ ...base, finishedAt: Infinity })).toBe(false);
   });
 });
+
+describe('ATOM 6.0 · coherencia entre crédito por procedimiento y estado de la pregunta', () => {
+  it('respuestas directas vacías con procedimiento válido: la pregunta no figura como sin responder', async () => {
+    const { GENERATOR_BY_ID } = await import('./registry');
+    const { gradeQuestion, gradeSession, newSession } = await import('./examSession');
+    const onda = GENERATOR_BY_ID.get('onda-lambda')!.create(7, 1);
+    const proc = 'λ = 500 nm = 5·10^-7 m\nν = c/λ = 3·10^8 / 5·10^-7 = 6·10^14 Hz\nE = h·ν = 6,626·10^-34 · 6·10^14 = 3,976·10^-19 J';
+    const g = gradeQuestion(onda, {}, 2, [], proc);
+    expect(g.earned).toBeGreaterThan(0);
+    // Tres pasos numéricos acreditados por el procedimiento; la región (elección) sigue en blanco.
+    expect(g.state).toBe('parcial');
+    const s = newSession('x', [onda], [2], 50, 1, 0);
+    s.procedures = { 0: proc };
+    s.finishedAt = 10;
+    const r = gradeSession(s, [onda]);
+    expect(r.unanswered).toBe(0);
+    expect(r.partial).toBe(1);
+    expect(r.unansweredCause[0]).toBeUndefined();
+  });
+  it('sin procedimiento ni respuestas sigue siendo «sin responder» y sin crédito', async () => {
+    const { GENERATOR_BY_ID } = await import('./registry');
+    const { gradeQuestion } = await import('./examSession');
+    const onda = GENERATOR_BY_ID.get('onda-lambda')!.create(7, 1);
+    const g = gradeQuestion(onda, {}, 2, [], '');
+    expect(g.state).toBe('sin-responder');
+    expect(g.earned).toBe(0);
+  });
+  it('en todas las familias, el estado concuerda con los pasos acreditados', async () => {
+    const { GENERATORS } = await import('./registry');
+    const { gradeQuestion } = await import('./examSession');
+    for (const gen of GENERATORS) for (const d of gen.difficulties) {
+      const ex = gen.create(11, d);
+      const g = gradeQuestion(ex, {}, 1);
+      expect(g.state, ex.id).toBe('sin-responder');
+      expect(g.earned, ex.id).toBe(0);
+      const full = gradeQuestion(ex, Object.fromEntries(ex.parts.map((p) => [p.id, p.answer.kind === 'choice' ? p.answer.correct : p.canonical])), 1, ex.parts.filter((p) => p.answer.kind === 'order').map((p) => p.id));
+      expect(full.state, ex.id).toBe(full.parts.every((p) => p.answered) ? 'respondida' : 'parcial');
+    }
+  });
+});

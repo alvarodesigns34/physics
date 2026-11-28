@@ -140,7 +140,13 @@ export function gradeQuestion(ex: Exercise, answers: Record<string, PartValue> |
     sigFigIssue: g.result.correct && g.result.errorKind === 'cifras',
     sigFigsAssessed: g.result.correct ? g.result.sigFigsAssessed : undefined,
   }));
-  return { exercise: ex, points, earned: score * points, score, state: questionState(ex, answers, confirmed), parts, records, procedure };
+  // ATOM 6.0: el estado se deriva de los MISMOS pasos que reciben crédito. Antes se calculaba aparte con
+  // questionState(), que ignoraba el procedimiento: una pregunta con crédito por procedimiento y las
+  // respuestas directas en blanco obtenía puntos y a la vez figuraba «sin responder» (y su causa se
+  // atribuía a «sin terminar» o «falta de tiempo»).
+  const answeredParts = parts.filter((x) => x.answered).length;
+  const state: QuestionState = answeredParts === 0 ? 'sin-responder' : answeredParts < parts.length ? 'parcial' : 'respondida';
+  return { exercise: ex, points, earned: score * points, score, state, parts, records, procedure };
 }
 
 export interface ExamReport {

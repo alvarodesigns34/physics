@@ -29,7 +29,7 @@ Leyenda de módulos: **AF** Atomic Forge · **TM** Time Machine · **PL** Photon
 | 1.2 | Número másico A = Z + N; notación ᴬ_Z X | TEO p.1 | N | AF | AMP 1–5 |
 | 1.3 | Isótopos: mismo Z, distinto A. Protio, deuterio y tritio (radiactivo). Mezclas isotópicas | TEO p.1 | C | AF, MS | AMP 3 |
 | 1.4 | Iones: catión (pierde e⁻, carga +) y anión (gana e⁻, carga −) | TEO p.1 | C N | AF | AMP 4, 5 |
-| 1.5 | Especies isoelectrónicas: mismo número de electrones y misma configuración | TEO p.1, p.21 | C R | AF, PU | TEO 19; AMP 23a, 27 |
+| 1.5 | Especies isoelectrónicas: mismo número de electrones (no implica necesariamente la misma configuración: Ca y Ti²⁺ tienen 20 e⁻, pero [Ar] 4s² frente a [Ar] 3d²; en las series de bloque s y p del examen, como O²⁻, F⁻, Na⁺, Mg²⁺, sí coincide) | TEO p.1, p.21 | C R | AF, PU | TEO 19; AMP 23a, 27 |
 | 1.6 | Partículas subatómicas: carga (C y relativa), masa (kg y u), localización (núcleo o corteza) | TEO p.3 | C N | AF | AMP 1 |
 
 ### Bloque 2 · Revisión histórica de los modelos atómicos
