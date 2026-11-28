@@ -181,7 +181,18 @@ PENDIENTE_MEMORIA
 
 ## E. Verificación de esta iteración
 
-PENDIENTE_VERIFICACION
+| Comprobación | Resultado |
+|---|---|
+| `npm run typecheck` | sin errores |
+| `npm test` | **1435 / 1435** (iteración anterior: 1412) |
+| `npm run build` | correcto |
+| `npm run e2e` (61 llamadas a `check`) | superada. Nuevas: casos de Hidrógeno (Paschen α con su gráfica; AMP 7 sin solución), Thomson compensado con q/m, cambio de muestra en Masas sin errores, «otro equivalente» = problema distinto |
+| `npm run a11y` (39 vistas, claro, oscuro y simulacro) | **0 infracciones** |
+| `npm run resilience` | superada |
+| `npm run visual` | 12/12 a 0,000 % tras actualizar las referencias, revisadas una a una (las anteriores en `referencia-60a/`) |
+| Revisión independiente del código | 8 hallazgos (5 importantes, 3 menores): todos corregidos y con pruebas |
+| Puertas de despliegue | sin cambios: `deploy.yml` sigue exigiendo el flujo completo de `ci.yml` |
+| Progreso | misma clave `atom:v1` y versión de datos 2; ningún id ni semilla existente cambia de enunciado (las equivalencias declaradas solo afectan a la clave, no al ejercicio) |
 
 ## F. Limitaciones que siguen abiertas
 
