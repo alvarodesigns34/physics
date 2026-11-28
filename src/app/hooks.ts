@@ -3,8 +3,8 @@ import { useStore, type QualitySetting } from '../state/store';
 
 // ── Rutas (hash) ──────────────────────────────────────────────────────────
 
-export type Route = '/' | '/forja' | '/fotones' | '/entrenamiento' | '/campana' | '/periodico' | '/cuantico' | '/arquitecto' | '/historia' | '/masas' | '/guia';
-const ROUTES: Route[] = ['/guia', '/', '/forja', '/fotones', '/entrenamiento', '/campana', '/periodico', '/cuantico', '/arquitecto', '/historia', '/masas'];
+export type Route = '/' | '/forja' | '/fotones' | '/entrenamiento' | '/campana' | '/periodico' | '/cuantico' | '/arquitecto' | '/historia' | '/masas' | '/guia' | '/preparar';
+const ROUTES: Route[] = ['/guia', '/', '/forja', '/fotones', '/entrenamiento', '/campana', '/periodico', '/cuantico', '/arquitecto', '/historia', '/masas', '/preparar'];
 
 /**
  * Analiza el hash de forma defensiva (ATOM 5.1): ruta desconocida → inicio; el hash se limita a 2 kB; solo

@@ -4,7 +4,7 @@
  * vencidos, siguiente misión), y deja a un clic los laboratorios, el temario, el examen, las fórmulas,
  * los ejercicios de clase y los errores repetidos.
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { navigate } from '../../app/hooks';
 import { useStore } from '../../state/store';
 import { BLOCKS, NODES } from '../../learning/syllabus';
@@ -17,6 +17,18 @@ import type { ErrorKind, SkillId } from '../../learning/types';
 import { Icon } from '../../ui/Icon';
 import { LabGlyph, LAB_META } from './LabGlyph';
 import { SpectrumSignature } from './SpectrumSignature';
+import { essentials, prepItems } from '../../learning/examPrep';
+import { readLastPlace } from '../../state/resume';
+
+function ago(at: number, now: number) {
+  const m = Math.round((now - at) / 60_000);
+  if (m < 1) return 'ahora mismo';
+  if (m < 60) return `hace ${m} min`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `hace ${h} h`;
+  const d = Math.round(h / 24);
+  return d === 1 ? 'ayer' : `hace ${d} días`;
+}
 
 const nodeTitle = (id: string) => NODES.find((n) => n.id === id)?.title ?? id;
 
@@ -42,6 +54,12 @@ export function HomeOverlay() {
   const nextMission = MISSIONS.find((m) => s.campaign[m.id]?.status !== 'completada');
   const missionsDone = MISSIONS.filter((m) => s.campaign[m.id]?.status === 'completada').length;
   const practiced = Object.keys(s.mastery).length;
+  const [last] = useState(readLastPlace);
+  const prep = useMemo(() => {
+    const items = prepItems(s.history, s.notebook);
+    const ex = items.filter((i) => i.family.scope === 'examinable');
+    return { next: essentials(items, 1)[0], done: ex.filter((i) => i.readiness.level === 'solida').length, total: ex.length };
+  }, [s.history, s.notebook]);
 
   const blocks = BLOCKS.map((b) => {
     const nodes = NODES.filter((n) => n.block === b.id);
@@ -84,6 +102,15 @@ export function HomeOverlay() {
           <SpectrumSignature />
         </header>
 
+        {last && (
+          <a className="resume enter" href={last.hash}>
+            <Icon name="arrow-left" size={16} />
+            <span className="resume__k">Retomar</span>
+            <span className="resume__label">{last.label}</span>
+            <span className="resume__when small faint">{ago(last.at, now)}</span>
+          </a>
+        )}
+
         <section className="home__primary enter" aria-label="Qué hacer ahora" style={{ animationDelay: '40ms' }}>
           <button type="button" className="hcard hcard--hero" onClick={primary.go}>
             <span className="eyebrow eyebrow--accent">{primary.eyebrow}</span>
@@ -93,26 +120,31 @@ export function HomeOverlay() {
               {primary.cta} <Icon name="arrow-right" size={16} />
             </span>
           </button>
-          <a className="hcard" href="#/entrenamiento?v=examen">
-            <span className="hcard__icon" style={{ color: 'var(--b4)' }}>
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
-                <rect x="5" y="3.5" width="14" height="17" rx="2.5" />
-                <path d="M9 8h6M9 12h6M9 16h3" />
-              </svg>
+          <a className="hcard hcard--prep" href="#/preparar">
+            <span className="eyebrow">Preparar examen</span>
+            <span className="hcard__title hcard__title--sm">Lo que tienes que saber resolver</span>
+            <span className="hcard__body">{prep.done ? `${prep.done} de ${prep.total} familias sólidas. ` : ''}Siguiente imprescindible:</span>
+            {prep.next && (
+              <span className="hcard__next" style={{ ['--bc' as string]: `var(--b${prep.next.family.block})` }}>
+                <span className="num">{prep.next.family.block}</span> {prep.next.family.title}
+              </span>
+            )}
+            <span className="hcard__cta hcard__cta--quiet">
+              Sesiones de 15 a 90 min <Icon name="arrow-right" size={16} />
             </span>
-            <span className="hcard__title hcard__title--sm">Simulacro de examen</span>
-            <span className="hcard__body">8 preguntas · 10 puntos · 50 min. Corrección por apartados e informe.</span>
           </a>
-          <a className="hcard" href="#/entrenamiento?v=repaso">
-            <span className="hcard__icon" style={{ color: 'var(--b5)' }}>
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
-                <path d="M20 12a8 8 0 1 1-2.34-5.66" />
-                <path d="M20 4v4h-4" />
-              </svg>
-            </span>
-            <span className="hcard__title hcard__title--sm">Repaso</span>
-            <span className="hcard__body">{due.length ? `${due.length} pendiente${due.length === 1 ? '' : 's'} hoy, según tus fallos y aciertos.` : 'Nada vencido hoy. Los repasos aparecen cuando practicas.'}</span>
-          </a>
+          <div className="home__stack">
+            <a className="hcard hcard--compact" href="#/entrenamiento?v=examen">
+              <span className="hcard__title hcard__title--sm">Simulacro</span>
+              <span className="hcard__body">Seis perfiles, corrección por apartados e informe.</span>
+            </a>
+            <a className="hcard hcard--compact" href="#/entrenamiento?v=repaso">
+              <span className="hcard__title hcard__title--sm">
+                Repaso{due.length ? <span className="hcard__badge num">{due.length}</span> : null}
+              </span>
+              <span className="hcard__body">{due.length ? `Pendiente${due.length === 1 ? '' : 's'} hoy, según tus fallos y aciertos.` : 'Nada vencido hoy.'}</span>
+            </a>
+          </div>
         </section>
 
         <section className="home__section enter" aria-labelledby="h-labs" style={{ animationDelay: '80ms' }}>

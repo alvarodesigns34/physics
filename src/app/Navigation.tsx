@@ -10,6 +10,7 @@ import { LabGlyph } from '../modules/hub/LabGlyph';
 const MAIN: { route: Route; label: string; icon: string }[] = [
   { route: '/', label: 'Inicio', icon: 'M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1Z' },
   { route: '/guia', label: 'Guía', icon: 'M5 4.5h5.5A2.5 2.5 0 0 1 13 7v12.5a2 2 0 0 0-2-2H5ZM19 4.5h-3.5A2.5 2.5 0 0 0 13 7v12.5a2 2 0 0 1 2-2h4Z' },
+  { route: '/preparar', label: 'Examen', icon: 'M7 3.5h10a2 2 0 0 1 2 2v15l-3-2-2 2-2-2-2 2-2-2-3 2v-15a2 2 0 0 1 2-2ZM9 8.5h6M9 12h6M9 15.5h3' },
   { route: '/entrenamiento', label: 'Practicar', icon: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Zm0 4a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Zm0 3.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z' },
 ];
 

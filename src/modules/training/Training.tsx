@@ -18,6 +18,7 @@ import { ExamView } from './ExamView';
 import { MasteryBadge, ProgressView } from './Progress';
 import { Review } from './Review';
 import { Sources } from './Sources';
+import { PREP_BY_GEN } from '../../learning/examPrep';
 type View = 'practica' | 'ruta' | 'repaso' | 'examen' | 'cuaderno' | 'progreso' | 'fuentes';
 const VIEWS: { id: View; label: string }[] = [
   { id: 'practica', label: 'Práctica' },
@@ -30,11 +31,14 @@ const VIEWS: { id: View; label: string }[] = [
 ];
 
 /** Enlace directo a una familia de ejercicios: #/entrenamiento?gen=<id> (desde la guía o la búsqueda). */
-function exerciseForGenerator(id: string | null): Exercise | null {
+function exerciseForGenerator(id: string | null, wanted?: string | null, seedParam?: string | null): Exercise | null {
   const g = id ? GENERATORS.find((x) => x.id === id) : undefined;
   if (!g) return null;
-  const d = g.difficulties.includes(2) ? 2 : g.difficulties[g.difficulties.length - 1]!;
-  return g.create(Math.floor(Math.random() * 1e6), d);
+  // ATOM 6.0: el Centro de preparación pide una dificultad concreta (&d=3 para «más exigente»).
+  const w = Number(wanted);
+  const d = g.difficulties.includes(w as 1 | 2 | 3) ? (w as 1 | 2 | 3) : g.difficulties.includes(2) ? 2 : g.difficulties[g.difficulties.length - 1]!;
+  const seed = seedParam && /^\d{1,9}$/.test(seedParam) ? Number(seedParam) : Math.floor(Math.random() * 1e6);
+  return g.create(seed, d);
 }
 
 /** Elegir el apartado para la ruta de estudio. */
@@ -181,6 +185,43 @@ function Practice({ initialScope, fixedExercise, onClearFixed, forceVariant }: {
   );
 }
 
+/**
+ * ATOM 6.0 · Secuencia de una familia (desde «Preparar examen»): ejemplo guiado → otro equivalente sin
+ * ayuda → uno más exigente. Cada enlace genera un enunciado NUEVO (semilla nueva), nunca el mismo.
+ */
+function FamilyFollowUp({ gen, difficulty, variant }: { gen: string; difficulty: number; variant?: Variant }) {
+  const prep = PREP_BY_GEN.get(gen);
+  const fresh = () => Math.floor(Math.random() * 1e9);
+  const to = (d: number, modo: Variant) => navigate(`/entrenamiento?gen=${gen}&d=${d}&modo=${modo}&s=${fresh()}`);
+  return (
+    <div className="family-follow" role="group" aria-label="Siguiente paso en esta familia">
+      <span className="small muted">{prep ? prep.title : 'Esta familia'} · {variant === 'guiado' ? 'ejemplo guiado' : variant === 'desafio' ? 'nivel exigente' : variant === 'revision' ? 'resolución explicada' : 'sin ayuda'}</span>
+      <span className="row row--wrap" style={{ gap: 6 }}>
+        {variant !== 'autonomo' && (
+          <button type="button" className="btn btn--sm" onClick={() => to(prep?.difficulty ?? difficulty, 'autonomo')}>
+            Otro equivalente sin ayuda
+          </button>
+        )}
+        {variant === 'autonomo' && (
+          <button type="button" className="btn btn--sm" onClick={() => to(difficulty, 'autonomo')}>
+            Otro enunciado nuevo
+          </button>
+        )}
+        {prep?.hard && variant !== 'desafio' && (
+          <button type="button" className="btn btn--ghost btn--sm" onClick={() => to(prep.hard!, 'desafio')}>
+            Más exigente
+          </button>
+        )}
+        {prep && (
+          <a className="btn btn--ghost btn--sm" href={`#/preparar?b=${prep.block}`}>
+            <Icon name="arrow-left" size={14} /> Preparar examen
+          </a>
+        )}
+      </span>
+    </div>
+  );
+}
+
 const VIEW_TITLE: Record<View, string> = {
   practica: 'Practica lo que te falta.',
   ruta: 'Un concepto, de principio a fin.',
@@ -211,11 +252,15 @@ export function TrainingOverlay() {
   }, [nodesParam]);
   const genParam = query.get('gen');
   const exParam = query.get('ex');
-  const [fixed, setFixed] = useState<Exercise | null>(() => (exParam ? exerciseFromId(exParam) : exerciseForGenerator(genParam)));
+  const dParam = query.get('d');
+  const sParam = query.get('s');
+  const [fixed, setFixed] = useState<Exercise | null>(() => (exParam ? exerciseFromId(exParam) : exerciseForGenerator(genParam, dParam, sParam)));
   useEffect(() => {
     if (exParam) setFixed(exerciseFromId(exParam));
-    else if (genParam) setFixed(exerciseForGenerator(genParam));
-  }, [genParam, exParam]);
+    else if (genParam) setFixed(exerciseForGenerator(genParam, dParam, sParam));
+  }, [genParam, exParam, dParam, sParam]);
+  const modoParam = query.get('modo');
+  const forced = VARIANTS.find((v) => v.id === modoParam)?.id;
   const go = (v: View) => navigate(`/entrenamiento?v=${v}`);
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -260,7 +305,8 @@ export function TrainingOverlay() {
               </span>
             </div>
           )}
-          {view === 'practica' && <Practice key={scopeKey} initialScope={practiceScope} fixedExercise={fixed} onClearFixed={() => setFixed(null)} forceVariant={query.get('modo') === 'revision' ? 'revision' : undefined} />}
+          {view === 'practica' && fixed && genParam && fixed.generatorId === genParam && <FamilyFollowUp gen={genParam} difficulty={fixed.difficulty} variant={forced} />}
+          {view === 'practica' && <Practice key={scopeKey} initialScope={practiceScope} fixedExercise={fixed} onClearFixed={() => setFixed(null)} forceVariant={forced} />}
           {view === 'repaso' && (
             <Review
               onStart={(nodes) => {

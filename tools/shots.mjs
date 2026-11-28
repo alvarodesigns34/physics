@@ -40,6 +40,7 @@ const VIEWS = [
   ['campana', '#/campana'],
   ['progreso', '#/entrenamiento?v=progreso'],
   ['cuaderno', '#/entrenamiento?v=cuaderno'],
+  ['preparar', '#/preparar?b=3'],
 ].filter(([n]) => !ONLY || ONLY.includes(n));
 const DEVICES = {
   desktop: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },

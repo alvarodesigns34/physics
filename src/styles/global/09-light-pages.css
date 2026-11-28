@@ -42,8 +42,80 @@
 }
 .home__primary {
   display: grid;
-  grid-template-columns: 1.6fr 1fr 1fr;
+  grid-template-columns: 1.4fr 1.15fr 0.95fr;
   gap: var(--s-4);
+}
+/* ATOM 6.0: simulacro y repaso, apilados y compactos junto a «Preparar examen». */
+.home__stack {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: var(--s-4);
+}
+.hcard--compact {
+  padding: var(--s-4) var(--s-5);
+  gap: 4px;
+  justify-content: center;
+}
+.hcard--prep {
+  border-color: var(--hairline-strong);
+}
+.hcard__next {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--r-inner);
+  background: var(--surface-raised-2);
+  border-left: 3px solid var(--bc);
+  font-weight: 600;
+  line-height: 1.35;
+}
+.hcard__next .num {
+  color: var(--bc);
+  font-weight: 700;
+}
+.hcard__badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: var(--fs-xs);
+  vertical-align: middle;
+}
+/* «Retomar»: una sola línea, discreta, encima de las acciones principales. */
+.resume {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  align-self: flex-start;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 8px 16px 8px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface-raised);
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color var(--dur-fast) var(--ease-std);
+}
+.resume:hover {
+  border-color: var(--accent-line);
+}
+.resume__k {
+  font-weight: 650;
+  color: var(--accent-strong);
+}
+.resume__label {
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 .hcard {
   display: flex;
@@ -108,6 +180,11 @@
   color: var(--accent-ink);
   font-weight: 600;
   font-size: var(--fs-sm);
+}
+.hcard__cta.hcard__cta--quiet {
+  background: transparent;
+  color: var(--accent-strong);
+  padding-left: 0;
 }
 .home__section {
   display: flex;
@@ -322,6 +399,10 @@
 @media (max-width: 1100px) {
   .home__primary {
     grid-template-columns: 1fr 1fr;
+  }
+  .home__stack {
+    grid-template-rows: none;
+    grid-template-columns: 1fr;
   }
   .home__primary .hcard--hero {
     grid-column: 1 / -1;

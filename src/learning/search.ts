@@ -4,7 +4,7 @@
  * práctica del apartado. Admite sinónimos habituales en clase («Rydberg», «Hund», «Möller», «EI»…),
  * ignora tildes y mayúsculas y tolera prefijos («isotop» → isótopos).
  */
-import { NODES, type ModuleId } from './syllabus';
+import { BLOCKS, NODES, type ModuleId } from './syllabus';
 import { LESSONS, TRICKS, guideAnchor } from './guide';
 import { GENERATORS } from './registry';
 
@@ -129,6 +129,9 @@ function buildIndex(): Doc[] {
   for (const g of GENERATORS) {
     docs.push({ nodeIds: g.nodeIds, kind: 'practica', title: `Ejercicios: ${g.title}`, detail: `Familia de ejercicios · ${g.nodeIds.slice(0, 3).join(', ')}`, href: `/entrenamiento?gen=${g.id}`, text: normalize(`${g.title} ${g.id.replace(/-/g, ' ')}`) });
   }
+  // ATOM 6.0 · Centro de preparación del examen: la página y cada uno de sus bloques.
+  docs.push({ nodeIds: [], kind: 'pagina', title: 'Preparar examen', detail: 'Imprescindibles, sesión de 15–90 min y problemas tipo examen por bloque', href: '/preparar', text: normalize('preparar examen imprescindibles sesion itinerario problemas tipo examen repaso final') });
+  for (const b of BLOCKS) docs.push({ nodeIds: NODES.filter((n) => n.block === b.id).map((n) => n.id), kind: 'pagina', title: `Preparar examen: ${b.title}`, detail: 'Problemas que debes saber resolver en este bloque', href: `/preparar?b=${b.id}`, text: normalize(`preparar examen ${b.title} ${b.short}`) });
   for (const [node, list] of Object.entries(TRICKS)) {
     docs.push({ nodeIds: [node], kind: 'truco', title: `Trucos: ${nodeTitle(node)}`, detail: list[0]!.slice(0, 90), href: '/guia?v=trucos', text: normalize(`${nodeTitle(node)} ${list.join(' ')}`) });
   }

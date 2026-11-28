@@ -13,6 +13,7 @@ import { HomeOverlay } from '../modules/hub/Home';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { OfflinePanel, UpdateBanner } from '../ui/OfflinePanel';
 import { ProgressTransfer } from '../ui/ProgressTransfer';
+import { saveLastPlace } from '../state/resume';
 
 const ForgeScene = lazy(() => import('../modules/forge/Forge').then((m) => ({ default: m.ForgeScene })));
 const ForgeOverlay = lazy(() => import('../modules/forge/Forge').then((m) => ({ default: m.ForgeOverlay })));
@@ -29,6 +30,7 @@ const HistoryOverlay = lazy(() => import('../modules/history/History').then((m) 
 const MassScene = lazy(() => import('../modules/masses/MassSpec').then((m) => ({ default: m.MassScene })));
 const MassOverlay = lazy(() => import('../modules/masses/MassSpec').then((m) => ({ default: m.MassOverlay })));
 const GuideOverlay = lazy(() => import('../modules/guide/Guide').then((m) => ({ default: m.GuideOverlay })));
+const PrepOverlay = lazy(() => import('../modules/prep/Prep').then((m) => ({ default: m.PrepOverlay })));
 const PeriodicOverlay = lazy(() => import('../modules/periodic/Periodic').then((m) => ({ default: m.PeriodicOverlay })));
 
 /** Laboratorios disponibles (en el orden del temario). */
@@ -54,6 +56,7 @@ const CRUMB: Record<Route, string> = {
   '/historia': 'Time Machine',
   '/masas': 'Mass Spectrometry Lab',
   '/guia': 'Guía de estudio',
+  '/preparar': 'Preparar examen',
 };
 
 
@@ -209,7 +212,7 @@ function MobileNav({ route }: { route: Route }) {
       )}
       <nav className="mobile-nav" aria-label="Secciones">
         <a href="#/" aria-current={route === '/' ? 'page' : undefined}>
-          <Icon name="target" size={20} />
+          <Icon name="home" size={20} />
           <span>Inicio</span>
         </a>
         <a href="#/guia" aria-current={route === '/guia' ? 'page' : undefined}>
@@ -220,6 +223,10 @@ function MobileNav({ route }: { route: Route }) {
           <Icon name="flask" size={20} />
           <span>Laboratorios</span>
         </button>
+        <a href="#/preparar" aria-current={route === '/preparar' ? 'page' : undefined}>
+          <Icon name="exam" size={20} />
+          <span>Examen</span>
+        </a>
         <a href="#/entrenamiento" aria-current={route === '/entrenamiento' ? 'page' : undefined}>
           <Icon name="star" size={20} />
           <span>Entrenar</span>
@@ -295,6 +302,7 @@ function SceneFor({ route }: { route: Route }) {
       return <MassScene />;
     case '/entrenamiento':
     case '/guia':
+    case '/preparar':
       return null;
     case '/campana':
       return <HubScene />;
@@ -324,6 +332,8 @@ function OverlayFor({ route }: { route: Route }): ReactNode {
       return <TrainingOverlay />;
     case '/guia':
       return <GuideOverlay />;
+    case '/preparar':
+      return <PrepOverlay />;
     case '/campana':
       return <HubOverlay />;
     default:
@@ -332,12 +342,13 @@ function OverlayFor({ route }: { route: Route }): ReactNode {
 }
 
 export function App() {
-  const { route } = useRoute();
+  const { route, query } = useRoute();
   const reduced = useReducedMotion();
   const textScale = useStore((s) => s.settings.textScale);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [webgl] = useState(hasWebGL);
   const effectiveRoute: Route = route;
+  const isPage = effectiveRoute === '/guia' || effectiveRoute === '/entrenamiento' || effectiveRoute === '/preparar';
 
   useEffect(() => {
     document.documentElement.style.setProperty('--text-scale', String(textScale));
@@ -362,6 +373,15 @@ export function App() {
     document.title = `ATOM · ${CRUMB[effectiveRoute]}`;
     notifySceneChange();
   }, [effectiveRoute]);
+  // ATOM 6.0 · Recuerda el último lugar de estudio (con su apartado) para «Retomar» desde el inicio.
+  const n = query.get('n') ?? query.get('nodes')?.split(',')[0];
+  const v = query.get('v');
+  useEffect(() => {
+    if (effectiveRoute === '/' || effectiveRoute === '/campana') return;
+    if (effectiveRoute === '/entrenamiento' && v === 'examen') return; // el simulacro tiene su propia recuperación
+    const nodeT = n ? NODES.find((x) => x.id === n)?.title : undefined;
+    saveLastPlace({ hash: window.location.hash, label: nodeT ? `${CRUMB[effectiveRoute]} · ${nodeT}` : CRUMB[effectiveRoute], at: Date.now() });
+  }, [effectiveRoute, n, v]);
   useEffect(() => installUiSounds(), []);
   const soundOn = useStore((s) => s.settings.sound);
   const seenIntro = useStore((s) => s.settings.seenIntro);
@@ -371,7 +391,7 @@ export function App() {
   }, [effectiveRoute, soundOn, ambientOn]);
 
   return (
-    <div className="app" data-motion={reduced ? 'reducido' : 'completo'} data-kind={effectiveRoute === '/' ? 'inicio' : effectiveRoute === '/guia' || effectiveRoute === '/entrenamiento' ? 'pagina' : 'laboratorio'}>
+    <div className="app" data-motion={reduced ? 'reducido' : 'completo'} data-kind={effectiveRoute === '/' ? 'inicio' : isPage ? 'pagina' : 'laboratorio'}>
       <a href="#contenido" className="sr-only">
         Saltar al contenido
       </a>
@@ -383,13 +403,13 @@ export function App() {
             </Suspense>
           </ErrorBoundary>
         ) : (
-          effectiveRoute !== '/entrenamiento' && effectiveRoute !== '/guia' && effectiveRoute !== '/' && (
+          !isPage && effectiveRoute !== '/' && (
             <div className="loading" style={{ padding: 32, textAlign: 'center' }}>
               Este dispositivo no ofrece WebGL: las escenas 3D no están disponibles, pero los paneles, cálculos y ejercicios funcionan.
             </div>
           )
         )}
-        {(effectiveRoute === '/entrenamiento' || effectiveRoute === '/guia' || effectiveRoute === '/') && <div aria-hidden="true" className="page-bg" />}
+        {(isPage || effectiveRoute === '/') && <div aria-hidden="true" className="page-bg" />}
       </section>
       <div className="overlay">
         <TopBar route={effectiveRoute} onSettings={() => setSettingsOpen(true)} onSearch={openSearch} />

@@ -1,5 +1,5 @@
 /** Iconografía mínima, trazo 1.5 px, dibujada a medida (sin dependencias). */
-type Name = 'plus' | 'minus' | 'check' | 'x' | 'info' | 'settings' | 'arrow-right' | 'arrow-left' | 'chevron-up' | 'chevron-down' | 'bulb' | 'eye' | 'sound' | 'mute' | 'target' | 'reset' | 'star' | 'flask';
+type Name = 'plus' | 'minus' | 'check' | 'x' | 'info' | 'settings' | 'arrow-right' | 'arrow-left' | 'chevron-up' | 'chevron-down' | 'bulb' | 'eye' | 'sound' | 'mute' | 'target' | 'reset' | 'star' | 'flask' | 'home' | 'exam';
 
 const PATHS: Record<Name, string> = {
   plus: 'M12 5v14M5 12h14',
@@ -19,6 +19,8 @@ const PATHS: Record<Name, string> = {
   target: 'M12 21a9 9 0 100-18 9 9 0 000 18zM12 16a4 4 0 100-8 4 4 0 000 8zM12 12h.01',
   reset: 'M3 12a9 9 0 109-9 9.7 9.7 0 00-6.7 2.8L3 8M3 3v5h5',
   star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z',
+  home: 'M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1Z',
+  exam: 'M7 3.5h10a2 2 0 0 1 2 2v15l-3-2-2 2-2-2-2 2-2-2-3 2v-15a2 2 0 0 1 2-2ZM9 8.5h6M9 12h6M9 15.5h3',
   flask: 'M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 006 21h12a1.7 1.7 0 001.5-2.5L14 9V3M7.5 14h9',
 };
 

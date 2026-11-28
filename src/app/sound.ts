@@ -193,7 +193,7 @@ export const sfx = {
 
 // ── Ambiente por laboratorio ──────────────────────────────────────────────
 
-const AMBIENT_ROOT: Record<string, number> = { '/': 55, '/forja': 49, '/fotones': 58.3, '/historia': 46.2, '/masas': 51.9, '/cuantico': 61.7, '/arquitecto': 65.4, '/periodico': 43.7, '/entrenamiento': 0, '/guia': 0 };
+const AMBIENT_ROOT: Record<string, number> = { '/': 55, '/forja': 49, '/fotones': 58.3, '/historia': 46.2, '/masas': 51.9, '/cuantico': 61.7, '/arquitecto': 65.4, '/periodico': 43.7, '/entrenamiento': 0, '/guia': 0, '/preparar': 0 };
 
 let ambNodes: { stop: () => void } | null = null;
 
