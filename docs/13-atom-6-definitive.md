@@ -177,7 +177,38 @@ Herramienta nueva: `tools/labshots.mjs`, que captura los laboratorios **en uso**
 
 ## D. Memoria con interacciones reales
 
-PENDIENTE_MEMORIA
+Herramienta: `tools/memlong.mjs`. Cada ciclo recorre los 11 laboratorios, Preparar examen, Entrenamiento y Guía con **interacciones reales**: casos, deslizadores, cambios de muestra, rotación, modos y ejercicios. Antes de cada lectura llama a `gc()`. Toma instantáneas del montón en el ciclo 2 y en el último y compara los objetos por constructor. Cada ciclo dura unos 5–6 min; las dos tandas son de 12 ciclos, unos 65–75 min cada una. Se han usado Chromium y SwiftShader, sin GPU real.
+
+**1. Primera tanda (antes del arreglo)**, en `memlong-60-interacciones-antes-arreglo.json`:
+
+- Montón tras `gc()`, en MB por ciclo: 36,0 · 40,67 · 42,4 · 43,14 · 43,02 · 43,43 · 43,51 · 44,09 · 44,72 · 45,24 · 45,6 · 45,62. Sube de forma sostenida, unos 0,36 MB por ciclo entre los ciclos 6 y 12.
+- Recursos GPU vivos del renderizador: constantes (22 geometrías, 21 texturas, 17 programas, 1 lienzo, 451 nodos DOM). El crecimiento no estaba en la escena activa.
+- Diferencia del montón entre el ciclo 2 y el 12: **+10 `WebGL2RenderingContext`**, +220 `WebGLShader`, +110 `WebGLProgram` y +710 `WebGLUniformLocation`. Había contextos WebGL completos que seguían vivos aunque el lienzo ya no existía.
+
+**2. Aislamiento.** `tools/ctxprobe.mjs` cuenta los contextos vivos con `Runtime.queryObjects` después de `gc()`.
+
+- Una primera versión indicaba «un contexto por laboratorio». Era un **artefacto de la propia medición**: los arrays que devuelve `queryObjects` retenían los contextos. Se corrigió con un grupo de objetos propio que se libera tras cada recuento.
+- Con la sonda corregida, solo un laboratorio retenía: **13 visitas a Quantum Space → 12 contextos vivos**. La causa son los materiales de superficie compartidos a nivel de módulo. three.js registra en cada material un oyente de `dispose` que referencia al `WebGLRenderer`, así que cada renderizador desmontado seguía alcanzable.
+- Arreglo (`539fcdc`): `releaseSurfaceMaterials()` libera y vacía esos materiales al desmontar la escena. Tras el arreglo, la misma sonda da **1 contexto constante**.
+
+**3. Segunda tanda (con el arreglo)**, en `memlong-60-interacciones.json`:
+
+- Montón en MB: 36,11 · 40,44 · 42,19 · 42,46 · 42,73 · 43,02 · 43,3 · 43,19 · 43,2 · 43,21 · 43,3 · 43,31. Entre los ciclos 6 y 12 sube **+0,29 MB en total** (antes, +2,19 MB). Es una meseta de unos 43,2–43,3 MB desde el ciclo 7.
+- Recursos GPU, lienzos y nodos DOM: idénticos en los 12 ciclos.
+- En la diferencia del montón **ya no aparece ningún objeto WebGL**. Lo que más crece:
+  - código compilado: +1,4 MB, 3 907 objetos, frente a +2,3 MB antes;
+  - `JSArrayBufferData`: 8 búferes que suman 1,42 MB, **idénticos en ambas tandas**;
+  - entradas de la API de rendimiento del navegador: `PerformanceScriptTiming`, `LongAnimationFrame` y `LargestContentfulPaint`, unos 90 KB.
+
+**4. Conclusión, limitada a lo medido**
+
+- Había **una fuga real**: un contexto WebGL completo por cada visita a Quantum Space. Está corregida, y lo demuestran la sonda (12 → 1) y la diferencia del montón (+10 contextos → 0).
+- Con el arreglo, el montón se estabiliza en 12 ciclos con interacciones. Lo que sigue creciendo es código compilado por el motor y búferes del navegador. Los 8 `ArrayBuffer` no aumentan entre tandas, lo que encaja con cachés acotadas que se llenan una vez; su origen exacto no se ha identificado objeto a objeto.
+- **No se afirma** que no quede ninguna fuga. Una tendencia inferior a unos 0,05 MB por ciclo no se puede distinguir del ruido con 12 ciclos. Tampoco se ha medido en Safari ni en iPadOS, cuyo recolector y cuya gestión de contextos WebGL son distintos.
+
+**5. Hallazgo colateral.** El recorrido con interacciones reprodujo un fallo de Mass Spectrometry: «Cannot read properties of undefined (reading 'a')» al cambiar de muestra con iones en vuelo. En la reproducción aislada hubo 16 errores en 3 cambios de muestra antes del arreglo y 0 después. Se ha corregido con un reinicio síncrono del haz y una guarda de índices, y la prueba E2E lo cubre (fila del espectrómetro en la sección C).
+
+**Avisos de interacción.** Hubo clics que superaron el límite de 4 s mientras SwiftShader rasterizaba: 12 distintos en la primera tanda y 4 en la segunda. Son esperas de la herramienta, no errores de la aplicación. El ciclo continúa y el laboratorio se recorre igualmente.
 
 ## E. Verificación de esta iteración
 
@@ -190,6 +221,7 @@ PENDIENTE_MEMORIA
 | `npm run a11y` (39 vistas, claro, oscuro y simulacro) | **0 infracciones** |
 | `npm run resilience` | superada |
 | `npm run visual` | 12/12 a 0,000 % tras actualizar las referencias, revisadas una a una (las anteriores en `referencia-60a/`) |
+| Memoria, 2 × 12 ciclos con interacciones (sección D) | fuga de contextos WebGL en Quantum hallada y corregida; montón en meseta tras el arreglo |
 | Revisión independiente del código | 8 hallazgos (5 importantes, 3 menores): todos corregidos y con pruebas |
 | Puertas de despliegue | sin cambios: `deploy.yml` sigue exigiendo el flujo completo de `ci.yml` |
 | Progreso | misma clave `atom:v1` y versión de datos 2; ningún id ni semilla existente cambia de enunciado (las equivalencias declaradas solo afectan a la clave, no al ejercicio) |
