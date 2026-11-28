@@ -104,3 +104,11 @@ Settings        { alias, quality, reducedMotion, sound, textScale, configOrder }
 - Cálculo fuera del hilo principal: cliente genérico `src/workers/computeClient.ts` (superficies, nubes y comparación de orbitales).
 - Pedagogía: `src/ui/MathText.tsx` (fórmulas), `src/ui/Pedagogy.tsx` (resoluciones, figuras, desarrollo), `src/learning/resolutions.ts`, `generators/reasoning.ts`, `history.ts`, `architectChallenges.ts`, `massInverse.ts`, `training/StudyPath.tsx`.
 - Calidad: `tools/a11y.mjs` (axe, en CI), `tools/visual.mjs` (regresión visual), `tools/stats.mjs` (cifras), `tools/shots.mjs` (capturas escritorio/iPad).
+
+## Actualización ATOM 6.0
+- **Preparar examen** (`#/preparar`): lógica pura en `src/learning/examPrep.ts` (catálogo razonado de familias, representatividad calculada desde `SOURCE_EXERCISES` por pregunta, preparación por evidencia, itinerarios e imprescindibles); vista en `src/modules/prep/Prep.tsx`; estilos en `src/styles/global/15-prep.css`. El Centro de entrenamiento acepta `gen`, `d` (dificultad), `modo` (guiado, autónomo, desafío, revisión) y `s` (semilla) para enlazar una familia concreta.
+- **Familias nuevas**: `src/learning/generators/atom6.ts` (absorción desde el estado fundamental; contar electrones con números cuánticos).
+- **Retomar**: `src/state/resume.ts` guarda la última ruta de estudio (comodidad por dispositivo, no progreso).
+- **Tipografía**: `src/styles/fonts.css` y `src/assets/fonts/` (Inter 4 subconjuntada con superíndices, subíndices, flechas y operadores; complemento científico de JetBrains Mono).
+- **Cliente de Workers**: `group` evita que la versión refinada aborte la vista previa del mismo orbital; `postMessage` fallido y mensajes ilegibles ya no bloquean el cliente.
+- **Publicación**: `deploy.yml` llama a `ci.yml` (`workflow_call`) y solo despliega si pasan E2E, a11y y resiliencia.

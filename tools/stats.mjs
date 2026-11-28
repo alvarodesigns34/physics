@@ -14,6 +14,9 @@ try {
   const guide = await server.ssrLoadModule('/src/learning/guide.ts');
   const reasoning = await server.ssrLoadModule('/src/learning/generators/reasoning.ts');
   const session = await server.ssrLoadModule('/src/learning/session.ts');
+  const prep = await server.ssrLoadModule('/src/learning/examPrep.ts');
+  const atom6 = await server.ssrLoadModule('/src/learning/generators/atom6.ts');
+  const pf = prep.PREP_FAMILIES;
 
   const sources = reg.SOURCE_EXERCISES;
   const byDoc = {};
@@ -34,6 +37,12 @@ try {
     ['Preguntas de desarrollo con rúbrica', reasoning.ESSAYS.length],
     ['Ejercicios de los documentos', sources.length],
     ...Object.entries(byDoc).sort().map(([k, v]) => [`· ${k}`, v]),
+    ['· nuevas en ATOM 6.0', atom6.ATOM6_GENERATORS.length],
+    ['Familias del Centro «Preparar examen»', pf.length],
+    ['· por bloque (1–7)', [1, 2, 3, 4, 5, 6, 7].map((b) => pf.filter((f) => f.block === b).length).join(' · ')],
+    ['· esenciales · tipo examen · exigentes', ['esencial', 'examen', 'exigente'].map((t) => pf.filter((f) => f.tier === t).length).join(' · ')],
+    ['· de ampliación (no examinables según TEO)', pf.filter((f) => f.scope !== 'examinable').length],
+    ['Preguntas distintas de las fuentes (los apartados de una pregunta cuentan una vez)', new Set(sources.map((x) => prep.questionKey(x.ref))).size],
     ['Perfiles de simulacro', session.MOCK_PROFILES.length + 1],
     ['Misiones de la campaña', camp.MISSIONS.length],
     ['Lecciones de la guía', guide.LESSONS.length],

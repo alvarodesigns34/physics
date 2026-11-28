@@ -1,0 +1,429 @@
+{
+  "date": "2026-11-28T00:57:04.922Z",
+  "renderer": "SwiftShader (software)",
+  "method": "ATOM 5.0: fotogramas dibujados, no rAF; heap tras gc()",
+  "results": [
+    {
+      "route": "/",
+      "readyMs": 306,
+      "rafHz": 60.3,
+      "idleFrames": 0,
+      "calls": null,
+      "triangles": null,
+      "programs": null,
+      "geometries": null,
+      "textures": null,
+      "heapMB": 8
+    },
+    {
+      "route": "cuantico:n=3",
+      "interactionMs": 2619,
+      "longTasks": 18,
+      "longMaxMs": 1046
+    },
+    {
+      "route": "cuantico:l=2",
+      "interactionMs": 2520,
+      "longTasks": 17,
+      "longMaxMs": 901
+    },
+    {
+      "route": "cuantico:subnivel",
+      "interactionMs": 3124,
+      "longTasks": 15,
+      "longMaxMs": 1074
+    }
+  ],
+  "stability": [
+    {
+      "ciclo": 1,
+      "heapMB": 17.1,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 2,
+      "heapMB": 17.7,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 3,
+      "heapMB": 18.2,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 4,
+      "heapMB": 18.7,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 5,
+      "heapMB": 19.1,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 6,
+      "heapMB": 19.4,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 7,
+      "heapMB": 19.4,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 34,
+        "triangles": 18713
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 8,
+      "heapMB": 19.6,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 9,
+      "heapMB": 20,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 10,
+      "heapMB": 20.2,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 11,
+      "heapMB": 20.4,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 12,
+      "heapMB": 20.2,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 13,
+      "heapMB": 20.4,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 14,
+      "heapMB": 20.5,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 15,
+      "heapMB": 20.7,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 16,
+      "heapMB": 20.8,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 17,
+      "heapMB": 20.9,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 18,
+      "heapMB": 21,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 19,
+      "heapMB": 21.1,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 20,
+      "heapMB": 21.2,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 21,
+      "heapMB": 21.4,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 22,
+      "heapMB": 21.9,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 23,
+      "heapMB": 22,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 24,
+      "heapMB": 21.9,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 25,
+      "heapMB": 22.2,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 26,
+      "heapMB": 22.4,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 27,
+      "heapMB": 22.5,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 28,
+      "heapMB": 22.7,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 29,
+      "heapMB": 22.7,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    },
+    {
+      "ciclo": 30,
+      "heapMB": 22.9,
+      "gpu": {
+        "geometries": 22,
+        "textures": 21,
+        "programs": 16,
+        "calls": 76,
+        "triangles": 19217
+      },
+      "canvases": 1,
+      "domNodes": 420
+    }
+  ]
+}

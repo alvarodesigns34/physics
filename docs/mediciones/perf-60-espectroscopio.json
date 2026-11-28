@@ -1,0 +1,70 @@
+{
+  "date": "2026-11-28T01:50:31.695Z",
+  "renderer": "SwiftShader (software), 1440x900, calidad media",
+  "method": "tools/perf.mjs, PERF_ROUTES=/fotones?tab=espectroscopio, ejecuciones intercaladas 5.2 / 6.0",
+  "runs": [
+    {
+      "version": "5.2",
+      "run": 1,
+      "dragP95Ms": 200,
+      "dragFps": 6.2,
+      "calls": 44
+    },
+    {
+      "version": "6.0",
+      "run": 1,
+      "dragP95Ms": 200.1,
+      "dragFps": 6,
+      "calls": 44
+    },
+    {
+      "version": "5.2",
+      "run": 2,
+      "dragP95Ms": 200,
+      "dragFps": 6.1,
+      "calls": 44
+    },
+    {
+      "version": "6.0",
+      "run": 2,
+      "dragP95Ms": 183.3,
+      "dragFps": 6.6,
+      "calls": 44
+    },
+    {
+      "version": "5.2",
+      "run": 3,
+      "dragP95Ms": 200,
+      "dragFps": 6.3,
+      "calls": 44
+    },
+    {
+      "version": "6.0",
+      "run": 3,
+      "dragP95Ms": 216.7,
+      "dragFps": 5.6,
+      "calls": 44
+    },
+    {
+      "version": "6.0 con anisotropía 4 (descartado)",
+      "run": 1,
+      "dragP95Ms": 200,
+      "dragFps": 6,
+      "calls": 44
+    },
+    {
+      "version": "6.0 con anisotropía 4 (descartado)",
+      "run": 2,
+      "dragP95Ms": 199.9,
+      "dragFps": 6.5,
+      "calls": 44
+    },
+    {
+      "version": "6.0 con anisotropía 4 (descartado)",
+      "run": 3,
+      "dragP95Ms": 200,
+      "dragFps": 6.3,
+      "calls": 44
+    }
+  ]
+}

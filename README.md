@@ -1,80 +1,73 @@
 # ATOM · The Matter Experience
 
-Laboratorio interactivo de **estructura atómica y sistema periódico** para 1.º de Bachillerato. Combina escenas 3D, simulaciones con cálculos verificados, una campaña de misiones y un sistema de ejercicios con corrección razonada, dominio adaptativo y repaso espaciado.
+Aplicación para estudiar **estructura atómica y sistema periódico** (Física y Química, 1.º de Bachillerato): teoría con fórmulas, once laboratorios 3D con cálculo real, ejercicios generados y corregidos paso a paso, un centro de preparación del examen y simulacros con informe. Funciona sin conexión (PWA), sin cuentas ni servidores: el progreso se guarda en el navegador y se puede pasar a otro dispositivo.
+
+Versión publicada: <https://alvarodesigns34.github.io/physics/> · Versión actual del código: **ATOM 6.0** ([informe](docs/13-atom-6-definitive.md)).
 
 ## Puesta en marcha
 
 ```bash
-npm install
+npm ci
 npm run dev        # desarrollo en http://localhost:5173
-npm test           # pruebas del núcleo científico, del motor de aprendizaje y de la auditoría
-npm run stats      # regenera docs/ESTADISTICAS.md (cifras sacadas del código)
-npm run build      # comprobación de tipos + compilación en dist/
-npm run e2e        # prueba de humo en navegador (requiere build previo; también en CI)
-npm run bench      # tiempos de los cálculos científicos más costosos
-node tools/perf.mjs salida.json   # fotogramas, tareas largas y memoria por laboratorio
-node tools/shots.mjs etiqueta     # capturas de escritorio e iPad en docs/capturas/etiqueta/
 ```
 
-> **Cifras actualizadas**: [docs/ESTADISTICAS.md](docs/ESTADISTICAS.md) se genera desde el código (`npm run stats`); este README no repite números que puedan quedar desfasados.
+## Comprobaciones
 
-## Qué incluye (ATOM 3.0)
+```bash
+npm run typecheck  # TypeScript
+npm test           # pruebas unitarias (núcleo científico, motor de aprendizaje, auditorías)
+npm run build      # tipos + compilación en dist/
+npm run e2e        # prueba de humo en navegador, escritorio y móvil (requiere build)
+npm run a11y       # axe-core en claro y oscuro (requiere build)
+npm run resilience # almacenamiento dañado, sin conexión, pérdida de contexto WebGL, service worker
+npm run visual     # regresión visual frente a docs/capturas/referencia/
+npm run bench      # tiempos de los cálculos científicos más costosos
+npm run stats      # regenera docs/ESTADISTICAS.md desde el código
+node tools/perf.mjs salida.json   # fotogramas, tareas largas, recursos GPU y memoria por laboratorio
+node tools/shots.mjs etiqueta [desktop,ipad,ipadv,wide,movil]   # capturas; THEME=oscuro, TEXT=1.3
+```
 
-- **Identidad clara**: tema claro por defecto (oscuro opcional), tipografía sans única, sistema de tokens en `src/styles/tokens.css`; los laboratorios muestran su escena en un visor de tono pizarra.
-- **Inicio para estudiar**: qué hacer ahora (recomendación explicada del motor, repaso, simulacro), laboratorios, temario por bloque, competencias y errores que repites.
-- **Navegación**: raíl lateral en escritorio e iPad y búsqueda global de conceptos (⌘K, Ctrl K o «/») que devuelve teoría, laboratorio y práctica.
-- **Ejercicios que obligan a pensar**: detectar errores en una resolución, deducir elementos por pistas, energías de ionización sucesivas, líneas sin serie conocida (dos métodos), gráficas, proporciones de Bohr, problemas multibloque y preguntas de desarrollo con rúbrica y autoevaluación.
-- **Resoluciones explicadas** por bloques con fórmulas renderizadas, pistas progresivas y modos guiado, autónomo, desafío y revisión.
-- **Simulacros por perfil**: equilibrado, numérico, razonamiento, exigente, estilo EBAU y puntos débiles (ponderaciones declaradas como propuesta).
+Las cifras del proyecto (familias, ejercicios, pruebas…) están en [docs/ESTADISTICAS.md](docs/ESTADISTICAS.md), generado desde el código; este README no las repite para que no queden desfasadas.
 
-### Detalle por área (heredado de ATOM 2.0)
+## Qué incluye
 
 | Área | Contenido |
 |---|---|
-| **Campaña (atrio 3D)** | Mundo central 3D (columnata, suelo reflectante) con la densidad electrónica *calculada* del neón, nueve estaciones, acceso directo a la guía y al examen tipo, y bienvenida en la primera visita |
-| **Guía de estudio** | 7 lecciones por bloque: lo esencial, fórmulas con el significado y la unidad de cada símbolo, errores típicos de examen, consejos y ejercicios resueltos paso a paso; formulario completo. 10 widgets interactivos: anatomía de una onda (cuerda y onda EM: λ, ν, T, A, v), espectro electromagnético, Rydberg con diagrama de niveles, notación de nucleidos, números cuánticos, Möller, tendencias periódicas, masa atómica media, modelos y partículas |
-| **Atomic Forge** | Construcción de átomos e iones con botones, arrastre o teclado (P, N, E); identidad, estabilidad nuclear (NUBASE), isótopos naturales, configuración e isoelectrónicos. Nube electrónica con Z efectiva de Slater y visor de escala real (R = 1,2·A^⅓ fm frente al radio atómico) |
-| **Photon Lab** | Banco de ondas (λ, ν, T, E), escalera de niveles del hidrógeno con Rydberg, emisión, absorción y cascadas, detector UV-visible-IR y espectroscopio de prisma 3D: vidrio SF11 (Sellmeier), trazado de rayos con Snell y líneas NIST en su posición calculada |
-| **Entrenamiento** | Práctica adaptativa (32 generadores, 5 de ellos problemas compuestos de nivel examen), «Examen tipo» puntuado sobre 10 con enlaces a la teoría de cada fallo, repaso espaciado (Leitner), examen con informe por apartados, progreso sobre los 54 apartados del temario (todos con ejercicios) y 64 ejercicios de los apuntes |
-| **Time Machine** | Modelos de Dalton a la mecánica cuántica, colapso clásico de Rutherford, tubo de rayos catódicos (fuerza de Lorentz y q/m) y Geiger–Marsden con Monte Carlo en vivo frente a la fórmula de Rutherford |
-| **Mass Spectrometry Lab** | Sector magnético con isótopos naturales reales, espectro acumulado y masa media medida con su incertidumbre estadística |
-| **Quantum Space** | Orbitales reales (n ≤ 5) como superficie que encierra el 90 % de la probabilidad (marching cubes) o como nube de puntos, con fase, corte para ver nodos, órbita de Bohr superpuesta, P(r) y paquete de incertidumbre mínima |
-| **Electron Architect** | Torre de energía 3D con cajas interactivas, Pauli, Hund y Aufbau en vivo, excepciones reales y diagrama de Möller editable |
-| **Periodic Universe** | Tabla 3D de 118 elementos con propiedades reales, comparador razonado que detecta excepciones y tamaños de átomos frente a iones |
-| **Ejercicios de clase** | 129 ejercicios de las fuentes con sus datos: teoría, ampliación (31, tablas completas), hoja del tema (1–28) y EBAU de La Rioja, por nivel (básico, examen, avanzado) |
-| **Diagnóstico** | Evidencia por apartado y por competencia (concepto, fórmula, unidades, cálculo, cifras, notación, razonamiento); dominio con intervalo; recomendaciones explicadas y grafo de prerrequisitos |
-| **Campaña** | 7 capítulos y 35 misiones con objetivos experimentales verificables |
-| **Sonido** | Síntesis WebAudio: ambiente propio de cada laboratorio, efectos por acción (partículas, fotones con tono según su frecuencia, contador Geiger, detector, espines, aciertos y errores) y volumen ajustable |
-| **Ajustes** | Calidad gráfica adaptable, movimiento reducido, sonido opcional, escala de texto, orden de configuraciones y exportar o importar el progreso |
+| **Inicio** | Qué hacer ahora (recomendación explicada del motor adaptativo), **Retomar** el último punto de estudio, acceso a Preparar examen, simulacro y repaso, laboratorios y temario |
+| **Preparar examen** (6.0) | Familias de problemas por bloque con su competencia, motivo, dificultad, tiempo, errores habituales, presencia en las fuentes (contada por pregunta) y tu preparación según tu evidencia, sin porcentajes. Sesiones orientativas de 15, 30, 60 y 90 min e imprescindibles antes del examen. Cada familia: ejemplo guiado → otro equivalente sin ayuda → más exigente, teoría y laboratorio |
+| **Guía** | 7 lecciones por bloque con fórmulas, errores típicos, trucos, notas de rigor, ejercicios resueltos y widgets interactivos |
+| **Entrenamiento** | Práctica adaptativa (modos guiado, autónomo, desafío y revisión), ruta de estudio por apartado, repaso espaciado, cuaderno de errores, progreso con incertidumbre y los ejercicios de clase (TEO, AMP, HOJ y EBAU) |
+| **Simulacros** | Seis perfiles, guardado y recuperación, corrección por apartados con crédito por procedimiento, informe con ruta de repaso por familias y errores agrupados por tipo |
+| **Laboratorios** | Atomic Forge, Time Machine (modelos, tubo de rayos catódicos, Geiger–Marsden), Photon Lab (ondas, hidrógeno, espectroscopio), Mass Spectrometry, Quantum Space, Electron Architect y Periodic Universe; cada escena declara qué es cálculo y qué es esquema |
+| **Corrección** | Números con unidades y cifras significativas, configuraciones, números cuánticos, ordenaciones y procedimientos escritos con análisis dimensional y procedencia de cada número |
+| **Progreso** | Clave `atom:v1`, versión de datos 2; exportar, importar y fusionar entre dispositivos de forma exacta e idempotente |
 
 ## Documentación
 
 1. [Matriz de cobertura curricular y erratas de las fuentes](docs/01-matriz-cobertura.md)
 2. [Arquitectura funcional](docs/02-arquitectura.md)
-3. [Diseño de experiencias y jugabilidad](docs/03-diseno-experiencia.md)
-4. [Simulaciones y fundamentos físicos](docs/04-simulaciones-fundamentos.md)
-5. [Propuesta visual y tecnológica](docs/05-propuesta-visual-tecnologica.md)
-6. [Plan de desarrollo por fases](docs/06-plan-fases.md)
-7. [Segunda generación: auditoría, decisiones, mediciones y pendientes](docs/07-segunda-generacion.md)
-8. [Tercera generación (ATOM 3.0): informe](docs/08-tercera-generacion.md) · [progreso](docs/ATOM3-PROGRESS.md) · [criterios de aceptación](docs/ATOM3-QUALITY-GATES.md) · [reanudación](docs/ATOM3-RESUME.md)
-9. [Estadísticas generadas desde el código](docs/ESTADISTICAS.md)
+3. [Simulaciones y fundamentos físicos](docs/04-simulaciones-fundamentos.md)
+4. Informes por versión: [2.0](docs/07-segunda-generacion.md) · [3.0](docs/08-tercera-generacion.md) · [4.0](docs/09-cuarta-generacion.md) · [5.0](docs/10-quinta-generacion.md) · [5.1](docs/11-atom-5-1.md) · [5.2](docs/12-atom-5-2.md) · **[6.0](docs/13-atom-6-definitive.md)**
+5. [Estadísticas generadas desde el código](docs/ESTADISTICAS.md) · mediciones en [docs/mediciones/](docs/mediciones/) · capturas en [docs/capturas/](docs/capturas/)
 
 ## Estructura
 
 ```
 src/science/    Núcleo científico puro (sin React ni Three.js), con pruebas
-src/learning/   Temario, generadores, corrector, dominio, repaso, examen y campaña
-src/state/      Estado persistente (zustand + localStorage versionado)
-src/render/     Piezas 3D reutilizables: escenario, nube electrónica, núcleo y etiquetas
-src/modules/    Atrio, los 7 laboratorios y el Centro de entrenamiento
-src/ui/         Componentes de interfaz: reproductor de ejercicios, panel de misión…
-tools/          Generador de datos (mendeleev) y prueba de humo
+src/learning/   Temario, generadores, corrector, procedimientos, dominio, repaso, simulacro, preparación del examen
+src/state/      Estado persistente (zustand + localStorage versionado), fusión e importación
+src/workers/    Cálculo de orbitales en Web Workers con caché acotada
+src/render/     Piezas 3D reutilizables: escenario, materiales, etiquetas
+src/modules/    Inicio, guía, entrenamiento, preparar examen y los laboratorios
+src/ui/         Componentes de interfaz (reproductor de ejercicios, fórmulas, pedagogía)
+src/styles/     tokens.css (sistema de diseño), fonts.css y hojas por área en global/
+tools/          Pruebas en navegador, medición, capturas, estadísticas y datos
 ```
 
 ## Fuentes de datos
 
-CODATA 2018 (constantes) · IUPAC/CIAAW (pesos atómicos) · NIST ASD (energías de ionización) y *NIST Handbook of Basic Atomic Spectroscopic Data* (líneas espectrales) · NUBASE (nucleidos) · Pyykkö y Atsumi 2009 (radios covalentes) · Shannon 1976 (radios iónicos) · CIE 1931 2° (color espectral). Los datos de elementos se regeneran con `tools/generate_data.py`.
+CODATA 2018 (constantes) · IUPAC/CIAAW (pesos atómicos) · NIST ASD (energías de ionización) y *NIST Handbook of Basic Atomic Spectroscopic Data* (líneas espectrales) · NUBASE (nucleidos) · Pyykkö y Atsumi 2009 (radios covalentes) · Shannon 1976 (radios iónicos) · CIE 1931 2° (color espectral). Tipografías Inter 4 y JetBrains Mono (SIL OFL; licencias en `src/assets/fonts/`).
 
 ## Publicación
 
-El flujo `.github/workflows/deploy.yml` compila, prueba y publica la aplicación en GitHub Pages con cada push a `main`. Solo hay que activar, una vez, **Settings → Pages → Source: GitHub Actions**. La aplicación usa rutas relativas y funciona en `https://<usuario>.github.io/<repositorio>/`.
+`.github/workflows/deploy.yml` publica en GitHub Pages con cada push a `main`, **solo si pasa antes el flujo completo de comprobaciones** (`ci.yml`: tipos, pruebas, compilación, E2E, accesibilidad y resiliencia). Requisito único: **Settings → Pages → Source: GitHub Actions**.

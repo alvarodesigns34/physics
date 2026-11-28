@@ -1,0 +1,23 @@
+ATOM 6.0 · Descomposición de la latencia al cambiar de orbital en Quantum Space
+Chromium + SwiftShader (GPU por software), 1440 × 900, calidad media, build de producción (y dev para el perfil de CPU).
+Herramientas: scripts de instrumentación (Worker.postMessage/onmessage, PerformanceObserver longtask, contador de
+fotogramas __atomFrames), CDP Profiler (muestreo 200 µs), envoltura de TODAS las funciones de WebGL/WebGL2 con
+cronómetro, y CDP Performance.getMetrics.
+
+Línea de tiempo (ms desde el clic; build de producción):
+  n=3      post vista previa 384 · respuesta 1623 · tarea larga 386+1235 · después fotogramas cada ≈ 180 ms
+  l=2      post 39 · respuesta 979 · tarea larga 44+934
+  subnivel post 463 · respuesta 1431 · tarea larga 467+963 · fotogramas cada ≈ 280 ms
+  n=4      post 35 · respuesta 943 · tarea larga 41+901 · fotogramas cada ≈ 300 ms
+  → la respuesta del Worker llega SIEMPRE justo al terminar una tarea larga del hilo principal: el Worker no es
+    el cuello de botella; su mensaje espera a que el hilo principal quede libre.
+
+Perfil de CPU (dev, 2,5 s tras el clic):  JS total ≈ 30 ms (React, three.js, BufferGeometry); «(program)», tiempo
+nativo fuera de JS: 3,6 s (l=2) y 5,0 s (n=4).
+Llamadas WebGL cronometradas (3 s tras el clic): todas juntas 1–2 ms; bufferData máx. < 1 ms; programas 11 → 11
+(no se compila ningún sombreador nuevo).
+Performance.getMetrics (3 s): TaskDuration 3301–5811 ms; ScriptDuration 30–44 ms; Layout 2–3 ms; RecalcStyle 4–7 ms.
+Cálculo de la superficie (Node, misma función que el Worker): 56³ ≈ 40–90 ms por orbital; subnivel 5d a 48³ ≈ 91 ms.
+
+Conclusión: ≈ 99 % del tiempo es rasterizado emulado por software (proceso de GPU) que bloquea el hilo principal.
+No es representativo de una GPU real; no se ha podido medir en GPU real, Safari ni iPadOS.

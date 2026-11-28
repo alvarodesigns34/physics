@@ -1,0 +1,20 @@
+stdout | src/science/perf.bench.ts > orbitales > orbitalGrid 3d, rejilla 72³ (calidad alta)
+BENCH orbitalGrid 3d, rejilla 72³ (calidad alta): mediana 27.9 ms (mín 27.2, máx 45.1, n = 3)
+stdout | src/science/perf.bench.ts > orbitales > orbitalGrid 3p, rejilla 56³ (calidad media)
+BENCH orbitalGrid 3p, rejilla 56³ (calidad media): mediana 14.2 ms (mín 13.8, máx 18.2, n = 3)
+stdout | src/science/perf.bench.ts > orbitales > orbitalGrid 4f, rejilla 40³ (calidad baja)
+BENCH orbitalGrid 4f, rejilla 40³ (calidad baja): mediana 8.2 ms (mín 7.8, máx 8.8, n = 3)
+stdout | src/science/perf.bench.ts > orbitales > sampleOrbital 3d, 52 800 puntos
+BENCH sampleOrbital 3d, 52 800 puntos: mediana 35.5 ms (mín 35.0, máx 38.9, n = 5)
+stdout | src/science/perf.bench.ts > orbitales > atomDensity Fe, 20 000 puntos
+BENCH atomDensity Fe, 20 000 puntos: mediana 6.0 ms (mín 5.9, máx 8.9, n = 5)
+stdout | src/science/perf.bench.ts > superficie completa (rejilla + marching cubes) > 3d_z², 72³
+BENCH 3d_z², 72³: mediana 44.1 ms (mín 44.0, máx 66.3, n = 3)
+stdout | src/science/perf.bench.ts > superficie completa (rejilla + marching cubes) > subnivel 3d (5 orbitales), 48³
+BENCH subnivel 3d (5 orbitales), 48³: mediana 102.2 ms (mín 96.0, máx 107.0, n = 3)
+stdout | src/science/perf.bench.ts > superficie con el marching cubes propio (lo que ejecuta el Web Worker) > 3d_z², 72³ (rejilla + poligonización)
+BENCH 3d_z², 72³ (rejilla + poligonización): mediana 45.2 ms (mín 45.1, máx 68.0, n = 3)
+stdout | src/science/perf.bench.ts > superficie con el marching cubes propio (lo que ejecuta el Web Worker) > solo poligonización 72³
+BENCH solo poligonización 72³: mediana 30.9 ms (mín 22.9, máx 33.3, n = 5)
+stdout | src/science/perf.bench.ts > óptica > prismGeometry + 400 rayos
+BENCH prismGeometry + 400 rayos: mediana 0.9 ms (mín 0.6, máx 1.6, n = 5)

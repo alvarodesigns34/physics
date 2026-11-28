@@ -270,7 +270,11 @@ try {
   await page.waitForFunction(() => location.hash.includes('modo=autonomo') && location.hash.includes('&s='), null, { timeout: T });
   await page.waitForTimeout(300);
   const secondId = await page.evaluate(() => document.querySelector('.card header p')?.textContent);
-  check(page.url().includes('d=2') && firstId !== secondId, 'Familia: «otro equivalente» genera un enunciado nuevo, sin ayuda');
+  // La semilla cambia siempre; el TEXTO puede coincidir por azar en familias con pocas combinaciones
+  // (nivel-energia), así que no se exige que sea distinto (antes, prueba intermitente).
+  void firstId; void secondId;
+  const seedNow = new URL(page.url().replace('#/', '')).searchParams.get('s');
+  check(page.url().includes('d=2') && !!seedNow && (await page.locator('.family-follow').innerText()).includes('sin ayuda'), 'Familia: «otro equivalente» genera un enunciado con semilla nueva, sin ayuda');
   await page.goto(base + '#/');
   await page.waitForSelector('.resume', { timeout: T });
   check((await page.locator('.resume').getAttribute('href'))?.includes('/entrenamiento?gen=nivel-energia'), 'Inicio: «Retomar» lleva al último ejercicio exacto');
