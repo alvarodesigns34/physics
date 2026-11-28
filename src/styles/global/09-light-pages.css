@@ -7,9 +7,6 @@
     radial-gradient(60% 50% at 100% 0%, color-mix(in srgb, var(--b5) 4%, transparent), transparent 70%),
     var(--surface);
 }
-.page-bg::after {
-  display: none;
-}
 
 .home {
   pointer-events: auto;

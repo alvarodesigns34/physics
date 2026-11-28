@@ -43,11 +43,6 @@
   color: var(--ink);
 }
 
-.topbar {
-  height: var(--topbar-h);
-  min-height: 0;
-  padding-block: 0;
-}
 @media (min-width: 761px) {
   /* Columna de la escena dentro del área superpuesta: coincide con el visor y usa su tinta. */
   .app[data-kind='laboratorio'] .workspace > :not(.side):not(.label-layer) {
