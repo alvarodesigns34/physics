@@ -204,7 +204,7 @@ export interface Readiness {
   openErrors: number;
   /** Explicación en una frase, sin porcentajes */
   text: string;
-  /** Problemas distintos que produce la familia a su dificultad de práctica (muestra de 96 semillas) */
+  /** Problemas distintos que produce la familia (muestra de 96 semillas); 0 si no hizo falta medirla */
   variety: number;
   lastAt?: number;
 }
@@ -248,10 +248,12 @@ export function familyReadiness(generatorId: string, history: AttemptForPrep[], 
   const mean = wsum ? last.reduce((a, x) => a + x.s * x.w, 0) / wsum : 0;
   const pf = PREP_BY_GEN.get(generatorId);
   const d = (pf?.difficulty ?? 2) as Difficulty;
-  const variety = familyVariety(generatorId, d);
-  const need = variety >= 6 ? 2 : Math.max(1, Math.min(3, variety));
+  // La variedad solo se mide (≈ 96 ejercicios generados) cuando decide entre «en progreso» y «sólida».
+  const decides = indep.length >= 2 && openErrors === 0 && mean >= 0.85 && distinctSolved >= 1;
+  const variety = decides ? familyVariety(generatorId, d) : 0;
+  const need = !decides ? 2 : variety >= 6 ? 2 : Math.max(1, Math.min(3, variety));
   const hardSolved = !!pf?.hard && indep.some((h) => h.score >= 0.8 && demonstrated(h) && Number(h.exerciseId.split(':')[1]) === pf.hard);
-  const allSeen = variety > 0 && variety < 6 && new Set(own.map((h) => problemKeyOfId(h.exerciseId))).size >= variety;
+  const allSeen = decides && variety > 0 && variety < 6 && new Set(own.map((h) => problemKeyOfId(h.exerciseId))).size >= variety;
   const base = { attempts: own.length, independent: indep.length, distinctSolved, openErrors, lastAt: own.at(-1)?.at, variety };
   const pl = (n: number, s: string, p = `${s}s`) => `${n} ${n === 1 ? s : p}`;
   if (!own.length) return { ...base, level: 'sin-evidencia', text: openErrors ? `Tienes ${pl(openErrors, 'error')} sin resolver en el cuaderno.` : 'Aún no has resuelto ningún ejercicio de esta familia.' };
@@ -266,7 +268,7 @@ export function familyReadiness(generatorId: string, history: AttemptForPrep[], 
       : allSeen && pf?.hard && !hardSolved
         ? `Ya has visto las ${variety} variantes de esta familia: acertar una del nivel exigente demuestra que no es memoria.`
         : distinctSolved < need
-          ? `${pl(distinctSolved, 'problema distinto', 'problemas distintos')} resuelto${distinctSolved === 1 ? '' : 's'} sin ayuda de ${need} necesarios${guessed ? ` (${pl(guessed, 'acierto', 'aciertos')} de elección no cuentan: pudo ser azar)` : ''}${variety < 6 ? ` · familia con solo ${variety} variantes` : ''}.`
+          ? `${pl(distinctSolved, 'problema distinto', 'problemas distintos')} resuelto${distinctSolved === 1 ? '' : 's'} sin ayuda de ${need} necesarios${guessed ? ` (${pl(guessed, 'acierto', 'aciertos')} de elección no cuentan: pudo ser azar)` : ''}${variety > 0 && variety < 6 ? ` · familia con solo ${variety} variantes` : ''}.`
           : 'En progreso.';
   return { ...base, level: 'en-progreso', text: why };
 }
