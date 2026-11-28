@@ -756,6 +756,25 @@ export function checkProcedure(text: string, specOrCps: ProcedureSpec | Checkpoi
       const o = originOf(x);
       if (o.line) results.filter((r) => r.line === o.line).forEach((r) => (r.used = true));
     }
+    // ATOM 6.0 · Una operación hecha SOLO con números redondos (enteros pequeños, potencias de 10) no parte de
+    // ningún dato: «ν = 10^14 · 6 = 6·10^14 Hz» fabrica el resultado. Debe intervenir al menos un dato, una
+    // constante (por su valor o su símbolo) o un resultado anterior.
+    let trivial = false;
+    if (derived && origin === 'sound') {
+      const substantive = (x: number) => {
+        const a = Math.abs(x);
+        if (a === 0) return false;
+        const near = (y: number) => close(a, Math.abs(y), 0.015);
+        return ctx.data.some(near) || KNOWN_CONSTANT_VALUES.some(near) || known.some((k) => k.origin === 'sound' && near(k.v));
+      };
+      const namesUsed = evals.flatMap((m) => (m.ast ? [...ids(m.ast)] : []));
+      const usesSymbol = namesUsed.some((n) => userVars.has(n) || n in ctx.constants);
+      if (!usesSymbol && !headLits.some(substantive)) {
+        trivial = true;
+        origin = 'unknown';
+        unknownNum = headLits[0] ?? si;
+      }
+    }
     if (!derived) {
       // Afirmación: «λ = 6,56·10⁻⁷ m». Si coincide con un dato o un resultado anterior, es una reescritura.
       const o = originOf(head.value!).origin === 'sound' || originOf(si).origin === 'sound' ? 'sound' : originOf(si).origin === 'tainted' ? 'tainted' : 'unknown';
@@ -775,7 +794,7 @@ export function checkProcedure(text: string, specOrCps: ProcedureSpec | Checkpoi
     let note: string | undefined;
     if (origin === 'unknown' && derived) {
       issues.push({ kind: 'sin-justificar', line: L, number: unknownNum! });
-      note = `¿De dónde sale ${fmt(unknownNum!)}? No es un dato ni un resultado anterior.`;
+      note = trivial ? 'La operación solo usa números redondos: no parte de ningún dato, constante ni resultado anterior.' : `¿De dónde sale ${fmt(unknownNum!)}? No es un dato ni un resultado anterior.`;
     } else if (origin === 'tainted') note = 'Coherente con tu error anterior, pero no demuestra este paso.';
     let cp: string | undefined;
     for (const c of spec.checkpoints) {

@@ -220,3 +220,19 @@ describe('la ayuda del analizador queda registrada en el modelo', async () => {
     expect(helped.nodes[node]!.kind).toBe('asistida');
   });
 });
+
+describe('ATOM 6.0 · operaciones fabricadas con números redondos', () => {
+  it.each([
+    ['entero por potencia de 10', 'ν = 10^14 · 6 = 6·10^14 Hz'],
+    ['potencia por entero', 'ν = 6 · 10^14 = 6·10^14 Hz'],
+    ['dividir y multiplicar por lo mismo', 'ν = 6·10^14 · 2 / 2 = 6·10^14 Hz'],
+  ])('%s: sin crédito', (_n, proc) => {
+    const r = checkProcedure(proc, spec);
+    expect(r.reached).toEqual([]);
+  });
+  it('una operación con un dato o una constante sigue acreditándose (métodos alternativos)', () => {
+    expect(checkProcedure('ν = 3·10^8 / 5·10^-7 = 6·10^14 Hz', spec).reached).toEqual([cpNu]);
+    expect(checkProcedure('E = h·c/λ = 6,626·10^-34 · 3·10^8 / 5·10^-7 = 3,976·10^-19 J', spec).reached).toEqual([cpE]);
+    expect(checkProcedure('λ = 500·10^-9 m = 5·10^-7 m', spec).reached).toEqual([cpL]);
+  });
+});
