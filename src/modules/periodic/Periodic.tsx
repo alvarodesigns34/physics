@@ -650,13 +650,13 @@ export function PeriodicOverlay() {
         <div className="side__scroll">
           <MissionPanel lab="periodico" signal={signal} />
           <div className="segmented" role="tablist" aria-label="Vista" style={{ alignSelf: 'stretch' }}>
-            <button type="button" role="tab" aria-selected={st.view === 'tabla'} style={{ flex: 1 }} onClick={() => st.set({ view: 'tabla' })}>
+            <button type="button" role="tab" aria-selected={st.view === 'tabla'} style={{ flex: 'auto', whiteSpace: 'nowrap', paddingInline: 10 }} onClick={() => st.set({ view: 'tabla' })}>
               Tabla 3D
             </button>
-            <button type="button" role="tab" aria-selected={st.view === 'tamanos'} style={{ flex: 1 }} onClick={() => st.set({ view: 'tamanos' })}>
+            <button type="button" role="tab" aria-selected={st.view === 'tamanos'} style={{ flex: 'auto', whiteSpace: 'nowrap', paddingInline: 10 }} onClick={() => st.set({ view: 'tamanos' })}>
               Átomos e iones
             </button>
-            <button type="button" role="tab" aria-selected={st.view === 'tendencias'} style={{ flex: 1 }} onClick={() => st.set({ view: 'tendencias' })}>
+            <button type="button" role="tab" aria-selected={st.view === 'tendencias'} style={{ flex: 'auto', whiteSpace: 'nowrap', paddingInline: 10 }} onClick={() => st.set({ view: 'tendencias' })}>
               Tendencias
             </button>
           </div>

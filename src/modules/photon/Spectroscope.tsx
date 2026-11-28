@@ -336,10 +336,12 @@ export const SPECTRO_ANCHORS: Anchor[] = (() => {
   const dir = PRISM.screenDir;
   return [
     { id: 'sp-lamp', position: to3(src, 0.95).toArray() as [number, number, number], offset: [64, 0] },
-    { id: 'sp-prism', position: to3(PRISM.vertices[0], 0.72).toArray() as [number, number, number] },
-    { id: 'sp-screen', position: to3([c[0] + dir[0] * S_CENTER, c[1] + dir[1] * S_CENTER], SCREEN_H / 2 + 0.22).toArray() as [number, number, number] },
-    { id: 'sp-violet', position: to3(PRISM.trace(400)!.hit, -SCREEN_H / 2 - 0.16).toArray() as [number, number, number] },
-    { id: 'sp-red', position: to3(PRISM.trace(700)!.hit, -SCREEN_H / 2 - 0.16).toArray() as [number, number, number] },
+    // ATOM 6.0: etiquetas fuera de la geometría (antes «Prisma…» caía sobre la cara del prisma y «400 nm»
+    // sobre el haz de rayos, que llega a la pantalla desde abajo).
+    { id: 'sp-prism', position: to3(PRISM.vertices[0], -0.62).toArray() as [number, number, number], offset: [0, 18] },
+    { id: 'sp-screen', position: to3([c[0] + dir[0] * S_CENTER, c[1] + dir[1] * S_CENTER], SCREEN_H / 2 + 0.85).toArray() as [number, number, number] },
+    { id: 'sp-violet', position: to3(PRISM.trace(400)!.hit, SCREEN_H / 2 + 0.14).toArray() as [number, number, number] },
+    { id: 'sp-red', position: to3(PRISM.trace(700)!.hit, SCREEN_H / 2 + 0.14).toArray() as [number, number, number] },
   ];
 })();
 
