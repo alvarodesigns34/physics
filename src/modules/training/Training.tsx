@@ -19,6 +19,7 @@ import { MasteryBadge, ProgressView } from './Progress';
 import { Review } from './Review';
 import { Sources } from './Sources';
 import { PREP_BY_GEN } from '../../learning/examPrep';
+import { freshSeed, problemKey, problemKeyOfId } from '../../learning/equivalence';
 type View = 'practica' | 'ruta' | 'repaso' | 'examen' | 'cuaderno' | 'progreso' | 'fuentes';
 const VIEWS: { id: View; label: string }[] = [
   { id: 'practica', label: 'Práctica' },
@@ -189,13 +190,24 @@ function Practice({ initialScope, fixedExercise, onClearFixed, forceVariant }: {
  * ATOM 6.0 · Secuencia de una familia (desde «Preparar examen»): ejemplo guiado → otro equivalente sin
  * ayuda → uno más exigente. Cada enlace genera un enunciado NUEVO (semilla nueva), nunca el mismo.
  */
-function FamilyFollowUp({ gen, difficulty, variant }: { gen: string; difficulty: number; variant?: Variant }) {
+function FamilyFollowUp({ gen, difficulty, variant, current }: { gen: string; difficulty: number; variant?: Variant; current: Exercise }) {
   const prep = PREP_BY_GEN.get(gen);
-  const fresh = () => Math.floor(Math.random() * 1e9);
-  const to = (d: number, modo: Variant) => navigate(`/entrenamiento?gen=${gen}&d=${d}&modo=${modo}&s=${fresh()}`);
+  const history = useStore((s) => s.history);
+  const [exhausted, setExhausted] = useState(false);
+  // ATOM 6.0 (final): «otro equivalente» es otro PROBLEMA, no otra semilla: se descartan los ya vistos
+  // (mismos datos, aunque cambie el id o el orden) según el historial de esta familia.
+  const to = (d: number, modo: Variant) => {
+    const seen = new Set<string>([problemKey(current), ...history.filter((h) => h.exerciseId.startsWith(`${gen}:${d}:`)).map((h) => problemKeyOfId(h.exerciseId))]);
+    const { seed, exhausted: ex } = freshSeed(gen, d as 1 | 2 | 3, seen);
+    setExhausted(ex);
+    navigate(`/entrenamiento?gen=${gen}&d=${d}&modo=${modo}&s=${seed}`);
+  };
   return (
     <div className="family-follow" role="group" aria-label="Siguiente paso en esta familia">
-      <span className="small muted">{prep ? prep.title : 'Esta familia'} · {variant === 'guiado' ? 'ejemplo guiado' : variant === 'desafio' ? 'nivel exigente' : variant === 'revision' ? 'resolución explicada' : 'sin ayuda'}</span>
+      <span className="small muted">
+        {prep ? prep.title : 'Esta familia'} · {variant === 'guiado' ? 'ejemplo guiado' : variant === 'desafio' ? 'nivel exigente' : variant === 'revision' ? 'resolución explicada' : 'sin ayuda'}
+        {exhausted && <span className="family-follow__note"> · Ya has visto todas las variantes de este nivel: este problema se repite{prep?.hard ? '; prueba «Más exigente»' : ''}.</span>}
+      </span>
       <span className="row row--wrap" style={{ gap: 6 }}>
         {variant !== 'autonomo' && (
           <button type="button" className="btn btn--sm" onClick={() => to(prep?.difficulty ?? difficulty, 'autonomo')}>
@@ -204,7 +216,7 @@ function FamilyFollowUp({ gen, difficulty, variant }: { gen: string; difficulty:
         )}
         {variant === 'autonomo' && (
           <button type="button" className="btn btn--sm" onClick={() => to(difficulty, 'autonomo')}>
-            Otro enunciado nuevo
+            Otro problema nuevo
           </button>
         )}
         {prep?.hard && variant !== 'desafio' && (
@@ -305,7 +317,7 @@ export function TrainingOverlay() {
               </span>
             </div>
           )}
-          {view === 'practica' && fixed && genParam && fixed.generatorId === genParam && <FamilyFollowUp gen={genParam} difficulty={fixed.difficulty} variant={forced} />}
+          {view === 'practica' && fixed && genParam && fixed.generatorId === genParam && <FamilyFollowUp gen={genParam} difficulty={fixed.difficulty} variant={forced} current={fixed} />}
           {view === 'practica' && <Practice key={scopeKey} initialScope={practiceScope} fixedExercise={fixed} onClearFixed={() => setFixed(null)} forceVariant={forced} />}
           {view === 'repaso' && (
             <Review

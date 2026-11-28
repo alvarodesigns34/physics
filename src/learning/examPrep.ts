@@ -19,6 +19,7 @@
 import { SOURCE_EXERCISES } from './registry';
 import { guideAnchorFor } from './guide';
 import type { Difficulty } from './types';
+import { familyVariety, problemKeyOfId } from './equivalence';
 
 export type Tier = 'esencial' | 'examen' | 'exigente';
 export type Scope = 'examinable' | 'ampliacion' | 'enriquecimiento';
@@ -198,11 +199,13 @@ export interface Readiness {
   attempts: number;
   /** Intentos sin ayuda (evidencia demostrada o con posible azar) */
   independent: number;
-  /** Enunciados distintos resueltos sin ayuda con éxito (≥ 0,8) */
+  /** PROBLEMAS distintos (clave de equivalencia) resueltos sin ayuda y sin posible azar (≥ 0,8) */
   distinctSolved: number;
   openErrors: number;
   /** Explicación en una frase, sin porcentajes */
   text: string;
+  /** Problemas distintos que produce la familia a su dificultad de práctica (muestra de 96 semillas) */
+  variety: number;
   lastAt?: number;
 }
 
@@ -211,29 +214,61 @@ export const READINESS_LABEL: Record<ReadinessLevel, string> = { 'sin-evidencia'
 export const generatorOf = (exerciseId: string) => exerciseId.split(':')[0]!;
 
 /**
- * Reglas (explícitas y probadas):
+ * Reglas (explícitas y probadas). ATOM 6.0 (iteración final): todo se cuenta por PROBLEMA (clave de
+ * equivalencia, `equivalence.ts`), no por id: otra semilla con los mismos datos es el mismo problema.
  * - sin intentos → sin evidencia;
  * - menos de 2 intentos sin ayuda → poca evidencia (aunque los asistidos hayan ido bien);
- * - errores abiertos en el cuaderno, o media de los 3 últimos intentos sin ayuda < 0,6 → a reforzar;
- * - media ≥ 0,85 en los 3 últimos sin ayuda Y al menos 2 enunciados DISTINTOS bien resueltos sin ayuda
- *   → sólida (repetir el mismo enunciado no basta: puede ser memoria);
+ * - errores abiertos en el cuaderno, o media ponderada de los últimos intentos sin ayuda < 0,6 → a reforzar.
+ *   En la media, un acierto que pudo ser azar (elección con pocas opciones) pesa 0,5 y repetir un problema
+ *   ya resuelto pesa 0,3 (puede ser memoria);
+ * - sólida: media ≥ 0,85 Y problemas DISTINTOS resueltos sin ayuda y sin posible azar (evidencia
+ *   «demostrada»): 2 si la familia tiene variedad (≥ 6 problemas distintos); en familias con pocas
+ *   variantes, 3 (o todas). Si ya se han visto todas las variantes y la familia tiene nivel exigente, hace
+ *   falta además acertar uno de ese nivel: con todas vistas, acertar no descarta haberlas memorizado;
  * - en otro caso → en progreso.
  */
 export function familyReadiness(generatorId: string, history: AttemptForPrep[], notebook: NotebookForPrep[] = []): Readiness {
   const own = history.filter((h) => generatorOf(h.exerciseId) === generatorId && h.mode !== 'campana');
   const indep = own.filter((h) => (h.evidence ? h.evidence === 'demostrada' || h.evidence === 'posible-azar' : h.hintsUsed === 0));
   const openErrors = notebook.filter((n) => n.generatorId === generatorId && !n.resolvedAt).length;
-  const distinctSolved = new Set(indep.filter((h) => h.score >= 0.8).map((h) => h.exerciseId)).size;
-  const last3 = indep.slice(-3);
-  const mean = last3.length ? last3.reduce((a, h) => a + h.score, 0) / last3.length : 0;
-  const base = { attempts: own.length, independent: indep.length, distinctSolved, openErrors, lastAt: own.at(-1)?.at };
+  const demonstrated = (h: AttemptForPrep) => (h.evidence ? h.evidence === 'demostrada' : h.hintsUsed === 0);
+  const solvedKeys = new Set(indep.filter((h) => h.score >= 0.8 && demonstrated(h)).map((h) => problemKeyOfId(h.exerciseId)));
+  const distinctSolved = solvedKeys.size;
+  const guessed = indep.filter((h) => h.score >= 0.8 && !demonstrated(h)).length;
+  // Media ponderada de los últimos 4 intentos sin ayuda.
+  const seen = new Set<string>();
+  const weighted = indep.map((h) => {
+    const k = problemKeyOfId(h.exerciseId);
+    const w = (h.evidence === 'posible-azar' ? 0.5 : 1) * (seen.has(k) ? 0.3 : 1);
+    seen.add(k);
+    return { s: h.score, w };
+  });
+  const last = weighted.slice(-4);
+  const wsum = last.reduce((a, x) => a + x.w, 0);
+  const mean = wsum ? last.reduce((a, x) => a + x.s * x.w, 0) / wsum : 0;
+  const pf = PREP_BY_GEN.get(generatorId);
+  const d = (pf?.difficulty ?? 2) as Difficulty;
+  const variety = familyVariety(generatorId, d);
+  const need = variety >= 6 ? 2 : Math.max(1, Math.min(3, variety));
+  const hardSolved = !!pf?.hard && indep.some((h) => h.score >= 0.8 && demonstrated(h) && Number(h.exerciseId.split(':')[1]) === pf.hard);
+  const allSeen = variety > 0 && variety < 6 && new Set(own.map((h) => problemKeyOfId(h.exerciseId))).size >= variety;
+  const base = { attempts: own.length, independent: indep.length, distinctSolved, openErrors, lastAt: own.at(-1)?.at, variety };
   const pl = (n: number, s: string, p = `${s}s`) => `${n} ${n === 1 ? s : p}`;
   if (!own.length) return { ...base, level: 'sin-evidencia', text: openErrors ? `Tienes ${pl(openErrors, 'error')} sin resolver en el cuaderno.` : 'Aún no has resuelto ningún ejercicio de esta familia.' };
   if (openErrors > 0 && indep.length < 2) return { ...base, level: 'a-reforzar', text: `${pl(openErrors, 'error')} sin resolver en el cuaderno y ${pl(indep.length, 'intento')} sin ayuda.` };
   if (indep.length < 2) return { ...base, level: 'poca-evidencia', text: `${pl(own.length, 'intento')}, ${indep.length === 0 ? 'ninguno' : 'solo uno'} sin ayuda: todavía no se puede valorar.` };
-  if (openErrors > 0 || mean < 0.6) return { ...base, level: 'a-reforzar', text: openErrors ? `${pl(openErrors, 'error')} sin resolver en el cuaderno.` : `Los últimos ${last3.length} intentos sin ayuda tienen fallos importantes.` };
-  if (mean >= 0.85 && distinctSolved >= 2) return { ...base, level: 'solida', text: `${pl(distinctSolved, 'enunciado distinto', 'enunciados distintos')} bien resueltos sin ayuda.` };
-  return { ...base, level: 'en-progreso', text: distinctSolved < 2 && mean >= 0.85 ? 'Bien sin ayuda, pero en un solo enunciado: prueba otro distinto.' : `Aciertos parciales en los últimos ${last3.length} intentos sin ayuda.` };
+  if (openErrors > 0 || mean < 0.6) return { ...base, level: 'a-reforzar', text: openErrors ? `${pl(openErrors, 'error')} sin resolver en el cuaderno.` : `Los últimos intentos sin ayuda tienen fallos importantes.` };
+  if (mean >= 0.85 && distinctSolved >= need && (!allSeen || !pf?.hard || hardSolved))
+    return { ...base, level: 'solida', text: `${pl(distinctSolved, 'problema distinto', 'problemas distintos')} bien resueltos sin ayuda${allSeen && !pf?.hard ? '. Ya has visto todas sus variantes: confírmalo en un simulacro' : ''}.` };
+  const why =
+    mean < 0.85
+      ? 'Aciertos parciales en los últimos intentos sin ayuda.'
+      : allSeen && pf?.hard && !hardSolved
+        ? `Ya has visto las ${variety} variantes de esta familia: acertar una del nivel exigente demuestra que no es memoria.`
+        : distinctSolved < need
+          ? `${pl(distinctSolved, 'problema distinto', 'problemas distintos')} resuelto${distinctSolved === 1 ? '' : 's'} sin ayuda de ${need} necesarios${guessed ? ` (${pl(guessed, 'acierto', 'aciertos')} de elección no cuentan: pudo ser azar)` : ''}${variety < 6 ? ` · familia con solo ${variety} variantes` : ''}.`
+          : 'En progreso.';
+  return { ...base, level: 'en-progreso', text: why };
 }
 
 // ── Prioridad, imprescindibles e itinerarios ───────────────────────────────

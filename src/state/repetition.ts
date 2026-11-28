@@ -15,8 +15,14 @@ export const SPACED_RETRIEVAL_MS = 2 * 86_400_000;
  * - repetición tras ≥ 2 días: factor 0,6 y `spaced` (recuperación espaciada: puede cerrar el cuaderno);
  * - repetición inmediata: 0,35 la segunda vez y 0,15 después (memoria de la respuesta, no dominio).
  */
-export function repetitionInfo(history: { exerciseId: string; at: number }[], id: string, now: number): { factor: number; spaced: boolean } {
-  const prev = history.filter((h) => h.exerciseId === id);
+/**
+ * ATOM 6.0 (final): `keyOf` permite comparar PROBLEMAS (clave de equivalencia) en lugar de ids: otra semilla
+ * con los mismos datos es una repetición. Sin `keyOf` se compara el id (lo que usa la fusión para reproducir
+ * intentos antiguos tal como los ponderó el dispositivo original).
+ */
+export function repetitionInfo(history: { exerciseId: string; at: number }[], id: string, now: number, keyOf?: (id: string) => string): { factor: number; spaced: boolean } {
+  const k = keyOf ? keyOf(id) : id;
+  const prev = history.filter((h) => (keyOf ? h.exerciseId === id || keyOf(h.exerciseId) === k : h.exerciseId === id));
   if (!prev.length) return { factor: 1, spaced: false };
   const last = Math.max(...prev.map((h) => h.at));
   if (now - last >= SPACED_RETRIEVAL_MS) return { factor: 0.6, spaced: true };

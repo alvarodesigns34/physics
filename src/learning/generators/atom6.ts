@@ -119,6 +119,8 @@ export function buildAbsorption(seed: number, difficulty: Difficulty): Exercise 
     difficulty,
     level: difficulty === 3 ? 5 : 4,
     title: '¿Qué luz absorbe el hidrógeno?',
+    // El problema lo definen las energías, no su orden ni sus letras.
+    equivalence: [...c.photons].sort((x, y) => x - y).join('|'),
     statement: `Un gas de hidrógeno atómico, con TODOS sus átomos en el estado fundamental, se ilumina con fotones de estas energías: ${c.photons.map((e, i) => `**${letters[i]}: ${ev(e)} eV**`).join(', ')}. Ningún átomo recibe más de un fotón. Usa Eₙ = −13,6 eV/n².`,
     data: [{ label: 'Eₙ', value: '−13,6 eV/n²' }],
     parts,

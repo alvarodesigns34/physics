@@ -9,6 +9,7 @@ import { initialMastery, updateCard, updateMastery, updateMasteryY, type NodeMas
 import type { Difficulty, ErrorKind, Exercise, SkillId } from '../learning/types';
 import { buildEvidence, EVIDENCE_WEIGHT, type EvidenceKind, type PartRecord } from '../learning/evidence';
 import { addMiss, registerClean, type NotebookEntry } from '../learning/notebook';
+import { problemKeyOfId } from '../learning/equivalence';
 import { parseExport, PROGRESS_VERSION, validateProgress } from './validate';
 import { mergeProgress, type MergeSummary } from './merge';
 import type { ConfigOrder } from '../science/configuration';
@@ -206,7 +207,8 @@ export const useStore = create<AppState>()(
           const ev = buildEvidence(ex, o.parts);
           // Repetir el MISMO enunciado (mismo id) puede ser memoria, no comprensión (auditoría de ATOM 4.0:
           // inflación por repetición). Pesa mucho menos y nunca cuenta como evidencia «demostrada».
-          const repInfo = repetitionInfo(s.history, ex.id, now);
+          // ATOM 6.0 (final): repetición por PROBLEMA, no por id (otra semilla con los mismos datos es el mismo problema).
+          const repInfo = repetitionInfo(s.history, ex.id, now, problemKeyOfId);
           const rep = repInfo.factor;
           if (rep < 1) {
             for (const v of Object.values(ev.nodes)) if (v.kind === 'demostrada' || v.kind === 'posible-azar') v.kind = 'asistida';
@@ -262,7 +264,7 @@ export const useStore = create<AppState>()(
             });
           if (misses.length) notebook = addMiss(notebook, { exerciseId: ex.id, generatorId: ex.generatorId, title: ex.title, nodeIds: Object.keys(ev.nodes), at: now, mode, misses });
           else if (o.hintsUsed === 0 && (rep === 1 || repInfo.spaced) && o.parts.every((r) => r.attempts <= 1 && !r.revealed && !r.hinted && !r.procedureAssisted && r.credit >= 1))
-            notebook = registerClean(notebook, { id: ex.id, generatorId: ex.generatorId, difficulty: ex.difficulty, steps: o.parts.map((r, k) => ({ id: r.id, prompt: ex.parts.find((p) => p.id === r.id)?.prompt ?? ex.parts[k]!.prompt })) }, now).list;
+            notebook = registerClean(notebook, { sameProblem: (a, b) => problemKeyOfId(a) === problemKeyOfId(b), id: ex.id, generatorId: ex.generatorId, difficulty: ex.difficulty, steps: o.parts.map((r, k) => ({ id: r.id, prompt: ex.parts.find((p) => p.id === r.id)?.prompt ?? ex.parts[k]!.prompt })) }, now).list;
           return { mastery, skills, cards, notebook, history: [...s.history, attempt].slice(-400) };
         }),
       recordExam: (r) => set((s) => ({ exams: [...s.exams, { ...r, at: Date.now() }].slice(-30) })),

@@ -154,6 +154,12 @@ export interface Exercise {
    */
   originalSolution?: string;
   constants?: ConstantSet;
+  /**
+   * ATOM 6.0 · Datos que DEFINEN el problema, cuando su presentación puede variar sin cambiarlo (p. ej., la
+   * misma lista de fotones en otro orden y con otras letras). Si existe, la clave de equivalencia lo usa en
+   * lugar del texto. No se guarda: se reconstruye con el ejercicio.
+   */
+  equivalence?: string;
 }
 
 export interface ExerciseGenerator {

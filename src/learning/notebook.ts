@@ -61,6 +61,8 @@ export interface CleanExercise {
   difficulty?: number;
   /** Pasos RESUELTOS limpiamente en este intento (id y enunciado) */
   steps: { id?: string; prompt: string }[];
+  /** ATOM 6.0 (final): ¿son el MISMO problema dos ids? (por defecto, solo si el id coincide) */
+  sameProblem?: (a: string, b: string) => boolean;
 }
 
 /** ¿Contiene el ejercicio limpio cada uno de los pasos que se fallaron en la entrada? */
@@ -91,11 +93,13 @@ export function registerClean(list: NotebookEntry[], ex: CleanExercise, now: num
     if (x.resolvedAt || !coversMisses(x, ex)) return x;
     const dEntry = difficultyOf(x.exerciseId);
     const hardEnough = dEntry === null || (ex.difficulty ?? difficultyOf(ex.id) ?? 0) >= dEntry;
-    if (x.exerciseId !== ex.id && isVariantOf(x, ex.generatorId) && hardEnough) {
+    const same = x.exerciseId === ex.id || !!ex.sameProblem?.(x.exerciseId, ex.id);
+    if (!same && isVariantOf(x, ex.generatorId) && hardEnough) {
       resolved++;
       return { ...x, resolvedAt: now, resolvedBy: 'variante' as const };
     }
-    if (x.exerciseId === ex.id && isSourceExercise(x) && now - x.at >= 2 * DAY) {
+    // El mismo problema (de los documentos, o generado con los mismos datos) solo cuenta pasados ≥ 2 días.
+    if (same && (isSourceExercise(x) || !!ex.sameProblem) && now - x.at >= 2 * DAY) {
       resolved++;
       return { ...x, resolvedAt: now, resolvedBy: 'mismo-dias-despues' as const };
     }
