@@ -391,3 +391,27 @@
   border-radius: var(--r-inner);
   background: var(--surface-raised);
 }
+
+/* Pantallas estrechas (comprobación secundaria): el modo y los minutos pasan bajo el título. */
+@media (max-width: 560px) {
+  .prep-step {
+    grid-template-columns: 28px auto minmax(0, 1fr) 16px;
+    grid-template-areas: 'n body body go' 'n mode min go';
+    row-gap: 6px;
+  }
+  .prep-step__n {
+    grid-area: n;
+  }
+  .prep-step__body {
+    grid-area: body;
+  }
+  .prep-step__go {
+    grid-area: go;
+  }
+  .prep-mode {
+    grid-area: mode;
+  }
+  .prep-step__min {
+    grid-area: min;
+  }
+}

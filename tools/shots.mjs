@@ -46,7 +46,11 @@ const DEVICES = {
   desktop: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },
   ipad: { viewport: { width: 1180, height: 820 }, deviceScaleFactor: 1, hasTouch: true, isMobile: false },
   ipadv: { viewport: { width: 820, height: 1180 }, deviceScaleFactor: 1, hasTouch: true, isMobile: false },
+  // ATOM 6.0: escritorio grande y móvil (comprobación secundaria); solo con «all» explícito por nombre.
+  wide: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 },
+  movil: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true },
 };
+const TEXT = Number(process.env.TEXT ?? 1);
 
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', String(PORT), '--strictPort', '--outDir', DIST], { stdio: 'pipe' });
 await new Promise((resolve, reject) => {
@@ -57,17 +61,17 @@ const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=sw
 const errors = [];
 try {
   for (const [dev, opts] of Object.entries(DEVICES)) {
-    if (which !== 'all' && which !== dev) continue;
+    if (which === 'all' ? dev === 'wide' || dev === 'movil' : !which.split(',').includes(dev)) continue;
     const ctx = await browser.newContext(opts);
     // Saltar la bienvenida: marca de visita previa.
-    await ctx.addInitScript(([theme, quality, forge]) => {
-      const state = { settings: { seenIntro: true, theme, quality } };
+    await ctx.addInitScript(([theme, quality, forge, text]) => {
+      const state = { settings: { seenIntro: true, theme, quality, textScale: text } };
       if (forge) {
         const [z, n, e] = forge.split(',').map(Number);
         state.forge = { z, n, e };
       }
       try { localStorage.setItem('atom:v1', JSON.stringify({ state, version: 2 })); } catch {}
-    }, [THEME, QUALITY, process.env.FORGE ?? '']);
+    }, [THEME, QUALITY, process.env.FORGE ?? '', TEXT]);
     const page = await ctx.newPage();
     page.on('pageerror', (e) => errors.push(`${dev}: ${e.message}`));
     for (const [name, hash] of VIEWS) {
@@ -78,7 +82,7 @@ try {
         b?.click();
       });
       await page.waitForTimeout(300);
-      await page.screenshot({ path: `${OUT}/${name}-${dev}${THEME === 'oscuro' ? '-oscuro' : ''}.png` });
+      await page.screenshot({ path: `${OUT}/${name}-${dev}${THEME === 'oscuro' ? '-oscuro' : ''}${TEXT !== 1 ? `-texto${Math.round(TEXT * 100)}` : ''}.png` });
       console.log(`✓ ${name}-${dev}`);
     }
     await ctx.close();

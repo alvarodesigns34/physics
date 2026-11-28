@@ -288,6 +288,7 @@ try {
   await m.waitForSelector('.mobile-nav', { timeout: T });
   check(await m.evaluate(() => document.querySelector('.guide-scroll').scrollWidth <= document.querySelector('.guide-scroll').clientWidth + 1), 'Móvil: la guía no desborda en horizontal');
   check(await m.locator('.mobile-nav').isVisible(), 'Móvil: barra de navegación inferior visible');
+  check(await m.evaluate(() => [...document.querySelectorAll('.mobile-nav > *')].every((el) => el.getBoundingClientRect().right <= innerWidth + 1) && document.querySelectorAll('.mobile-nav > *').length === 5), 'Móvil: las cinco pestañas de la barra inferior caben en pantalla');
   await m.screenshot({ path: `${OUT}/13-movil-guia.png` });
   await m.goto(base + '#/forja');
   await m.waitForSelector('canvas', { timeout: T });
