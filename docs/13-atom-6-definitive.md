@@ -125,3 +125,67 @@ c75f108 Simulacro: estado coherente con el crédito; isoelectrónicas; publicaci
 ```
 
 Para publicar: fusionar la rama en `main`. El flujo de despliegue ejecutará antes todas las comprobaciones.
+
+---
+
+# Iteración final (tras la revisión del 28-11-2026)
+
+Objetivos de la revisión: (1) equivalencias reales entre ejercicios y «Sólida» sin memorización; (2) evolución estética perceptible; (3) laboratorios 3D, que concentraron el esfuerzo principal; (4) recorrido prolongado de memoria con interacciones; (5) verificación independiente. Misma rama, sin publicar.
+
+## A. Equivalencia real entre ejercicios
+
+**Hallazgo medido.** Con 96–200 semillas por familia y dificultad, muchas familias producen muy pocos problemas distintos: `grafica-ei` 2, `masa-media` (d2) 3, `heisenberg` (d2) 3, `cascada`, `orbitales-recuento` y `rydberg` (d1) 4, `nivel-energia`, `onda-lambda`, `conversiones` y `prediccion-modelos` (d2) 5… Otras presentan el mismo problema con la lista en otro orden. Dos semillas o identificadores distintos **no** garantizaban dos problemas distintos, y la variedad no puede ampliarse sin cambiar los enunciados de semillas ya guardadas.
+
+**Solución** (`src/learning/equivalence.ts`). Una *clave de problema*: enunciado normalizado **en orden y con sus signos**, datos, y pares (pregunta, respuesta correcta) de los apartados, con las opciones por su texto. Solo se ignora el orden de la lista que el propio ejercicio pide ordenar. Cuando la presentación puede variar sin cambiar el problema, la familia lo declara (`equivalence`: absorción = conjunto de energías; tendencias = propiedad + conjunto de elementos). Se aplica en cuatro sitios:
+
+1. **`familyReadiness()`**: «Sólida» exige problemas DISTINTOS (por clave) resueltos sin ayuda, con evidencia *demostrada* y al nivel de práctica o superior. Son 2 si la familia tiene ≥ 6 variantes; en familias de poca variedad, 3 o todas. Si ya se han visto todas las variantes de esa dificultad y existe nivel exigente, hace falta acertar uno de ese nivel.
+2. **Posible azar**: un acierto de elección con pocas opciones no cuenta como problema demostrado y pesa 0,5 en la media; repetir un problema ya resuelto pesa 0,3.
+3. **Dominio (almacén)**: el factor de repetición (0,35 / 0,15 / 0,6 espaciado) se aplica por problema, no por id. La fusión entre dispositivos sigue reproduciendo los intentos antiguos tal como los ponderó el dispositivo original (por id), y los nuevos guardan su peso exacto: el progreso existente no cambia.
+4. **Cuaderno de errores y «otro equivalente»**: acertar el mismo problema con otra semilla no cierra un error como «variante». «Otro equivalente» elige un problema no visto según el historial y, si no quedan, la variante menos vista, y lo dice.
+
+La variedad solo se mide cuando decide entre «en progreso» y «sólida»: 104 ms la primera vez con 300 intentos y 2 ms después.
+
+**Revisión independiente** (herramienta de revisión de código sobre los commits de esta iteración). Encontró que la primera versión de la clave eliminaba los signos y ordenaba los términos, así que confundía (5, 1, −1, 0) con (5, 1, 1, 0) en `cuanticos-validez`: penalizaba como repetición un problema nuevo. También vio que `allSeen` mezclaba dificultades. Ambos están corregidos, con pruebas que generan 150–300 semillas por familia y exigen que ninguna clave agrupe enunciados que difieran en algo más que el orden de una lista. Corregidos también los demás hallazgos de esa revisión (§C y §D).
+
+Pruebas: `src/learning/equivalence.test.ts` (15) y `src/modules/photon/arrowLayout.test.ts` (6).
+
+## B. Estética
+
+Cambios en las definiciones existentes; no se añadió ninguna capa de sobrescritura:
+- **Acción principal en tinta** (`--action`: casi negro en claro, claro en oscuro). El cobalto queda para selección, enlaces y foco, así que el color vuelve a significar estado.
+- **Pestañas editoriales** (subrayado de 2 px sobre una línea fina) en lugar de una cápsula sobre fondo gris. La barra fija usa un fondo translúcido con desenfoque.
+- **Elevación en capas**: anillo de 1 px más sombra difusa corta, radios 18/12 y tarjetas sin borde duro. La tarjeta principal del inicio y la de selección de simulacro pierden el degradado tintado: superficie limpia con un trazo de acento.
+- **Práctica**: ámbito y modo en una sola barra; los bloques del temario como píldoras con su color (la seleccionada, en tinta).
+- **Guía**: el cuerpo de la lección en tinta (antes, gris medio en textos largos). Las tarjetas de errores, trucos y examen, sin franjas de color: el color queda en un punto junto al título y en las viñetas.
+- Contraste de los tokens verificado (`contrast.test.ts`) y accesibilidad sin infracciones en claro y oscuro.
+
+Comparación: `docs/capturas/atom6-final/` (iteración anterior) frente a `docs/capturas/atom6-final2/`. Referencias visuales actualizadas tras revisar las diferencias; las anteriores se conservan en `referencia-60a/`.
+
+## C. Laboratorios 3D
+
+| Laboratorio | Cambio | Valor pedagógico |
+|---|---|---|
+| Photon Lab · Hidrógeno | Casos (Hα, Hβ, Lyman α, Paschen α, absorción 2 → 4 y los de los apuntes: AMP 7, AMP 8, TEO ej. 1). **Gráfica sincronizada de la serie**: la línea elegida entre todas las de su serie, el límite λ∞ y la banda visible. **Eje de energía con valores en eV** y flechas agrupadas y rotuladas por serie (como TEO p.10), siempre dentro del diagrama. Encuadre propio en iPad vertical | Ver por qué las líneas convergen; un caso de los apuntes **no** muestra la solución: activa «Predecir antes de ver» |
+| Photon Lab · Ondas | Radiaciones de referencia con su contexto; **comparar dos radiaciones**: gráfica E–λ log–log sincronizada (recta de pendiente −1) y cociente E/E₀ = λ₀/λ | Pregunta típica: «¿cuántas veces más energía…?» |
+| Forja | Casos típicos (protio, deuterio, ¹²C/¹⁴C, O²⁻ y Al³⁺ isoelectrónicos, Cl⁻, Fe³⁺), sin referencias a ejercicios concretos porque la ficha muestra sus respuestas | Isótopos frente a iones frente a isoelectrónicos |
+| Time Machine · Tubo | **El método de Thomson en 5 pasos**: sin campos, solo E, solo B (curva opuesta), E y B compensados (v = E/B, medida de q/m) y más aceleración. Banco con superficie visible y latón satinado, en lugar del borde naranja saturado | Reproduce el razonamiento del experimento |
+| Espectrómetro de masas | **Fallo corregido**: cambiar de muestra con iones en vuelo (de Hg, 7 isótopos, a Cu, 2) rompía la escena con «reading 'a'» (16 errores en 3 cambios; 0 tras corregirlo). El haz se reinicia de forma síncrona y solo cuentan los iones válidos | Encontrado por la prueba de memoria con interacciones |
+| Quantum Space | Margen respecto al título; etiquetas de representación en una línea | — |
+| Geiger–Marsden, Espectroscopio, Tabla, Arquitecto | Revisados en uso: Geiger ya compara Thomson, núcleo y la fórmula de Rutherford en un histograma; no se tocan | — |
+
+Herramienta nueva: `tools/labshots.mjs`, que captura los laboratorios **en uso** (cascada, comparación, casos…) y no solo vacíos.
+
+## D. Memoria con interacciones reales
+
+PENDIENTE_MEMORIA
+
+## E. Verificación de esta iteración
+
+PENDIENTE_VERIFICACION
+
+## F. Limitaciones que siguen abiertas
+
+- Sin GPU real, Safari ni iPadOS: todas las capturas y mediciones son de Chromium con SwiftShader.
+- La variedad de las familias pobres no se ha ampliado: cambiaría los enunciados de semillas ya guardadas. Se ha resuelto en la evaluación (clave de problema), no en el generador.
+- No se reconstruyeron las escenas de la Tabla, el Arquitecto ni el Espectroscopio; las mejoras de esta iteración son de pedagogía, composición, materiales puntuales y controles.
+- La clave de problema es una regla explícita, no una equivalencia semántica completa: dos problemas con distinta redacción y el mismo razonamiento cuentan como distintos (error conservador).

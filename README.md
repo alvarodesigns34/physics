@@ -25,6 +25,8 @@ npm run bench      # tiempos de los cálculos científicos más costosos
 npm run stats      # regenera docs/ESTADISTICAS.md desde el código
 node tools/perf.mjs salida.json   # fotogramas, tareas largas, recursos GPU y memoria por laboratorio
 node tools/shots.mjs etiqueta [desktop,ipad,ipadv,wide,movil]   # capturas; THEME=oscuro, TEXT=1.3
+node tools/labshots.mjs etiqueta [desktop|ipad|ipadv]            # laboratorios EN USO (casos, cascada, comparación)
+node tools/memlong.mjs salida.json --ciclos=12                   # memoria con interacciones reales e instantáneas del montón
 ```
 
 Las cifras del proyecto (familias, ejercicios, pruebas…) están en [docs/ESTADISTICAS.md](docs/ESTADISTICAS.md), generado desde el código; este README no las repite para que no queden desfasadas.
